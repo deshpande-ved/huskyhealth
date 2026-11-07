@@ -171,3 +171,14 @@ def test_build_sheet_and_demo_docs():
         assert not re.search(r"([0-9]{1,3}\.){3}[0-9]{1,3}|ssh |@[a-z0-9-]+\.(com|edu)", doc)
         hosts = set(re.findall(r"https?://([a-z0-9.-]+)", doc))
         assert hosts <= {"veds-pi5.polecat-nominal.ts.net"}, hosts
+
+
+def test_marks_schema(c):
+    b = mkbox(c)
+    url = f"/v1/drop/{b['box']}"
+    ok = payload(marks=[{"sport": "walking", "t_s": 5000}])
+    assert c.post(url, data=json.dumps(ok), headers=auth(b["write"])).status_code == 204
+    c.get(url, headers=auth(b["read"]))
+    for bad in [payload(marks=[{"sport": "golf", "t_s": 5}]), payload(marks=[{"sport": "squash", "t_s": 5, "name": "x"}]),
+                payload(marks=[{"sport": "squash", "t_s": "5"}])]:
+        assert c.post(url, data=json.dumps(bad), headers=auth(b["write"])).status_code == 422
