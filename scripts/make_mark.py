@@ -11,7 +11,8 @@ the 1st/99th percentile, then each cell becomes a character from terminalcam's
 70-step ramp (bright -> dense), coloured by its pixel, on Rose Pine base.
 
 Writes:
-  web/art/husky.json            {cols, rows, chars: [str], rgb: [hex...]} for the UI
+  web/art/husky.json            {cols, rows, chars: [str], rgb: [hex...]}
+  web/art/husky.svg             the header logo: transparent, fixed viewBox so it never stretches
   web/icons/icon-192.png        192x192
   web/icons/icon-512.png        512x512, mark inside the maskable safe zone
   web/icons/apple-touch-icon.png 180x180, opaque
@@ -89,7 +90,7 @@ def to_grid(src, crop, cols=None):
     return cols, rows, chars, colors
 
 
-def svg(cols, rows, chars, colors, size, inset):
+def svg(cols, rows, chars, colors, size, inset, bg=True):
     # monospace advance ~0.6em; cell aspect 0.5 -> line height = 2 x advance
     box = size * (1 - 2 * inset)
     adv = box / cols
@@ -98,7 +99,7 @@ def svg(cols, rows, chars, colors, size, inset):
     top = (size - lh * rows) / 2
     left = (size - adv * cols) / 2
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 {size} {size}">',
-           f'<rect width="{size}" height="{size}" fill="{BASE}"/>',
+           *([f'<rect width="{size}" height="{size}" fill="{BASE}"/>'] if bg else []),
            f'<g font-family="Menlo, SF Mono, monospace" font-size="{fs:.3f}" font-weight="700">']
     for r in range(rows):
         y = top + lh * (r + 0.78)
@@ -152,6 +153,8 @@ if __name__ == "__main__":
                                   ("apple-touch-icon.png", 180, 0.04)]:
             render(svg(cols, rows, chars, colors, size, inset), size, os.path.join(ROOT, "web", "icons", name), tmp)
             print(f"wrote web/icons/{name}")
+        with open(os.path.join(ROOT, "web", "art", "husky.svg"), "w") as fh:
+            fh.write(svg(cols, rows, chars, colors, 512, 0.0, bg=False))
         fc, fr, fch, fco = to_grid(src, crop, FAV_COLS)
         with open(os.path.join(ROOT, "web", "favicon.svg"), "w") as fh:
             fh.write(svg(fc, fr, fch, fco, 64, 0.02))
