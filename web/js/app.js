@@ -96,21 +96,6 @@ function render() {
   }));
 }
 
-// The ASCII husky mark in the header (same art as the icons); purely decorative.
-async function showMark() {
-  try {
-    const res = await fetch("/art/husky.json");
-    if (!res.ok) return;
-    const art = await res.json();
-    paint($("mark"), art.chars.map((line) => [...line].map((ch) => ({ ch, cls: "" }))));
-    const spans = $("mark").querySelectorAll("span");
-    let i = 0;
-    art.chars.forEach((line, r) => [...line].forEach((_, c) => { spans[i++].style.color = art.rgb[r][c]; }));
-  } catch {
-    // offline before first cache: no mark, nothing else changes
-  }
-}
-
 async function rate(index, rpe) {
   const { features, error } = withEffort(state.features, index, rpe);
   if (error) return;
@@ -164,7 +149,6 @@ async function start() {
 
 if (typeof document !== "undefined") {
   showVersion();
-  showMark();
   addEventListener("online", showVersion);   // offline at launch -> refresh the About line when back online
   start();
   if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
