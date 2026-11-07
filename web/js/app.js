@@ -39,8 +39,21 @@ function figureNode(fig) {
   pre.setAttribute("role", "img");
   pre.setAttribute("aria-label", fig.label);
   paint(pre, fig.rows);
-  const link = el("a", { href: `#${fig.ref}` }, pre);
-  return el("figure", {}, link, el("p", { className: "plain-text", textContent: fig.plain }));
+  return el("a", { className: "fig-link", href: `#${fig.ref}` }, pre);
+}
+
+// A terminal-window panel: title in the border, one-line explanation, figure, legend, key numbers, method link.
+function panelNode(fig, extraClass = "") {
+  const kids = [el("h3", { textContent: fig.title })];
+  if (fig.explain) kids.push(el("p", { className: "explain", textContent: fig.explain }));
+  if (fig.rows && fig.rows.length) kids.push(figureNode(fig), el("p", { className: "plain-text", textContent: fig.plain }));
+  if (fig.legend) kids.push(el("ul", { className: "legend" }, ...fig.legend.map(([ch, cls, text]) =>
+    el("li", {}, el("b", { className: cls, textContent: ch }), text))));
+  if (fig.stats && fig.stats.length) kids.push(el("dl", { className: "stats" }, ...fig.stats.map((s) =>
+    el("div", {}, el("dd", { className: s.cls || "", textContent: s.v }), el("dt", { textContent: s.k })))));
+  if (fig.source) kids.push(el("p", { className: "method" },
+    el("a", { href: `#${fig.ref}`, textContent: `method: ${fig.source.citation} \u00b7 ${fig.source.status}` })));
+  return el("article", { className: `panel ${extraClass}`.trim() }, ...kids);
 }
 
 let state = { features: null, imp: { progress: null, error: null, done: null } };
@@ -49,10 +62,26 @@ let db = null;
 function render() {
   const f = state.features || EMPTY;
   const a = analyze(f);
-  $("figures").replaceChildren(...screenModel(a, f).map(figureNode));
-  $("zone-bars").replaceChildren(figureNode(zoneBars(f)));
-  $("lines").replaceChildren(...(state.features ? infoLines(a, f) : []).map((l) =>
-    el("p", { className: l.cls }, el("a", { href: `#${l.ref}`, textContent: l.text }))));
+  const [call, gaugeFig, cal, fitFat] = screenModel(a, f);
+  $("hero").replaceChildren(
+    el("div", {},
+      el("p", { className: "eyebrow", textContent: "today's call" }),
+      el("h2", { className: `verdict ${call.cls}`, textContent: call.headline }),
+      el("p", { className: "reason", textContent: call.reason }),
+      el("p", { className: "method" }, el("a", { href: `#${call.ref}`, textContent: `method: ${call.source.citation} \u00b7 ${call.source.status}` }))),
+    panelNode(gaugeFig));
+  const panels = [panelNode(cal), panelNode(fitFat), panelNode(zoneBars(f))];
+  if (state.features) {
+    const notes = infoLines(a, f);
+    panels.push(el("article", { className: "panel" }, el("h3", { textContent: "Notes" }),
+      el("ul", { className: "notes" }, ...notes.map((l) =>
+        el("li", { className: l.cls }, el("a", { href: `#${l.ref}`, textContent: l.text }))))));
+  } else {
+    panels.push(el("article", { className: "panel" }, el("h3", { textContent: "Get started" }),
+      el("p", { className: "explain", textContent: "Nothing imported yet. Export your Health data on your iPhone and pick the file below; everything is computed on this phone." }),
+      el("a", { className: "button", href: "#import", textContent: "import your export" })));
+  }
+  $("panels").replaceChildren(...panels);
   $("stored").textContent = storedLine(state.features);
   const todo = effortList(state.features);
   $("effort").classList.toggle("hidden", todo.length === 0);
@@ -63,8 +92,23 @@ function render() {
       b.addEventListener("click", () => rate(w.index, k + 1));
       return b;
     });
-    return el("li", {}, el("span", { textContent: `${w.sport}, ${w.age}: ` }), ...buttons);
+    return el("li", {}, el("span", { textContent: `${w.sport} \u00b7 ${w.age}` }), ...buttons);
   }));
+}
+
+// The ASCII husky mark in the header (same art as the icons); purely decorative.
+async function showMark() {
+  try {
+    const res = await fetch("/art/husky.json");
+    if (!res.ok) return;
+    const art = await res.json();
+    paint($("mark"), art.chars.map((line) => [...line].map((ch) => ({ ch, cls: "" }))));
+    const spans = $("mark").querySelectorAll("span");
+    let i = 0;
+    art.chars.forEach((line, r) => [...line].forEach((_, c) => { spans[i++].style.color = art.rgb[r][c]; }));
+  } catch {
+    // offline before first cache: no mark, nothing else changes
+  }
 }
 
 async function rate(index, rpe) {
@@ -120,6 +164,7 @@ async function start() {
 
 if (typeof document !== "undefined") {
   showVersion();
+  showMark();
   addEventListener("online", showVersion);   // offline at launch -> refresh the About line when back online
   start();
   if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {

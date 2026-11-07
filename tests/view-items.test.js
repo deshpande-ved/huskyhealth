@@ -13,7 +13,7 @@ test("five zone bars from 60-day totals; none -> message", () => {
   const z = zoneBars(f);
   const lines = figureText(z);
   assert.equal(lines.length, 5);
-  lines.forEach((l, k) => assert.match(l, new RegExp(`^z${k + 1} [#.]{20} +\\d+%$`)));
+  lines.forEach((l, k) => assert.match(l, new RegExp(`^Z${k + 1} [a-z]+ +[#.]{20} +\\d+%$`)));
   assert.ok(lines.every((l) => l.length <= WIDTH));
   assert.match(z.label, /^Zone minutes: z1 \d+%, z2 \d+%, z3 \d+%, z4 \d+%, z5 \d+%$/);
   const none = zoneBars({ ...f, workouts: [] });
