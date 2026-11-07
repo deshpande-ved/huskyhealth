@@ -10,6 +10,7 @@ const webPath = (p) => new URL(`../web${p === "/" ? "/index.html" : p}`, import.
 
 // E01/E02 entries. "/index.html" is not cached: Pages 308-redirects it to "/". Later stories add theirs here.
 const EXPECTED = ["/", "/css/style.css", "/js/app.js", "/js/engine.js", "/js/features.js",
+                  "/js/ascii.js", "/js/view.js", "/js/db.js",
                   "/js/parse-apple.worker.js", "/vendor/fflate.esm.js",
                   "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 

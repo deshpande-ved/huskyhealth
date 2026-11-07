@@ -230,8 +230,9 @@ items:
   epic: E04
   title: "ASCII drawing primitives and call banner font"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E04S01.story.md
   dependencies: [E01S03]
@@ -243,8 +244,9 @@ items:
   epic: E04
   title: "Rosé Pine palette and 44-column layout"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E04S02.story.md
   dependencies: [E01S01]
@@ -256,8 +258,9 @@ items:
   epic: E04
   title: "References page with a card per method"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E04S03.story.md
   dependencies: [E01S01]
@@ -269,8 +272,9 @@ items:
   epic: E04
   title: "Main screen figures from fixture features"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E04S04.story.md
   dependencies: [E04S01, E04S02, E04S03, E01S01, E01S03, E02S02, E02S03]
@@ -282,8 +286,9 @@ items:
   epic: E04
   title: "Plain view toggle"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E04S05.story.md
   dependencies: [E04S04, E01S01]
@@ -295,8 +300,9 @@ items:
   epic: E04
   title: "Store features only and Forget everything"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E04S06.story.md
   dependencies: [E04S04, E01S01, E01S03]
@@ -308,8 +314,9 @@ items:
   epic: E04
   title: "End to end and airplane-mode run"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E04S07.story.md
   dependencies: [E04S04, E04S05, E04S06, E04S08, E04S10, E01S03, E02S04, E03S02, E03S04]
@@ -321,8 +328,9 @@ items:
   epic: E04
   title: "Remaining screen items: zone bars, load flags and gate messages"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E04S08.story.md
   dependencies: [E04S03, E04S04, E02S02, E02S04]
@@ -347,8 +355,9 @@ items:
   epic: E04
   title: "Import progress bar and typed effort entry"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E04S10.story.md
   dependencies: [E04S04, E04S06, E04S08, E02S01, E02S04, E03S02, E03S03]
