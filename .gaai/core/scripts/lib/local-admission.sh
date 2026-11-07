@@ -1,0 +1,348 @@
+#!/usr/bin/env bash
+# Portable local admission orchestration. Project policy remains base-held;
+# this adapter only resolves, executes fixed argv, rechecks and seals evidence.
+
+LOCAL_ADMISSION_OUTCOME=""
+LOCAL_ADMISSION_RECEIPT_PATH=""
+
+_local_admission_cleanup() {
+  rm -rf "$1" 2>/dev/null || true
+  # The in-flight marker exists only while this gate holds a binding. Every exit
+  # path of the run function passes through here, so the marker cannot outlive
+  # the gate that published it.
+  if [[ -n "${_LOCAL_ADMISSION_INFLIGHT:-}" ]]; then
+    rm -f "$_LOCAL_ADMISSION_INFLIGHT" 2>/dev/null || true
+    _LOCAL_ADMISSION_INFLIGHT=""
+  fi
+  return 0
+}
+
+# Publishes what a gate has bound, for as long as it holds it.
+#
+# A gate binds (base, head, policy, risk, environment) and then runs its selected
+# commands for tens of minutes. Any advance of the base in that window invalidates
+# the receipt and discards the cycle, however well the commands did. Nothing in the
+# tree said a binding was live, so an operator or a peer session merging a pull
+# request could not know it was about to cost a delivery. This marker is that
+# signal — advisory only. It grants nothing, gates nothing, and its absence is
+# never permission.
+_local_admission_publish_inflight() {
+  local receipt_dir="$1" story="$2" boundary="$3" base_ref="$4" base_sha="$5" head_sha="$6"
+  local path="${receipt_dir}/.local-admission-${story}-${boundary}.inflight.json"
+  local tmp="${path}.tmp.$$"
+  ( umask 077; printf '{"story":"%s","boundary":"%s","base_ref":"%s","bound_base":"%s","bound_head":"%s","pid":%s,"started_at":"%s"}\n' \
+      "$story" "$boundary" "$base_ref" "$base_sha" "$head_sha" "$$" \
+      "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$tmp" ) 2>/dev/null || return 0
+  mv -f "$tmp" "$path" 2>/dev/null || { rm -f "$tmp" 2>/dev/null; return 0; }
+  _LOCAL_ADMISSION_INFLIGHT="$path"
+  return 0
+}
+
+_local_admission_seal() {
+  local executor="$1" boundary="$2" story="$3" plan="$4" results="$5"
+  local results_digest="$6" binding_digest="$7" outcome="$8" limit="$9" receipt_dir="${10}"
+  local tmp_receipt="${receipt_dir}/.local-admission-${story}-${boundary}.tmp.$$"
+  local seal_rc
+  LOCAL_ADMISSION_RECEIPT_PATH="${receipt_dir}/.local-admission-${story}-${boundary}.json"
+  rm -f "$tmp_receipt" 2>/dev/null || true
+  if node "$executor" --mode seal --boundary "$boundary" --story-id "$story" \
+      --plan "$plan" --results "$results" --outcome "$outcome" \
+      --results-digest "$results_digest" --binding-digest "$binding_digest" \
+      --max-bytes "$limit" --output "$tmp_receipt"; then
+    seal_rc=0
+  else
+    seal_rc=$?
+  fi
+  if (( seal_rc != 0 )); then
+    if (( seal_rc == 3 )); then LOCAL_ADMISSION_OUTCOME="blocked:receipt_too_large"
+    else LOCAL_ADMISSION_OUTCOME="blocked:receipt_seal_failed"; fi
+    rm -f "$tmp_receipt" "$LOCAL_ADMISSION_RECEIPT_PATH" 2>/dev/null || true
+    LOCAL_ADMISSION_RECEIPT_PATH=""; return 1
+  fi
+  if ! mv "$tmp_receipt" "$LOCAL_ADMISSION_RECEIPT_PATH" 2>/dev/null; then
+    LOCAL_ADMISSION_OUTCOME="blocked:receipt_write_failed"
+    rm -f "$tmp_receipt" "$LOCAL_ADMISSION_RECEIPT_PATH" 2>/dev/null || true
+    LOCAL_ADMISSION_RECEIPT_PATH=""; return 1
+  fi
+}
+
+_local_admission_reject_with_plan() {
+  local executor="$1" boundary="$2" story="$3" plan="$4" results="$5"
+  local outcome="$6" limit="$7" receipt_dir="$8"
+  local results_digest binding_digest
+  printf '[]\n' > "$results" 2>/dev/null || return 1
+  results_digest=$(node -e 'process.stdout.write(require("crypto").createHash("sha256").update("[]").digest("hex"))') || return 1
+  binding_digest=$(node -e 'const p=require(process.argv[1]);process.stdout.write(p.binding_digest||"")' "$plan") || return 1
+  _local_admission_seal "$executor" "$boundary" "$story" "$plan" "$results" \
+    "$results_digest" "$binding_digest" "$outcome" "$limit" "$receipt_dir"
+}
+
+# Record why an admission run was judged stale, next to the receipts.
+#
+# "stale_evidence" is reported for three different situations: the re-resolve
+# produced no output at all, it produced output with no binding_digest, or it
+# produced a binding that differs from the bound one. Only the third is actual
+# staleness. The three are indistinguishable downstream, the verify path deletes
+# the receipt, and the scratch directory is removed — so a blocked run leaves
+# nothing that says which happened, or whether the base moved at all.
+#
+# Evidence only: no gate semantics, no outcome renamed, failures ignored.
+_local_admission_note_stale() {
+  local receipt_dir="$1" story="$2" boundary="$3" stage="$4"
+  local bound="$5" observed="$6" summary_file="$7"
+  local bound_base="$8" bound_head="$9" fresh_base="${10}" fresh_head="${11}"
+  local note="${receipt_dir}/.local-admission-${story}-${boundary}.stale.json" why reason=""
+  # When the re-resolve rejected the candidate, the resolver wrote its reason
+  # into the summary file. That word — candidate_unsealed, repository_mismatch,
+  # candidate_stale — is the finding, so it travels with the note.
+  [[ -s "$summary_file" ]] && reason=$(node -e 'try{const s=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));process.stdout.write(s.status==="resolved"?"":String(s.reason||""))}catch{}' "$summary_file" 2>/dev/null || true)
+  if [[ ! -s "$summary_file" ]]; then why=resolver_no_output
+  elif [[ -z "$observed" ]]; then why=resolver_no_binding
+  elif [[ "$bound_base" != "$fresh_base" ]]; then why=base_advanced
+  elif [[ "$bound_head" != "$fresh_head" ]]; then why=head_advanced
+  else why=binding_differs_without_ref_change; fi
+  ( umask 077; printf '{"story":"%s","boundary":"%s","stage":"%s","why":"%s","resolver_reason":"%s",' \
+      "$story" "$boundary" "$stage" "$why" "$reason"
+    printf '"bound_binding":"%s","observed_binding":"%s",' "$bound" "$observed"
+    printf '"bound_base":"%s","fresh_base":"%s","bound_head":"%s","fresh_head":"%s",' \
+      "$bound_base" "$fresh_base" "$bound_head" "$fresh_head"
+    printf '"recorded_at":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  ) > "$note" 2>/dev/null || true
+  printf '[LOCAL-ADMISSION] story=%s boundary=%s stale_reason=%s resolver_reason=%s note=%s\n' \
+    "$story" "$boundary" "$why" "${reason:-none}" "$note"
+}
+
+_local_admission_resolve() {
+  local resolver="$1" repo="$2" base_ref="$3" base_sha="$4" head_sha="$5"
+  local policy="$6" risk="$7" output="$8" pinned_base="${9:-}"
+  local args=(--repo "$repo" --base-ref "$base_ref" --base-sha "$base_sha"
+    --head-sha "$head_sha" --policy "$policy" --output "$output")
+  [[ -n "$risk" ]] && args+=(--risk-inputs "$risk")
+  [[ "$pinned_base" == true ]] && args+=(--pinned-base true)
+  [[ -n "${invocation_id:-}" ]] && args+=(--invocation-id "$invocation_id" --story-id "$story" --boundary "$boundary")
+  node "$resolver" "${args[@]}"
+}
+
+# A pre-QA PASS admits only semantic-QA spend on one exact candidate, so a base
+# that advanced while the checks ran does not make that evidence wrong about the
+# candidate. It is kept only when the admission policy file is byte-identical on
+# the pinned and the current base (a policy change could require other checks)
+# and re-resolving the current candidate against the pinned base reproduces the
+# original binding exactly: an unchanged HEAD, a Git-visible clean tree and the
+# same governed inputs. Anything else still fails. The final boundary always
+# re-binds the exact current base before publication.
+_local_admission_base_pinned() {
+  local resolver="$1" repo="$2" base_ref="$3" pinned_base="$4" policy="$5" risk="$6"
+  local output="$7" expected="$8" current_head summary binding
+  current_head=$(git -C "$repo" rev-parse HEAD 2>/dev/null) || return 1
+  local pinned_policy current_policy
+  pinned_policy=$(git -C "$repo" rev-parse --verify -q "${pinned_base}:${policy}" 2>/dev/null) || return 1
+  current_policy=$(git -C "$repo" rev-parse --verify -q "refs/remotes/origin/${base_ref}:${policy}" 2>/dev/null) || return 1
+  [[ -n "$pinned_policy" && "$pinned_policy" == "$current_policy" ]] || return 1
+  rm -f "$output" 2>/dev/null || return 1  # the resolver creates its output exclusively
+  summary=$(_local_admission_resolve "$resolver" "$repo" "$base_ref" "$pinned_base" "$current_head" \
+    "$policy" "$risk" "$output" true 2>/dev/null) || true
+  binding=$(node -e 'const s=JSON.parse(process.argv[1]||"{}");process.stdout.write(s.binding_digest||"")' "$summary" 2>/dev/null) || binding=""
+  [[ -n "$binding" && "$binding" == "$expected" ]]
+}
+
+# Preserve original successful executions inside an explicitly non-current
+# envelope before scratch cleanup. Never leave a conventional stale PASS.
+_local_admission_retain() {
+  local stage="$1" reason="$2" retained tmp
+  retained="${receipt_dir}/.local-admission-${story}-${boundary}-${invocation_id}.blocked.json"
+  tmp="${retained}.tmp.$$"
+  local args=(--mode retain --plan "$plan" --results "$results" --stage "$stage"
+    --reason "$reason" --outcome "$LOCAL_ADMISSION_OUTCOME" --max-bytes "$limit" --output "$tmp"
+    --observed-base "${fresh_base:-}" --observed-head "${fresh_head:-}"
+    --observed-binding "${verify_binding:-${fresh_binding:-}}")
+  [[ -s "$proof" ]] && args+=(--proof "$proof")
+  [[ -s "$refresh_results" ]] && args+=(--fresh-results "$refresh_results")
+  if ! node "$executor" "${args[@]}"; then
+    LOCAL_ADMISSION_OUTCOME="blocked:evidence_persistence_failed"
+    # Exclusive creation may have refused somebody else's existing evidence.
+    # Without ownership of that path, cleanup must not unlink it.
+    rm -f "$target_receipt" 2>/dev/null || true
+    LOCAL_ADMISSION_RECEIPT_PATH=""
+    return 1
+  fi
+  # link() installs the complete private file exclusively (also refusing an
+  # existing directory or symlink); unlike mv it cannot overwrite evidence.
+  if ! node -e 'const fs=require("fs");fs.linkSync(process.argv[1],process.argv[2]);fs.unlinkSync(process.argv[1])' "$tmp" "$retained"; then
+    LOCAL_ADMISSION_OUTCOME="blocked:evidence_persistence_failed"
+    rm -f "$target_receipt" 2>/dev/null || true
+    LOCAL_ADMISSION_RECEIPT_PATH=""
+    return 1
+  fi
+  # Atomically replace any current receipt with the same non-authorizing facts.
+  # The unique retained file remains private audit evidence after later attempts.
+  if ! cp "$retained" "$tmp" || ! mv "$tmp" "$target_receipt"; then
+    LOCAL_ADMISSION_OUTCOME="blocked:evidence_persistence_failed"
+    rm -f "$tmp" "$target_receipt" 2>/dev/null || true
+    LOCAL_ADMISSION_RECEIPT_PATH=""
+    return 1
+  fi
+  LOCAL_ADMISSION_RECEIPT_PATH=""
+  printf '[LOCAL-ADMISSION] story=%s boundary=%s retained=%s reason=%s\n' "$story" "$boundary" "$retained" "$reason"
+}
+
+_run_local_admission() {
+  local boundary="$1" story="$2" repo="$3" base_ref="$4" receipt_dir="$5"
+  local lib_dir resolver executor policy risk limit result_limit result_bytes limits scratch plan fresh verify results target_receipt seal_plan seal_binding
+  local applicability invocation_id proof refresh_results reconciled=0 proof_reason tmp_receipt refresh_digest compose_rc seal_base pinned
+  local base_sha head_sha binding_digest results_digest fresh_base fresh_head fresh_summary fresh_binding verify_summary verify_binding reason outcome
+  LOCAL_ADMISSION_OUTCOME="blocked:unknown"; LOCAL_ADMISSION_RECEIPT_PATH=""
+  case "$boundary" in pre_qa|final) ;; *) LOCAL_ADMISSION_OUTCOME="blocked:boundary_invalid"; return 1 ;; esac
+  [[ "$story" =~ ^[A-Za-z0-9._-]+$ ]] \
+    || { LOCAL_ADMISSION_OUTCOME="blocked:story_id_invalid"; return 1; }
+  for tool in git node mktemp mkdir mv rm cp; do command -v "$tool" >/dev/null 2>&1 \
+    || { LOCAL_ADMISSION_OUTCOME="blocked:runtime_missing:${tool}"; return 1; }; done
+  mkdir -p "$receipt_dir" 2>/dev/null \
+    || { LOCAL_ADMISSION_OUTCOME="blocked:receipt_storage_unavailable"; return 1; }
+  target_receipt="${receipt_dir}/.local-admission-${story}-${boundary}.json"
+  rm -f "$target_receipt" 2>/dev/null \
+    || { LOCAL_ADMISSION_OUTCOME="blocked:receipt_storage_unavailable"; return 1; }
+  policy="${GAAI_LOCAL_ADMISSION_POLICY_PATH:-.gaai/project/ci/local-admission.json}"
+  risk="${GAAI_LOCAL_ADMISSION_RISK_INPUTS_PATH:-}"
+  [[ -z "$risk" || -f "$risk" ]] \
+    || { LOCAL_ADMISSION_OUTCOME="blocked:risk_inputs_missing"; return 1; }
+  scratch=$(mktemp -d "${TMPDIR:-/tmp}/gaai-local-admission.XXXXXX") \
+    || { LOCAL_ADMISSION_OUTCOME="blocked:temporary_storage_unavailable"; return 1; }
+  chmod 700 "$scratch" 2>/dev/null || { LOCAL_ADMISSION_OUTCOME="blocked:temporary_storage_unavailable"; _local_admission_cleanup "$scratch"; return 1; }
+  plan="$scratch/plan.json"; fresh="$scratch/fresh.json"; verify="$scratch/verify.json"; results="$scratch/results.json"
+  proof="$scratch/applicability.json"; refresh_results="$scratch/refresh-results.json"; pinned="$scratch/pinned.json"
+  invocation_id=$(node -e 'process.stdout.write(require("crypto").randomUUID())') \
+    || { LOCAL_ADMISSION_OUTCOME="blocked:execution_identity_failed"; _local_admission_cleanup "$scratch"; return 1; }
+  # Node canonicalizes symlinked entrypoint paths before exposing import.meta.url.
+  # Resolve the shell-side path physically too, otherwise aliases such as macOS
+  # /var -> /private/var make the resolver/executor CLI guards silently skip main().
+  lib_dir=$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
+  resolver="$lib_dir/local-admission-resolver.mjs"; executor="$lib_dir/local-admission-executor.mjs"
+  applicability="$lib_dir/local-admission-applicability.mjs"
+
+  if ! git -C "$repo" fetch origin "$base_ref" --quiet 2>/dev/null; then
+    LOCAL_ADMISSION_OUTCOME="blocked:base_fetch_failed"; _local_admission_cleanup "$scratch"; return 1
+  fi
+  base_sha=$(git -C "$repo" rev-parse "origin/$base_ref" 2>/dev/null) \
+    && head_sha=$(git -C "$repo" rev-parse HEAD 2>/dev/null) \
+    || { LOCAL_ADMISSION_OUTCOME="blocked:candidate_unresolvable"; _local_admission_cleanup "$scratch"; return 1; }
+  _local_admission_publish_inflight "$receipt_dir" "$story" "$boundary" \
+    "$base_ref" "$base_sha" "$head_sha"
+  _local_admission_resolve "$resolver" "$repo" "$base_ref" "$base_sha" "$head_sha" \
+    "$policy" "$risk" "$plan" >/dev/null 2>&1 || true
+  if [[ ! -s "$plan" ]] || [[ "$(node -e 'const p=require(process.argv[1]);process.stdout.write(p.status||"")' "$plan" 2>/dev/null)" != resolved ]]; then
+    reason=$(node -e 'const p=require(process.argv[1]);process.stdout.write(p.reason||"resolver_failed")' "$plan" 2>/dev/null || echo resolver_failed)
+    LOCAL_ADMISSION_OUTCOME="blocked:${reason}"
+    _local_admission_cleanup "$scratch"; return 1
+  fi
+  limits=$(node -e 'const p=require(process.argv[1]);console.log(`${p.limits?.max_receipt_bytes||""}\t${p.limits?.max_result_bytes||""}`)' "$plan" 2>/dev/null || true)
+  IFS=$'\t' read -r limit result_limit <<<"$limits"
+  [[ "$limit" =~ ^[1-9][0-9]*$ && "$result_limit" =~ ^[1-9][0-9]*$ ]] \
+    || { LOCAL_ADMISSION_OUTCOME="blocked:policy_limits_invalid"; _local_admission_cleanup "$scratch"; return 1; }
+  binding_digest=$(node -e 'const p=require(process.argv[1]);process.stdout.write(p.binding_digest)' "$plan")
+  seal_plan="$plan"; seal_binding="$binding_digest"; seal_base="$base_sha"
+  # `exec`: Bash 3.2 otherwise forks an intermediate subshell here, which can
+  # outlive a killed caller and hide that loss from the executor's parent check.
+  if ! results_digest=$(exec node "$executor" --mode execute --plan "$plan" --repo "$repo" --output "$results"); then
+    LOCAL_ADMISSION_OUTCOME="blocked:execution_failed"
+    _local_admission_reject_with_plan "$executor" "$boundary" "$story" "$plan" "$results" \
+      "$LOCAL_ADMISSION_OUTCOME" "$limit" "$receipt_dir" || true
+    _local_admission_cleanup "$scratch"; return 1
+  fi
+  result_bytes=$(node -e 'const fs=require("fs");const s=fs.readFileSync(process.argv[1],"utf8").trimEnd();process.stdout.write(String(Buffer.byteLength(s)))' "$results" 2>/dev/null || true)
+  if [[ ! "$result_bytes" =~ ^[0-9]+$ || "$result_bytes" -gt "$result_limit" ]]; then
+    LOCAL_ADMISSION_OUTCOME="blocked:results_too_large"
+    _local_admission_seal "$executor" "$boundary" "$story" "$plan" "$results" \
+      "$results_digest" "$binding_digest" "$LOCAL_ADMISSION_OUTCOME" "$limit" "$receipt_dir" || true
+    _local_admission_cleanup "$scratch"; return 1
+  fi
+  if ! git -C "$repo" fetch origin "$base_ref" --quiet 2>/dev/null; then
+    outcome="blocked:base_fetch_failed"
+  else
+    fresh_base=$(git -C "$repo" rev-parse "origin/$base_ref" 2>/dev/null || true)
+    fresh_head=$(git -C "$repo" rev-parse HEAD 2>/dev/null || true)
+    fresh_summary=$(_local_admission_resolve "$resolver" "$repo" "$base_ref" "$fresh_base" "$fresh_head" \
+      "$policy" "$risk" "$fresh" 2>/dev/null || true)
+    fresh_binding=$(node -e 'const s=JSON.parse(process.argv[1]||"{}");process.stdout.write(s.binding_digest||"")' "$fresh_summary" 2>/dev/null || true)
+    if [[ ! -s "$fresh" || -z "$fresh_binding" || "$fresh_binding" != "$binding_digest" ]]; then
+      if [[ -s "$fresh" ]] && proof_reason=$(node "$applicability" "$repo" "$plan" "$fresh" "$results" "$proof"); then
+        reconciled=1; seal_plan="$fresh"; seal_binding="$fresh_binding"; seal_base="$fresh_base"
+        if refresh_digest=$(exec node "$executor" --mode execute --plan "$fresh" --repo "$repo" \
+            --proof "$proof" --output "$refresh_results"); then
+          result_bytes=$(node -e 'const fs=require("fs");process.stdout.write(String(Buffer.byteLength(fs.readFileSync(process.argv[1],"utf8").trimEnd())))' "$refresh_results")
+          if [[ "$result_bytes" -gt "$result_limit" ]]; then outcome="blocked:results_too_large"
+          else outcome=$(node -e 'const r=require(process.argv[1]);const o=r.find(x=>x.outcome!=="passed")?.outcome;process.stdout.write(o?`blocked:command_${o}`:"pass")' "$refresh_results"); fi
+        else outcome="blocked:execution_failed"; fi
+      elif [[ "$boundary" == pre_qa && -n "$fresh_base" && "$fresh_base" != "$base_sha" ]] \
+          && _local_admission_base_pinned "$resolver" "$repo" "$base_ref" "$base_sha" \
+               "$policy" "$risk" "$pinned" "$binding_digest"; then
+        seal_plan="$plan"; seal_binding="$binding_digest"; seal_base="$base_sha"
+        outcome=$(node -e 'const r=require(process.argv[1]);const o=r.find(x=>x.outcome!=="passed")?.outcome;process.stdout.write(o?`blocked:command_${o}`:"pass")' "$results")
+        printf '[LOCAL-ADMISSION] story=%s boundary=%s base_advanced=%s pinned_base=%s candidate=unchanged\n' \
+          "$story" "$boundary" "$fresh_base" "$base_sha"
+      else
+        _local_admission_note_stale "$receipt_dir" "$story" "$boundary" post_run \
+          "$binding_digest" "$fresh_binding" "$fresh" \
+          "$base_sha" "$head_sha" "$fresh_base" "$fresh_head" || true
+        LOCAL_ADMISSION_OUTCOME="blocked:stale_evidence"
+        _local_admission_retain post_run "${proof_reason:-resolver_unavailable}" || true
+        _local_admission_cleanup "$scratch"; return 1
+      fi
+    else
+      seal_plan="$fresh"; seal_binding="$fresh_binding"
+      outcome=$(node -e 'const r=require(process.argv[1]);const o=r.find(x=>x.outcome!=="passed")?.outcome;process.stdout.write(o?`blocked:command_${o}`:"pass")' "$results")
+    fi
+  fi
+  LOCAL_ADMISSION_OUTCOME="$outcome"
+  if [[ "$outcome" == blocked:base_fetch_failed ]]; then
+    _local_admission_retain post_run base_fetch_failed || true
+    _local_admission_cleanup "$scratch"; return 1
+  fi
+  if (( reconciled )); then
+    tmp_receipt="${target_receipt}.tmp.${invocation_id}"
+    compose_rc=0
+    node "$executor" --mode compose --repo "$repo" --boundary "$boundary" --story-id "$story" \
+        --original-plan "$plan" --plan "$fresh" --original-results "$results" --results "$refresh_results" \
+        --proof "$proof" --outcome "$outcome" --max-bytes "$limit" --output "$tmp_receipt" \
+        || compose_rc=$?
+    if (( compose_rc != 0 )) || ! mv "$tmp_receipt" "$target_receipt"; then
+      rm -f "$tmp_receipt" 2>/dev/null || true
+      if (( compose_rc == 3 )); then LOCAL_ADMISSION_OUTCOME="blocked:receipt_too_large"
+      elif [[ "$outcome" == blocked:* ]]; then LOCAL_ADMISSION_OUTCOME="$outcome"
+      else LOCAL_ADMISSION_OUTCOME="blocked:stale_evidence"; fi
+      _local_admission_retain post_refresh composition_failed || true
+      _local_admission_cleanup "$scratch"; return 1
+    fi
+    LOCAL_ADMISSION_RECEIPT_PATH="$target_receipt"
+  else
+    _local_admission_seal "$executor" "$boundary" "$story" "$seal_plan" "$results" \
+      "$results_digest" "$seal_binding" "$outcome" "$limit" "$receipt_dir" || { _local_admission_cleanup "$scratch"; return 1; }
+  fi
+  reason=base_fetch_failed
+  if git -C "$repo" fetch origin "$base_ref" --quiet 2>/dev/null; then
+    reason=currentness_changed
+    fresh_base=$(git -C "$repo" rev-parse "origin/$base_ref" 2>/dev/null || true)
+    fresh_head=$(git -C "$repo" rev-parse HEAD 2>/dev/null || true)
+    verify_summary=$(_local_admission_resolve "$resolver" "$repo" "$base_ref" "$fresh_base" "$fresh_head" \
+      "$policy" "$risk" "$verify" 2>/dev/null || true)
+    verify_binding=$(node -e 'const s=JSON.parse(process.argv[1]||"{}");process.stdout.write(s.binding_digest||"")' "$verify_summary" 2>/dev/null || true)
+  fi
+  if [[ -z "${verify_binding:-}" || "$verify_binding" != "$seal_binding" ]] \
+      && ! { [[ "$boundary" == pre_qa && "$reason" == currentness_changed \
+                && -n "${fresh_base:-}" && "$fresh_base" != "$seal_base" ]] \
+             && _local_admission_base_pinned "$resolver" "$repo" "$base_ref" "$seal_base" \
+                  "$policy" "$risk" "$pinned" "$seal_binding" \
+             && printf '[LOCAL-ADMISSION] story=%s boundary=%s base_advanced=%s pinned_base=%s candidate=unchanged\n' \
+                  "$story" "$boundary" "$fresh_base" "$seal_base"; }; then
+    _local_admission_note_stale "$receipt_dir" "$story" "$boundary" post_seal \
+      "$seal_binding" "${verify_binding:-}" "$verify" \
+      "$seal_base" "$head_sha" "$fresh_base" "$fresh_head" || true
+    LOCAL_ADMISSION_OUTCOME="blocked:stale_evidence"
+    _local_admission_retain post_seal "$reason" || true
+    _local_admission_cleanup "$scratch"; return 1
+  fi
+  _local_admission_cleanup "$scratch"
+  printf '[LOCAL-ADMISSION] story=%s boundary=%s outcome=%s receipt=%s\n' \
+    "$story" "$boundary" "$LOCAL_ADMISSION_OUTCOME" "$LOCAL_ADMISSION_RECEIPT_PATH"
+  [[ "$LOCAL_ADMISSION_OUTCOME" == pass ]]
+}

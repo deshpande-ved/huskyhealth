@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Abort the commit if a secret, key, private plan or real health data is staged.
+set -eu
+staged="$(git diff --cached --name-only --diff-filter=ACMR | grep -v "^\.gaai/core/vendor/" || true)"
+blocked='(^|/)(\.env|\.env\.local|\.ssh/.*|id_[A-Za-z0-9_]+(\.pub)?|[^/]*\.(pem|key|p12|bak|zip|fit)|secrets/.*|docs/PLAN\.md|export[^/]*\.xml|apple_health_export/.*|tests/fixtures/real_[^/]*)$'
+if [ -n "$staged" ] && printf '%s\n' "$staged" | grep -Eq "$blocked"; then
+  echo "pre-commit: blocked path(s) staged:" >&2
+  printf '%s\n' "$staged" | grep -E "$blocked" >&2
+  exit 1
+fi
+if git diff --cached -U0 | grep -Eq 'sk-ant-[A-Za-z0-9_-]{16,}'; then
+  echo "pre-commit: an Anthropic API key is in the staged diff" >&2
+  exit 1
+fi
+if git diff --cached -U0 | grep -Eq '^\+.*(ANTHROPIC|GRADIUM)_API_KEY=[^[:space:]]'; then
+  echo "pre-commit: an API key value is in the staged diff" >&2
+  exit 1
+fi
+
+# ── GAAI dispatcher ──
+# Delegate to GAAI hook scripts in .gaai/core/hooks/pre-commit.d/
+# and .gaai/project/hooks/pre-commit.d/ (added by install.sh)
+ROOT="$(git rev-parse --show-toplevel)"
+for _gaai_dir in "$ROOT/.gaai/core/hooks/pre-commit.d" "$ROOT/.gaai/project/hooks/pre-commit.d"; do
+    [ -d "$_gaai_dir" ] || continue
+    for _gaai_script in "$_gaai_dir"/*; do
+        [ -x "$_gaai_script" ] || continue
+        "$_gaai_script" "$@" || exit $?
+    done
+done
