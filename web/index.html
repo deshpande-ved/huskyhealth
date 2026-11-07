@@ -18,43 +18,46 @@
 </head>
 <body>
   <main>
-    <header>
-      <h1>HuskyHealth</h1>
-      <p class="muted">Training insight from your watch, computed on your phone. Nothing leaves it.</p>
-      <nav class="muted"><a href="#import">import</a> · <a href="#settings">settings</a> · <a href="#references">references</a></nav>
+    <header class="top">
+      <pre id="mark" aria-hidden="true"></pre>
+      <div class="brand">
+        <h1>HuskyHealth</h1>
+        <p>training insight from your watch &middot; computed on this phone &middot; nothing leaves it</p>
+      </div>
     </header>
+    <nav class="tabs" aria-label="Sections"><a href="#today">today</a><a href="#import">import</a><a href="#settings">settings</a><a href="#references">references</a></nav>
 
     <section id="today" aria-label="Today">
-      <div id="figures"></div>
-      <div id="zone-bars"></div>
-      <div id="lines"></div>
+      <div class="hero" id="hero"></div>
+      <div class="panels" id="panels"></div>
     </section>
 
-    <section id="effort" aria-label="Rate your effort" class="hidden">
+    <section id="effort" aria-label="Rate your effort" class="block hidden">
       <h2>Rate your effort</h2>
-      <p class="muted">1 = very easy, 10 = maximal. Only the number is stored.</p>
+      <p class="lede">How hard did it feel? 1 = very easy, 10 = all-out. It turns minutes into effort load, which works even when wrist heart rate is noisy. Only the number is stored.</p>
       <ul id="effort-list"></ul>
     </section>
 
-    <section id="import" aria-label="Import">
+    <section id="import" aria-label="Import" class="block">
       <h2>Import</h2>
-      <p class="muted">Health app → profile → Export All Health Data, then pick <code>export.zip</code> here. It is read on this phone; it works in airplane mode.</p>
+      <p class="lede">On your iPhone: Health app &rarr; your profile picture &rarr; <em>Export All Health Data</em>, then pick <code>export.zip</code> here. It is read on this phone and works in airplane mode.</p>
       <label class="button" for="import-file">Choose export.zip</label>
       <input id="import-file" class="visually-hidden" type="file" accept=".zip,.xml">
       <pre id="progress" class="fig hidden" role="img" aria-label=""></pre>
       <p id="import-error" class="alert hidden"></p>
     </section>
 
-    <section id="settings" aria-label="Settings">
+    <section id="settings" aria-label="Settings" class="block">
       <h2>Settings</h2>
-      <p id="stored" class="muted">Nothing stored on this phone</p>
+      <p id="stored" class="lede">Nothing stored on this phone</p>
       <p><button id="plain-view" type="button" aria-pressed="false">Plain view</button></p>
       <p><button id="forget" type="button" class="danger">Forget everything</button></p>
     </section>
 
-    <section id="references" aria-label="References">
+    <section id="references" aria-label="References" class="block">
       <h2>References</h2>
-      <p class="muted">Every number on the main screen links here. Status says where each method comes from.</p>
+      <p class="lede">Every number on the main screen links here. Status says where each method comes from: published, adapted, ours, disputed or descriptive.</p>
+      <div class="cards">
 
       <article id="ref-zone-minutes" class="card">
         <h3>Zone minutes</h3>
@@ -123,8 +126,9 @@
         <p>Source: HuskyHealth · <span class="status">ours</span></p>
       </article>
 
+      </div>
       <h3>Caveats</h3>
-      <ul id="caveats">
+      <ul id="caveats" class="notes">
         <li>The Watch records HRV as SDNN at random times; the studies used morning rMSSD.</li>
         <li>Max HR is the highest you have recorded, not a tested maximum; it may be underestimated.</li>
         <li>Garmin-only users have no HRV, so no readiness call.</li>
