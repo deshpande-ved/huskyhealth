@@ -1,0 +1,3 @@
+{"v": 1, "call": "hard", "flags": ["monotony"], "hrv_z": 0.3, "hrv_days7": 6, "fitness": 40.0, "fatigue": 37.0, "form": 3.0,
+ "load7": 280.0, "load_prev7": 250.0, "srpe7": 560.0, "monotony": 2.3, "ramp": 1.1, "zone_pct7": [16, 31, 47, 5, 1],
+ "zone_pct42": [20, 30, 40, 8, 2], "vo2_trend_4w": 0.4, "rhr_delta": -1, "sport_mix": {"squash": 80, "running": 20}}
