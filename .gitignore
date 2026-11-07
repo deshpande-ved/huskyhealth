@@ -7,6 +7,7 @@
 secrets/
 # private plan (names homelab hosts/ports)
 docs/PLAN.md
+huskyhealth-runbook.md
 # real health data: never commit
 *.zip
 *.fit
