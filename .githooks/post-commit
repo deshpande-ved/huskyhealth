@@ -1,0 +1,29 @@
+#!/bin/bash
+# post-commit dispatcher — executes hooks from core/ then project/
+# Install: .gaai/project/scripts/install-hooks.sh
+
+ROOT="$(git rev-parse --show-toplevel)"
+CORE_DIR="$ROOT/.gaai/core/hooks/post-commit.d"
+PROJECT_DIR="$ROOT/.gaai/project/hooks/post-commit.d"
+
+for dir in "$CORE_DIR" "$PROJECT_DIR"; do
+    [ -d "$dir" ] || continue
+    for script in "$dir"/*; do
+        [ -x "$script" ] || continue
+        "$script" || echo "⚠️  $(basename "$dir")/../$(basename "$script") failed (non-blocking)"
+    done
+done
+
+exit 0
+
+# ── GAAI dispatcher ──
+# Delegate to GAAI hook scripts in .gaai/core/hooks/post-commit.d/
+# and .gaai/project/hooks/post-commit.d/ (added by install.sh)
+ROOT="$(git rev-parse --show-toplevel)"
+for _gaai_dir in "$ROOT/.gaai/core/hooks/post-commit.d" "$ROOT/.gaai/project/hooks/post-commit.d"; do
+    [ -d "$_gaai_dir" ] || continue
+    for _gaai_script in "$_gaai_dir"/*; do
+        [ -x "$_gaai_script" ] || continue
+        "$_gaai_script" "$@" || exit $?
+    done
+done
