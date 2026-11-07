@@ -160,8 +160,9 @@ items:
   epic: E03
   title: "Read the records and workouts we need from export.xml text"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E03S01.story.md
   dependencies: [E01S03, E02S01]
@@ -173,8 +174,9 @@ items:
   epic: E03
   title: "Import a .zip or .xml file in the worker, with progress"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E03S02.story.md
   dependencies: [E03S01, E01S03]
@@ -186,8 +188,9 @@ items:
   epic: E03
   title: "Turn workouts into feature rows (sport, zones, effort, source, day)"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E03S03.story.md
   dependencies: [E03S01, E01S03, E02S01]
@@ -199,8 +202,9 @@ items:
   epic: E03
   title: "Build the full Features JSON and prove it on the synthetic fixture"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E03S04.story.md
   dependencies: [E03S02, E03S03, E02S01]
@@ -212,8 +216,9 @@ items:
   epic: E03
   title: "Run Ved's real export locally and print counts only"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E03S05.story.md
   dependencies: [E03S04]

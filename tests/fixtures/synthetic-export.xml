@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic Apple Health export for tests. Hand-written; no real person, device or data.
+     Tests inject now = 2026-11-07 18:00:00 -0500 (day 0). -->
+<!DOCTYPE HealthData [
+<!ELEMENT HealthData (ExportDate,Me,(Record|Workout|ClinicalRecord)*)>
+]>
+<HealthData locale="en_US">
+ <ExportDate value="2026-11-07 17:00:00 -0500"/>
+ <Me HKCharacteristicTypeIdentifierBiologicalSex="HKBiologicalSexNotSet"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-09-08 12:00:00 -0500" endDate="2026-09-08 12:00:00 -0500" value="199"/>
+ <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Alex Sample Phone" unit="count" startDate="2026-11-06 09:00:00 -0500" endDate="2026-11-06 09:10:00 -0500" value="900"/>
+ <Record type="HKQuantityTypeIdentifierRestingHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-06 08:00:00 -0500" endDate="2026-11-06 08:00:00 -0500" value="52"/>
+ <Record type="HKQuantityTypeIdentifierRestingHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-06 14:00:00 -0500" endDate="2026-11-06 14:00:00 -0500" value="54"/>
+ <Record type="HKQuantityTypeIdentifierRestingHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-07 08:00:00 -0500" endDate="2026-11-07 08:00:00 -0500" value="55"/>
+ <Record type="HKQuantityTypeIdentifierHeartRateVariabilitySDNN" sourceName="Alex Sample Watch" unit="ms" startDate="2026-11-06 07:00:00 -0500" endDate="2026-11-06 07:01:00 -0500" value="60"/>
+ <Record type="HKQuantityTypeIdentifierHeartRateVariabilitySDNN" sourceName="Alex Sample Watch" unit="ms" startDate="2026-11-06 15:00:00 -0500" endDate="2026-11-06 15:01:00 -0500" value="70">
+  <MetadataEntry key="HKMetadataKeySyncVersion" value="2"/>
+ </Record>
+ <Record type="HKQuantityTypeIdentifierHeartRateVariabilitySDNN" sourceName="Alex Sample Watch" unit="ms" startDate="2026-11-07 07:00:00 -0500" endDate="2026-11-07 07:01:00 -0500" value="50">
+  <HeartRateVariabilityMetadataList>
+   <InstantaneousBeatsPerMinute bpm="61" time="7:00:01.00 AM"/>
+   <InstantaneousBeatsPerMinute bpm="230" time="7:00:02.00 AM"/>
+   <InstantaneousBeatsPerMinute bpm="63" time="7:00:03.00 AM"/>
+  </HeartRateVariabilityMetadataList>
+ </Record>
+ <Record type="HKQuantityTypeIdentifierVO2Max" sourceName="Alex Sample Watch" unit="mL/min·kg" startDate="2026-11-06 13:00:00 -0500" endDate="2026-11-06 13:00:00 -0500" value="45.2"/>
+ <Record type="HKElectrocardiogramType" sourceName="Alex Sample Watch" startDate="2026-11-06 10:00:00 -0500" endDate="2026-11-06 10:00:30 -0500" value="ecg-sinus-rhythm" filePath="/electrocardiograms/ecg_2026-11-06.csv"/>
+ <ClinicalRecord type="HKClinicalTypeIdentifierLabResultRecord" sourceName="Fictional Clinic" fhirVersion="4.0.1" receivedDate="2026-11-01 09:00:00 -0500" resourceFilePath="/clinical-records/lab_result_1.json"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-06 12:00:00 -0500" endDate="2026-11-06 12:00:00 -0500" value="100"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-06 12:00:15 -0500" endDate="2026-11-06 12:00:15 -0500" value="120"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-06 12:00:30 -0500" endDate="2026-11-06 12:00:30 -0500" value="140"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-06 12:00:45 -0500" endDate="2026-11-06 12:00:45 -0500" value="150"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-06 12:01:00 -0500" endDate="2026-11-06 12:01:00 -0500" value="160"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-06 12:01:15 -0500" endDate="2026-11-06 12:01:15 -0500" value="170"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-06 12:01:30 -0500" endDate="2026-11-06 12:01:30 -0500" value="180"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-06 12:01:45 -0500" endDate="2026-11-06 12:01:45 -0500" value="190"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-06 12:02:00 -0500" endDate="2026-11-06 12:02:00 -0500" value="150"/>
+ <Record type="HKQuantityTypeIdentifierWorkoutEffortScore" sourceName="Alex Sample Watch" unit="appleEffortScore" startDate="2026-11-06 12:02:00 -0500" endDate="2026-11-06 12:02:00 -0500" value="7"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-05 12:00:00 -0500" endDate="2026-11-05 12:00:00 -0500" value="133"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-05 12:00:15 -0500" endDate="2026-11-05 12:00:15 -0500" value="133"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-05 12:00:30 -0500" endDate="2026-11-05 12:00:30 -0500" value="133"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-05 12:00:45 -0500" endDate="2026-11-05 12:00:45 -0500" value="133"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-05 12:01:00 -0500" endDate="2026-11-05 12:01:00 -0500" value="133"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-05 12:01:15 -0500" endDate="2026-11-05 12:01:15 -0500" value="133"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-05 12:01:30 -0500" endDate="2026-11-05 12:01:30 -0500" value="133"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-05 12:01:45 -0500" endDate="2026-11-05 12:01:45 -0500" value="133"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-05 12:02:00 -0500" endDate="2026-11-05 12:02:00 -0500" value="133"/>
+ <Record type="HKQuantityTypeIdentifierEstimatedWorkoutEffortScore" sourceName="Alex Sample Watch" unit="appleEffortScore" startDate="2026-11-05 12:01:30 -0500" endDate="2026-11-05 12:01:30 -0500" value="5"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-04 12:00:00 -0500" endDate="2026-11-04 12:00:00 -0500" value="100"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-04 12:01:00 -0500" endDate="2026-11-04 12:01:00 -0500" value="100"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Alex Sample Watch" unit="count/min" startDate="2026-11-04 12:02:00 -0500" endDate="2026-11-04 12:02:00 -0500" value="100"/>
+ <Workout workoutActivityType="HKWorkoutActivityTypeSquash" duration="2" durationUnit="min" sourceName="Alex Sample Watch" sourceVersion="11.0" device="&lt;&lt;HKDevice: 0x600000000001&gt;, name:Test Apple Watch, manufacturer:Apple Inc., model:Watch, hardware:Watch7,1, software:11.0&gt;" creationDate="2026-11-06 12:02:05 -0500" startDate="2026-11-06 12:00:00 -0500" endDate="2026-11-06 12:02:00 -0500">
+  <MetadataEntry key="HKIndoorWorkout" value="1"/>
+  <WorkoutStatistics type="HKQuantityTypeIdentifierActiveEnergyBurned" startDate="2026-11-06 12:00:00 -0500" endDate="2026-11-06 12:02:00 -0500" sum="20" unit="Cal"/>
+  <WorkoutStatistics type="HKQuantityTypeIdentifierHeartRate" startDate="2026-11-06 12:00:00 -0500" endDate="2026-11-06 12:02:00 -0500" average="151" minimum="100" maximum="190" unit="count/min"/>
+  <WorkoutRoute sourceName="Alex Sample Watch" creationDate="2026-11-06 12:02:06 -0500" startDate="2026-11-06 12:00:00 -0500" endDate="2026-11-06 12:02:00 -0500">
+   <FileReference path="/workout-routes/route_2026-11-06_12.00pm.gpx"/>
+  </WorkoutRoute>
+ </Workout>
+ <Workout workoutActivityType="HKWorkoutActivityTypeRunning" duration="2" durationUnit="min" totalEnergyBurned="15" totalEnergyBurnedUnit="Cal" sourceName="Alex Sample Watch" device="&lt;&lt;HKDevice: 0x600000000001&gt;, name:Test Apple Watch, manufacturer:Apple Inc., model:Watch&gt;" startDate="2026-11-05 12:00:00 -0500" endDate="2026-11-05 12:02:00 -0500">
+  <MetadataEntry key="HKTimeZone" value="America/New_York"/>
+ </Workout>
+ <Workout workoutActivityType="HKWorkoutActivityTypeRunning" duration="2" durationUnit="min" sourceName="Trailmix Tracker" startDate="2026-11-05 12:00:30 -0500" endDate="2026-11-05 12:02:30 -0500"/>
+ <Workout workoutActivityType="HKWorkoutActivityTypeTraditionalStrengthTraining" duration="2" durationUnit="min" sourceName="Liftbook App" startDate="2026-11-04 12:00:00 -0500" endDate="2026-11-04 12:02:00 -0500"/>
+ <Workout workoutActivityType="HKWorkoutActivityTypeSquash" duration="2" durationUnit="min" sourceName="Alex Sample Watch" startDate="2026-09-08 12:00:00 -0500" endDate="2026-09-08 12:02:00 -0500"/>
+</HealthData>

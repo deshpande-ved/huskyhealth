@@ -1,0 +1,544 @@
+{
+ "v": 1,
+ "source": "apple_health",
+ "window_days": 60,
+ "max_hr": 190,
+ "days": [
+  {
+   "day": -59,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -58,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -57,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -56,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -55,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -54,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -53,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -52,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -51,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -50,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -49,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -48,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -47,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -46,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -45,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -44,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -43,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -42,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -41,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -40,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -39,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -38,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -37,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -36,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -35,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -34,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -33,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -32,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -31,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -30,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -29,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -28,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -27,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -26,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -25,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -24,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -23,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -22,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -21,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -20,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -19,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -18,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -17,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -16,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -15,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -14,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -13,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -12,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -11,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -10,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -9,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -8,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -7,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -6,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -5,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -4,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -3,
+   "trimp": 2,
+   "srpe": null,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -2,
+   "trimp": 6,
+   "srpe": 10,
+   "rhr": null,
+   "ln_hrv": null,
+   "vo2": null
+  },
+  {
+   "day": -1,
+   "trimp": 6.8,
+   "srpe": 14,
+   "rhr": 53,
+   "ln_hrv": 4.171,
+   "vo2": 45.2
+  },
+  {
+   "day": 0,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 55,
+   "ln_hrv": 3.912,
+   "vo2": null
+  }
+ ],
+ "workouts": [
+  {
+   "day": -3,
+   "sport": "other",
+   "min": 2,
+   "kcal": null,
+   "zone_min": [
+    2,
+    0,
+    0,
+    0,
+    0
+   ],
+   "trimp": 2,
+   "effort": null,
+   "srpe": null,
+   "source": "Other app",
+   "hr_sample_ok": false
+  },
+  {
+   "day": -2,
+   "sport": "running",
+   "min": 2,
+   "kcal": 15,
+   "zone_min": [
+    0,
+    0,
+    2,
+    0,
+    0
+   ],
+   "trimp": 6,
+   "effort": 5,
+   "srpe": 10,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -1,
+   "sport": "squash",
+   "min": 2,
+   "kcal": 20,
+   "zone_min": [
+    0.25,
+    0.25,
+    0.5,
+    0.5,
+    0.5
+   ],
+   "trimp": 6.8,
+   "effort": 7,
+   "srpe": 14,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  }
+ ]
+}
