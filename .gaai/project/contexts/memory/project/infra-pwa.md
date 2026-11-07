@@ -25,8 +25,8 @@ source: docs/PLAN.md (section 10.4)
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0b0b0f",
-  "theme_color": "#0b0b0f",
+  "background_color": "#191724",
+  "theme_color": "#191724",
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
@@ -53,6 +53,7 @@ self.addEventListener("fetch", (e) => {
   e.respondWith(caches.match(e.request).then((hit) => hit || fetch(e.request)));
 });
 ```
+- SHELL grows per epic (Ved, 2026-11-07): E01 ships only the shell's own files; each later story adds the offline files it creates, and any story that changes a SHELL file bumps `CACHE`. The list above is the eventual target. Manifest colours use Rosé Pine base `#191724`.
 - fitsdk spans several files: add each file under `/vendor/fitsdk/` to `SHELL`, or Garmin import fails offline.
 
 ## Import — `<input type="file" accept=".zip,.xml,.fit" multiple>` starts the right module worker

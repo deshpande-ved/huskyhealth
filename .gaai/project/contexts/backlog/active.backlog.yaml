@@ -9,10 +9,790 @@
 # Example item (remove before using):
 # - id: E01S01
 #   epic: E01
-#   title: "Example story title"
+#   title: "Shell page with About line"
 #   priority: high
 #   status: refined
 #   artefact: contexts/artefacts/stories/E01S01.story.md
 #   dependencies: []
 
-items: []
+items:
+- id: E01S01
+  epic: E01
+  title: "Shell page with About line"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E01S01.story.md
+  dependencies: []
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2]: PASS cycle 2 (opus)"
+- id: E01S02
+  epic: E01
+  title: "Manifest and placeholder icons"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E01S02.story.md
+  dependencies: [E01S01]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2]: PASS cycle 2 (opus)"
+- id: E01S03
+  epic: E01
+  title: "Service worker with the shell SHELL list"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E01S03.story.md
+  dependencies: [E01S01, E01S02]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2]: PASS cycle 2 (opus)"
+- id: E01S04
+  epic: E01
+  title: "_headers with the CSP"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E01S04.story.md
+  dependencies: []
+  estimate_hours: 0.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2]: PASS cycle 2 (opus)"
+- id: E01S05
+  epic: E01
+  title: "Check the shell on Cloudflare Pages"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E01S05.story.md
+  dependencies: [E01S01, E01S02, E01S03, E01S04]
+  estimate_hours: 1
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2]: PASS cycle 2 (opus)"
+- id: E02S01
+  epic: E02
+  title: "Zone minutes, TRIMP and session-RPE"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E02S01.story.md
+  dependencies: [E01S03]
+  estimate_hours: 2
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E02S02
+  epic: E02
+  title: "Fitness/fatigue and monotony"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E02S02.story.md
+  dependencies: [E02S01]
+  estimate_hours: 2
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E02S03
+  epic: E02
+  title: "The readiness band"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E02S03.story.md
+  dependencies: [E02S02]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E02S04
+  epic: E02
+  title: "Data gates"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E02S04.story.md
+  dependencies: [E02S03]
+  estimate_hours: 2
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E02S05
+  epic: E02
+  title: "Scenario tests"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E02S05.story.md
+  dependencies: [E02S04]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E03S01
+  epic: E03
+  title: "Read the records and workouts we need from export.xml text"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E03S01.story.md
+  dependencies: [E01S03, E02S01]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2]: PASS cycle 2 (opus), post-cycle fixes applied"
+- id: E03S02
+  epic: E03
+  title: "Import a .zip or .xml file in the worker, with progress"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E03S02.story.md
+  dependencies: [E03S01, E01S03]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2]: PASS cycle 2 (opus), post-cycle fixes applied"
+- id: E03S03
+  epic: E03
+  title: "Turn workouts into feature rows (sport, zones, effort, source, day)"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E03S03.story.md
+  dependencies: [E03S01, E01S03, E02S01]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2]: PASS cycle 2 (opus), post-cycle fixes applied"
+- id: E03S04
+  epic: E03
+  title: "Build the full Features JSON and prove it on the synthetic fixture"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E03S04.story.md
+  dependencies: [E03S02, E03S03, E02S01]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2]: PASS cycle 2 (opus), post-cycle fixes applied"
+- id: E03S05
+  epic: E03
+  title: "Run Ved's real export locally and print counts only"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E03S05.story.md
+  dependencies: [E03S04]
+  estimate_hours: 1
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2]: PASS cycle 2 (opus), post-cycle fixes applied"
+- id: E04S01
+  epic: E04
+  title: "ASCII drawing primitives and call banner font"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E04S01.story.md
+  dependencies: [E01S03]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E04S02
+  epic: E04
+  title: "Rosé Pine palette and 44-column layout"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E04S02.story.md
+  dependencies: [E01S01]
+  estimate_hours: 1
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E04S03
+  epic: E04
+  title: "References page with a card per method"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E04S03.story.md
+  dependencies: [E01S01]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E04S04
+  epic: E04
+  title: "Main screen figures from fixture features"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E04S04.story.md
+  dependencies: [E04S01, E04S02, E04S03, E01S01, E01S03, E02S02, E02S03]
+  estimate_hours: 2
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E04S05
+  epic: E04
+  title: "Plain view toggle"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E04S05.story.md
+  dependencies: [E04S04, E01S01]
+  estimate_hours: 1
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E04S06
+  epic: E04
+  title: "Store features only and Forget everything"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E04S06.story.md
+  dependencies: [E04S04, E01S01, E01S03]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E04S07
+  epic: E04
+  title: "End to end and airplane-mode run"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E04S07.story.md
+  dependencies: [E04S04, E04S05, E04S06, E04S08, E04S10, E01S03, E02S04, E03S02, E03S04]
+  estimate_hours: 2
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E04S08
+  epic: E04
+  title: "Remaining screen items: zone bars, load flags and gate messages"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E04S08.story.md
+  dependencies: [E04S03, E04S04, E02S02, E02S04]
+  estimate_hours: 2
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E04S09
+  epic: E04
+  title: "ASCII husky mark and icons"
+  priority: medium
+  status: draft
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E04S09.story.md
+  dependencies: [E01S02, E01S03, E04S01, E04S04]
+  estimate_hours: 2
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage); cut at E11 2026-11-07 (Ved: Discovery best judgment), stays draft per DEC-18"
+- id: E04S10
+  epic: E04
+  title: "Import progress bar and typed effort entry"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E04S10.story.md
+  dependencies: [E04S04, E04S06, E04S08, E02S01, E02S04, E03S02, E03S03]
+  estimate_hours: 2
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E05S01
+  epic: E05
+  title: "Strict BriefIn schema and single-use RAM tokens"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E05S01.story.md
+  dependencies: []
+  estimate_hours: 1
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E05S02
+  epic: E05
+  title: "Relay app with health check, token route and quiet errors"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E05S02.story.md
+  dependencies: [E05S01]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E05S03
+  epic: E05
+  title: "Brief route that asks Claude through egress"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E05S03.story.md
+  dependencies: [E05S02]
+  estimate_hours: 2
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E05S04
+  epic: E05
+  title: "Compose stack with a /v1-only gateway and a read-only relay"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E05S04.story.md
+  dependencies: [E05S02]
+  estimate_hours: 2
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E05S05
+  epic: E05
+  title: "Live brief smoke test and numbers-only egress proof"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E05S05.story.md
+  dependencies: [E05S03, E05S04]
+  estimate_hours: 1
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E05S06
+  epic: E05
+  title: "Relay on the Pi behind Funnel :10000"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E05S06.story.md
+  dependencies: [E05S04]
+  estimate_hours: 1
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E05S07
+  epic: E05
+  title: "Build the BriefIn on the phone, with load flags"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E05S07.story.md
+  dependencies: [E05S01, E01S03, E02S01, E02S02, E02S03, E03S04]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E05S08
+  epic: E05
+  title: "Brief screen with preview, consent and send"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E05S08.story.md
+  dependencies: [E05S07, E05S03, E04S04, E04S06, E01S01, E01S03, E01S04]
+  estimate_hours: 2
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E06S01
+  epic: E06
+  title: "Drop box API"
+  priority: medium
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E06S01.story.md
+  dependencies: [E05S02]
+  estimate_hours: 2
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E06S02
+  epic: E06
+  title: "Pairing in the PWA"
+  priority: medium
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E06S02.story.md
+  dependencies: [E06S01, E04S06, E05S08]
+  estimate_hours: 2
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E06S03
+  epic: E06
+  title: "Collect on open"
+  priority: medium
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E06S03.story.md
+  dependencies: [E06S01, E06S02, E06S04, E03S04, E04S06]
+  estimate_hours: 2
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E06S04
+  epic: E06
+  title: "Shortcut build sheet"
+  priority: medium
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E06S04.story.md
+  dependencies: [E06S01]
+  estimate_hours: 2
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E06S05
+  epic: E06
+  title: "Turn-off flow and demo"
+  priority: medium
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E06S05.story.md
+  dependencies: [E06S01, E06S02, E06S03, E06S04, E04S06]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E07S01
+  epic: E07
+  title: "Relay speaks the brief through Gradium"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E07S01.story.md
+  dependencies: [E05S03, E05S04]
+  estimate_hours: 2
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E07S02
+  epic: E07
+  title: "Read-aloud with captions, and phone voice"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E07S02.story.md
+  dependencies: [E07S01, E05S08, E01S03]
+  estimate_hours: 2
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E07S03
+  epic: E07
+  title: "Coach's voice from a consenting coach"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E07S03.story.md
+  dependencies: [E07S01, E07S02, E05S08, E01S03]
+  estimate_hours: 1
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E07S04
+  epic: E07
+  title: "Relay turns a short voice clip into one effort number"
+  priority: high
+  status: draft
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E07S04.story.md
+  dependencies: [E07S01, E05S02, E05S04]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage); cut at E11 2026-11-07 (Ved: Discovery best judgment), stays draft per DEC-18"
+- id: E07S05
+  epic: E07
+  title: "Hold-to-talk effort check-in, OFF by default"
+  priority: high
+  status: draft
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E07S05.story.md
+  dependencies: [E07S04, E01S03, E04S06, E04S10, E05S08]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage); cut at E11 2026-11-07 (Ved: Discovery best judgment), stays draft per DEC-18"
+- id: E08S01
+  epic: E08
+  title: "Presidio PII scanner module with a device-name recognizer"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E08S01.story.md
+  dependencies: [E05S02, E05S03, E05S04]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E08S02
+  epic: E08
+  title: "Block PII on the brief route and audit counts only"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E08S02.story.md
+  dependencies: [E08S01, E05S03]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E08S03
+  epic: E08
+  title: "Paste-ready proof scripts: replay, smuggle, pi-proof"
+  priority: high
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E08S03.story.md
+  dependencies: [E08S02, E05S04]
+  estimate_hours: 1
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E08S04
+  epic: E08
+  title: "Safe Harbor and threat-model text for a slide"
+  priority: medium
+  status: refined
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E08S04.story.md
+  dependencies: []
+  estimate_hours: 1
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage)"
+- id: E09S01
+  epic: E09
+  title: "Vendor Garmin's FIT SDK for offline use (H-1 check)"
+  priority: medium
+  status: draft
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E09S01.story.md
+  dependencies: [E02S01]
+  estimate_hours: 1.0
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage); cut at E11 2026-11-07 (Ved: Discovery best judgment), stays draft per DEC-18"
+- id: E09S02
+  epic: E09
+  title: "Turn .fit files into features, with sports mapped"
+  priority: medium
+  status: draft
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E09S02.story.md
+  dependencies: [E09S01, E02S01, E03S04]
+  estimate_hours: 2.0
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage); cut at E11 2026-11-07 (Ved: Discovery best judgment), stays draft per DEC-18"
+- id: E09S03
+  epic: E09
+  title: "Import .fit files in the app, offline"
+  priority: medium
+  status: draft
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E09S03.story.md
+  dependencies: [E09S01, E09S02, E04S06, E01S03, E04S07]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage); cut at E11 2026-11-07 (Ved: Discovery best judgment), stays draft per DEC-18"
+- id: E09S04
+  epic: E09
+  title: "GoldenCheetah cross-check steps and comparison scripts"
+  priority: medium
+  status: draft
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E09S04.story.md
+  dependencies: [E09S02, E02S02]
+  estimate_hours: 2.0
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage); cut at E11 2026-11-07 (Ved: Discovery best judgment), stays draft per DEC-18"
+- id: E09S05
+  epic: E09
+  title: "Show the GoldenCheetah correlation on the References page"
+  priority: medium
+  status: draft
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E09S05.story.md
+  dependencies: [E04S03, E01S03, E09S01]
+  estimate_hours: 1.0
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage); cut at E11 2026-11-07 (Ved: Discovery best judgment), stays draft per DEC-18"
+- id: E10S01
+  epic: E10
+  title: "Plan a taper for a match in N days"
+  priority: low
+  status: draft
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E10S01.story.md
+  dependencies: [E05S08, E05S03, E04S03, E04S05, E08S01]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage); cut at E11 2026-11-07 (Ved: Discovery best judgment), stays draft per DEC-18"
+- id: E10S02
+  epic: E10
+  title: "Relay answers a redacted question with narrow lookups"
+  priority: low
+  status: draft
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E10S02.story.md
+  dependencies: [E05S03, E08S02]
+  estimate_hours: 2
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage); cut at E11 2026-11-07 (Ved: Discovery best judgment), stays draft per DEC-18"
+- id: E10S03
+  epic: E10
+  title: "Ask HuskyHealth from the app"
+  priority: low
+  status: draft
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E10S03.story.md
+  dependencies: [E10S02, E05S08, E05S02, E04S01]
+  estimate_hours: 1
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage); cut at E11 2026-11-07 (Ved: Discovery best judgment), stays draft per DEC-18"
+- id: E10S04
+  epic: E10
+  title: "Synthetic brief cohort and risk check script"
+  priority: low
+  status: draft
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E10S04.story.md
+  dependencies: [E05S03]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage); cut at E11 2026-11-07 (Ved: Discovery best judgment), stays draft per DEC-18"
+- id: E10S05
+  epic: E10
+  title: "Record ARX risk and settle rounding widths"
+  priority: low
+  status: draft
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E10S05.story.md
+  dependencies: [E10S04]
+  estimate_hours: 1
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage); cut at E11 2026-11-07 (Ved: Discovery best judgment), stays draft per DEC-18"
+- id: E10S06
+  epic: E10
+  title: "Relay finds recent studies with fixed queries"
+  priority: low
+  status: draft
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E10S06.story.md
+  dependencies: [E05S03, E05S04]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage); cut at E11 2026-11-07 (Ved: Discovery best judgment), stays draft per DEC-18"
+- id: E10S07
+  epic: E10
+  title: "Show recent studies on References cards"
+  priority: low
+  status: draft
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E10S07.story.md
+  dependencies: [E10S06, E04S03, E08S01, E05S03]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage); cut at E11 2026-11-07 (Ved: Discovery best judgment), stays draft per DEC-18"
+- id: E10S08
+  epic: E10
+  title: "Taper session names from Claude"
+  priority: low
+  status: draft
+  phase_status: not_started
+  delivery_pipeline: 3phase
+  artefact: contexts/artefacts/stories/E10S08.story.md
+  dependencies: [E10S01, E05S03, E08S01]
+  estimate_hours: 1.5
+  created_at: 2026-11-07
+  updated_at: 2026-11-07
+  notes: "Discovery 2026-11-07, runbook Part E; validate-artefacts: PASS (haiku); review[tier-2] cycle 1 (opus) fixes applied; cycle 2 skipped, Discovery self-check (Ved, usage); cut at E11 2026-11-07 (Ved: Discovery best judgment), stays draft per DEC-18"

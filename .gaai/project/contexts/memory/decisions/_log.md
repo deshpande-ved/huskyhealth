@@ -37,6 +37,8 @@ updated_at: 2026-11-07
 > Bootstrap 2026-11-07: DEC-1..DEC-22 extracted from docs/PLAN.md section 15.
 > IDs numbered locally (max+1), not via allocate-id.sh: solo build, one Discovery session at a time (Ved's choice).
 
+- DEC-23 — Tracks are guidelines: list three, add Surge if F19 ships, skip Signal-to-Dose (strategy, strategic; supersedes DEC-14) — 2026-11-07
+  (Discovery 2026-11-07: numbered locally as max+1, per Ved.)
 - DEC-22 — Engine validated by tests, scenarios, GoldenCheetah cross-check and data gates (governance, operational) — 2026-11-07
 - DEC-21 — App-opened automation with a local new-workout check (architecture, architectural) — 2026-11-07
 - DEC-20 — ASCII design language (architecture, strategic) — 2026-11-07
@@ -45,7 +47,7 @@ updated_at: 2026-11-07
 - DEC-17 — Voice in only by opt-in; clone only a consenting coach (governance, strategic) — 2026-11-07
 - DEC-16 — Convenience mode opt-in, OFF by default, encrypted at rest (architecture, strategic) — 2026-11-07
 - DEC-15 — Use all three Gradium capabilities, each with a privacy rule (strategy, strategic) — 2026-11-07
-- DEC-14 — Prize tracks: Privacy-First, Most Startup-able, Best Use of Gradium (strategy, strategic) — 2026-11-07
+- DEC-14 — Prize tracks: Privacy-First, Most Startup-able, Best Use of Gradium (strategy, strategic) — 2026-11-07 — superseded by DEC-23
 - DEC-13 — Never open routes, ECGs or clinical records (architecture, architectural) — 2026-11-07
 - DEC-12 — No Rust (architecture, operational) — 2026-11-07
 - DEC-11 — Voice out by default; Gradium plus phone voice (architecture, architectural) — 2026-11-07

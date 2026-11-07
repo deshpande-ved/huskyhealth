@@ -28,7 +28,7 @@ source: docs/PLAN.md ("Claude Code: start here")
 
 ## SAFE-2 — Public-repo hygiene for committed context (blocking)
 
-- **Condition:** `.gaai/project/` is public. It contains no homelab host names other than the public relay URL, no LAN IPs, no ports other than 8090, 8091, 8000, 8080, 8082, 10000, no SSH aliases, and no personal email addresses.
+- **Condition:** `.gaai/project/` is public. It contains no homelab host names other than the public relay URL, no LAN IPs, no ports other than 8090, 8091, 8000, 8080, 8082, 8083 (internal-only search egress, Ved 2026-11-07), 10000, no SSH aliases, and no personal email addresses.
 - **Scope:** `.gaai/project/`, `README.md`, docs.
 - **Check:** the runbook's D5 scrub grep prints `clean`.
 
