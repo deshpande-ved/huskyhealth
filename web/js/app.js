@@ -23,6 +23,7 @@ async function showVersion() {
 
 if (typeof document !== "undefined") {
   showVersion();
+  addEventListener("online", showVersion);   // offline at launch -> refresh the About line when back online
   if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch(() => {});
   }
