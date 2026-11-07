@@ -369,8 +369,9 @@ items:
   epic: E05
   title: "Strict BriefIn schema and single-use RAM tokens"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E05S01.story.md
   dependencies: []
@@ -382,8 +383,9 @@ items:
   epic: E05
   title: "Relay app with health check, token route and quiet errors"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E05S02.story.md
   dependencies: [E05S01]
@@ -408,8 +410,9 @@ items:
   epic: E05
   title: "Compose stack with a /v1-only gateway and a read-only relay"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E05S04.story.md
   dependencies: [E05S02]
@@ -434,8 +437,9 @@ items:
   epic: E05
   title: "Relay on the Pi behind Funnel :10000"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E05S06.story.md
   dependencies: [E05S04]
