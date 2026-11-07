@@ -205,3 +205,14 @@ test("marks label sessions with the Watch's workout type; unmarked sessions keep
   assert.equal(again.features.workouts.length, 2);
   assert.equal(again.added, 0);
 });
+
+test("per-minute averaged heart rate (Shortcut 'Group by Minute') still finds the session, densely enough", () => {
+  const hr = [];
+  for (let s = 86400; s >= 0; s -= 300) hr.push({ t_s: s, v: 70 });          // background every 5 min
+  for (let s = 100 * 60; s >= 55 * 60; s -= 60) hr.push({ t_s: s, v: 150 });  // 45 min of per-minute averages
+  const drop = { v: 1, workouts: [{ sport: "squash", start_s: 86400, end_s: 0, kcal: null, src: "watch", hr }], rhr: [], hrv: [], effort: [] };
+  const { features } = mergeDrop(emptyFeatures(), drop, { nowMs: NOW, refDay: dayNumber(NOW) });
+  assert.equal(features.workouts.length, 1);
+  assert.ok(Math.abs(features.workouts[0].min - 45) < 1.1);
+  assert.equal(features.workouts[0].hr_sample_ok, true);
+});

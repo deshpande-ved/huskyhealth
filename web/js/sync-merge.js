@@ -37,7 +37,7 @@ export function shiftFeatures(f, shift) {
 // Workout sessions from heart rate alone (ours): during a workout the Watch records heart rate every few seconds,
 // otherwise every few minutes. A run of readings no more than GAP apart, lasting at least MIN_SESSION, is a session.
 // A session that ended less than SETTLE before sending may still be going on, so it waits for the next drop.
-export const GAP_MS = 30_000;
+export const GAP_MS = 75_000;          // fits raw workout readings (every few s) and Health's per-minute averages
 export const MIN_SESSION_MS = 10 * 60_000;
 export const SETTLE_MS = 10 * 60_000;
 
@@ -45,7 +45,7 @@ export function splitSessions(hr, sentAt = Infinity) {
   const out = [];
   let run = [];
   const close = () => {
-    if (run.length >= 40 && run[run.length - 1][0] - run[0][0] >= MIN_SESSION_MS && sentAt - run[run.length - 1][0] >= SETTLE_MS) {
+    if (run.length >= 10 && run[run.length - 1][0] - run[0][0] >= MIN_SESSION_MS && sentAt - run[run.length - 1][0] >= SETTLE_MS) {
       out.push({ start: run[0][0], end: run[run.length - 1][0] });
     }
     run = [];
@@ -93,7 +93,8 @@ const r1 = (x) => Math.round(x * 10) / 10;
 export function mergeDrop(features, drop, { nowMs, ageS = 0, refDay }) {
   const today = dayNumber(nowMs);
   const base = shiftFeatures(features || emptyFeatures(), refDay == null ? 0 : today - refDay);
-  const scan = { ...dropToScan(drop, nowMs - ageS * 1000), now: nowMs, days: base.window_days, maxHr: base.max_hr };
+  // hrEvery 60: the Shortcut may send per-minute averages, so one reading a minute counts as dense
+  const scan = { ...dropToScan(drop, nowMs - ageS * 1000), now: nowMs, days: base.window_days, maxHr: base.max_hr, hrEvery: 60 };
   const fresh = toFeatures(scan);
   const added = fresh.workouts.filter((w) => !base.workouts.some((b) => sameWorkout(b, w)));
   const workouts = [...base.workouts, ...added].sort((a, b) => a.day - b.day);

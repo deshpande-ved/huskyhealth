@@ -4,7 +4,7 @@ Convenience mode is **off by default**. Turn it on in the app (Settings → Conv
 
 Users don't build this: they open the shared iCloud link, tap **Add Shortcut** and paste their pairing code when asked. This sheet is for building (or rebuilding) the template.
 
-**Why heart rate, not workouts:** Shortcuts can't read workouts back from Health (no "Workouts" type in *Find Health Samples* on iOS 26). So the Shortcut sends the last 24 hours of heart rate, and the app finds the workout in it: during a workout the Watch records heart rate every few seconds, otherwise every few minutes. A run of readings no more than 30 s apart lasting at least 10 minutes is a session (method: ours). A session that ended less than 10 minutes before sending waits for the next run.
+**Why heart rate, not workouts:** Shortcuts can't read workouts back from Health (no "Workouts" type in *Find Health Samples* on iOS 26). So the Shortcut sends the last 24 hours of heart rate, and the app finds the workout in it: during a workout the Watch records heart rate every few seconds, otherwise every few minutes. A run of readings no more than 75 s apart (raw or per-minute averages) lasting at least 10 minutes is a session (method: ours). A session that ended less than 10 minutes before sending waits for the next run.
 
 **Where the workout type comes from:** a second, tiny shortcut, **HuskyHealth Workout**, runs from a "workout starts" automation (one per sport) and saves the Watch's workout type with the time: `walking|2026-11-07T18:05:00-05:00`. The Sync shortcut sends it as a `mark`; the app labels the session that starts within 20 minutes of it. Sessions with no mark keep the payload's sport (`other`).
 
@@ -37,7 +37,8 @@ Automations that call it (Shortcuts → Automation → **+** → **Workout**), o
 
 ## Build the payload
 
-7. **Repeat with Each** (Health Samples):
+6b. **Find Health Samples** again: type **Heart Rate**, **Start Date is in the last 1 days**, **Group by: Minute**, sort Oldest First. Health averages the readings per minute, so the loop below runs about 250–350 times instead of 1,000–2,000 (much faster). Keep the ungrouped search above for the Count: the density check needs raw readings.
+7. **Repeat with Each** (the **grouped** Health Samples from 6b):
    - **Get Details of Health Sample** → Start Date (Repeat Item) → **Get Time Between Dates** (Start Date → Current Date, **Seconds**)
    - **Get Details of Health Sample** → Value (Repeat Item)
    - **Text**: `{"t_s":`*Time Between Dates*`,"v":`*Value*`}`
