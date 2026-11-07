@@ -477,8 +477,9 @@ items:
   epic: E06
   title: "Drop box API"
   priority: medium
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E06S01.story.md
   dependencies: [E05S02]
@@ -490,8 +491,9 @@ items:
   epic: E06
   title: "Pairing in the PWA"
   priority: medium
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E06S02.story.md
   dependencies: [E06S01, E04S06, E05S08]
@@ -503,8 +505,9 @@ items:
   epic: E06
   title: "Collect on open"
   priority: medium
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E06S03.story.md
   dependencies: [E06S01, E06S02, E06S04, E03S04, E04S06]
@@ -516,8 +519,9 @@ items:
   epic: E06
   title: "Shortcut build sheet"
   priority: medium
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E06S04.story.md
   dependencies: [E06S01]
@@ -529,8 +533,9 @@ items:
   epic: E06
   title: "Turn-off flow and demo"
   priority: medium
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E06S05.story.md
   dependencies: [E06S01, E06S02, E06S03, E06S04, E04S06]

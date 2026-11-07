@@ -34,6 +34,9 @@ export function createDb(idb = globalThis.indexedDB) {
   return {
     saveFeatures: (f) => tx("readwrite", (s) => s.put(sanitize(f), KEY)),
     loadFeatures: async () => (await tx("readonly", (s) => s.get(KEY))) ?? null,
+    // small records beside the features: "sync" (keys, box id, read secret, ref_day) and "settings"
+    saveRecord: (key, value) => tx("readwrite", (s) => (value == null ? s.delete(key) : s.put(value, key))),
+    loadRecord: async (key) => (await tx("readonly", (s) => s.get(key))) ?? null,
     forgetAll: () => req(idb.deleteDatabase(DB)),
   };
 }

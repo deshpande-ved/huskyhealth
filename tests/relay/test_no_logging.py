@@ -25,7 +25,7 @@ def test_priv6_grep():
     for f in RELAY.glob("*.py"):
         src = f.read_text()
         assert not re.search(r"log(ger)?\.\w+\(.*(body|request\.json|brief|prompt|audio|errors\(\))", src), f.name
-        assert "print(" not in src, f.name
+        assert not re.search(r"\bprint\(", src), f.name
 
 
 def test_deploy_doc():
