@@ -60,7 +60,7 @@ Load only what the story needs.
 
 ## Decision Registry
 
-22 files in `decisions/` (`DEC-{N}.md`). Next ID: DEC-23.
+23 files in `decisions/` (`DEC-{N}.md`). Next ID: DEC-24.
 
 | ID | Domain | Level | Topic | Status |
 |---|---|---|---|---|
@@ -77,7 +77,7 @@ Load only what the story needs.
 | DEC-11 | architecture | architectural | Voice out by default; Gradium plus phone voice | active 2026-11-07 |
 | DEC-12 | architecture | operational | No Rust | active 2026-11-07 |
 | DEC-13 | architecture | architectural | Never open routes, ECGs or clinical records | active 2026-11-07 |
-| DEC-14 | strategy | strategic | Prize tracks: Privacy-First, Most Startup-able, Best Use of Gradium | active 2026-11-07 |
+| DEC-14 | strategy | strategic | Prize tracks: Privacy-First, Most Startup-able, Best Use of Gradium | superseded 2026-11-07 |
 | DEC-15 | strategy | strategic | Use all three Gradium capabilities, each with a privacy rule | active 2026-11-07 |
 | DEC-16 | architecture | strategic | Convenience mode opt-in, OFF by default, encrypted at rest | active 2026-11-07 |
 | DEC-17 | governance | strategic | Voice in only by opt-in; clone only a consenting coach | active 2026-11-07 |
@@ -86,6 +86,7 @@ Load only what the story needs.
 | DEC-20 | architecture | strategic | ASCII design language | active 2026-11-07 |
 | DEC-21 | architecture | architectural | App-opened automation with a local new-workout check | active 2026-11-07 |
 | DEC-22 | governance | operational | Engine validated by tests, scenarios, GoldenCheetah cross-check and data gates | active 2026-11-07 |
+| DEC-23 | strategy | strategic | Tracks are guidelines: three tracks, Surge if F19 ships, no Signal-to-Dose; supersedes DEC-14 | active 2026-11-07 |
 
 ---
 

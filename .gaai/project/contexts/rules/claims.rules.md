@@ -23,7 +23,7 @@ source: docs/PLAN.md (section 4)
 
 - **Condition:** Never say "injury risk" and never make medical or diagnostic claims. Describe load, fitness, fatigue, readiness and training calls.
 - **Scope:** `web/`, `relay/` prompts, docs, Devpost text.
-- **Check:** `grep -rniE "injury risk|diagnos|medical advice|treat(s|ment)?\b" web/ relay/ README.md` has no user-facing hits.
+- **Check:** `grep -rniE "injury risk|diagnos|medical advice|treat(s|ment)?\b" web/ relay/ README.md | grep -v "training insight, not medical advice"` has no user-facing hits. The one allowed hit is the References disclaimer "training insight, not medical advice" (Ved, 2026-11-07).
 
 ## CLAIM-2 — "De-identified", never "anonymous" (blocking)
 

@@ -3,13 +3,13 @@ id: DEC-14
 domain: strategy
 level: strategic
 title: "Prize tracks: Privacy-First, Most Startup-able, Best Use of Gradium"
-status: active
+status: superseded
 created_by: bootstrap
 created_at: 2026-11-07
-last_updated_by: bootstrap
+last_updated_by: discovery
 last_updated_at: 2026-11-07
 supersedes: null
-superseded_by: null
+superseded_by: DEC-23
 tags:
   - prizes
   - hackathon

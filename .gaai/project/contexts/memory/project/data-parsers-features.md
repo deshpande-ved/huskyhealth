@@ -29,7 +29,8 @@ related:
   - effort: user's score inside the workout window, else Apple's estimate, else none
   - session-RPE load = effort × minutes
   - relative day
-  - source label normalized to "Apple Watch" or "Garmin"; **never the owner's name**
+  - source label normalized to "Apple Watch", "Garmin" or "Other app"; **never the owner's name**
+  - `hr_sample_ok`: true when the window has ≥ floor(duration_s / 15) HR samples (≥ 1 per 15 s); feeds the engine's HR-density data gate (Ved, 2026-11-07)
 - **Per day:** TRIMP, session-RPE load, mean resting HR, mean ln(SDNN) of that day's readings, VO2 max if any.
 - Everything stays in the browser. **IndexedDB keeps only this features JSON.**
 
@@ -46,7 +47,7 @@ related:
   ],
   "workouts": [
     { "day": -1, "sport": "squash", "min": 60, "kcal": 555, "zone_min": [3, 11, 21, 18, 7],
-      "trimp": 195, "effort": 7, "srpe": 420, "source": "Apple Watch" }
+      "trimp": 195, "effort": 7, "srpe": 420, "source": "Apple Watch", "hr_sample_ok": true }
   ]
 }
 ```
