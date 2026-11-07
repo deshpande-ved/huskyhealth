@@ -1,3 +1,4 @@
+/* Rosé Pine, dark only. Every colour is defined once here; everything else uses the variables. */
 :root {
   --base: #191724;
   --surface: #1f1d2e;
@@ -31,9 +32,53 @@ body {
 }
 
 main { flex: 1; max-width: 100ch; }
+h1 { font-size: 1.4em; font-weight: 700; margin: 1.5em 0 0.25em; }
+h2 { font-size: 1.1em; margin: 2em 0 0.5em; color: var(--iris); }
+h3 { font-size: 1em; margin: 1em 0 0.25em; }
+a { color: var(--foam); }
+code { color: var(--gold); }
+section { margin-bottom: 1.5em; }
 
-h1 { font-size: 1.4em; font-weight: 700; margin: 1.5em 0 0.5em; }
+/* 44 columns must fit a 375 px phone with 16 px side padding: (375 - 32) / 44 / 0.6 ~= 13 px */
+pre.fig {
+  font-size: min(13px, calc((100vw - 32px) / 26.4));
+  line-height: 1.15;
+  margin: 1em 0 0.25em;
+  white-space: pre;
+  overflow: hidden;
+}
+figure { margin: 0 0 1em; }
+figure > a { text-decoration: none; color: inherit; display: block; }
 
-.muted { color: var(--muted); }
+/* colour roles */
+.z0, .muted { color: var(--muted); }
+.z1 { color: var(--foam); }
+.z2 { color: var(--pine); }
+.z3 { color: var(--gold); }
+.z4 { color: var(--rose); }
+.z5, .alert { color: var(--love); }
+.ai { color: var(--iris); }
+.status { color: var(--gold); }
+
+.card { background: var(--surface); padding: 0.5em 1em; margin: 0.75em 0; }
+.card p { margin: 0.3em 0; }
+
+button, .button {
+  font: inherit; color: var(--text); background: var(--surface);
+  border: 1px solid var(--muted); padding: 0.4em 0.9em; cursor: pointer; display: inline-block;
+}
+button[aria-pressed="true"] { border-color: var(--foam); color: var(--foam); }
+button.danger { border-color: var(--love); color: var(--love); }
+.rate { padding: 0.2em 0.55em; margin: 0.15em; }
+#effort-list { list-style: none; padding: 0; }
+#effort-list li { margin: 0.6em 0; }
+
+.hidden { display: none; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* Plain view: figures hidden, plain text shown */
+.plain-text { display: none; }
+body.plain pre.fig { display: none; }
+body.plain .plain-text { display: block; }
 
 footer { padding: 1em 0; }
