@@ -64,7 +64,7 @@ export function toFeatures(scan, stats = {}) {
     const est = inWindow(samples.effortEst, w.start, w.end);
     const effort = user.length ? user[user.length - 1][1] : est.length ? est[est.length - 1][1] : null;
     const zm = maxHr ? zoneMinutes(hr, w.start, w.end, maxHr) : [0, 0, 0, 0, 0];
-    const needed = Math.floor((w.end - w.start) / 1000 / 15);
+    const needed = Math.floor((w.end - w.start) / 1000 / (scan.hrEvery || 15));   // >= 1 reading per 15 s (60 s for per-minute sync data)
     return {
       start: w.start, end: w.end, src: sourceOf(w), nHr: hr.length,
       effortKind: user.length ? "user" : est.length ? "estimated" : "none",
