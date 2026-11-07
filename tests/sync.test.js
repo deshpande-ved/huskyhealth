@@ -153,3 +153,40 @@ test("Forget everything runs unpair first; UI has no inline code", () => {
     assert.ok(!/innerHTML|outerHTML|insertAdjacentHTML/.test(readFileSync(new URL(`../web/js/${f}`, import.meta.url), "utf8")), f);
   }
 });
+
+// Heart-rate-only drops (the Shortcut can't read workouts): sessions come from dense readings.
+import { splitSessions, dropToScan } from "../web/js/sync-merge.js";
+
+function hrWindow({ sessions = [], hours = 3 }) {
+  // sparse readings every 5 min across the window, plus dense 5 s readings for each [startMinAgo, endMinAgo]
+  const hr = [];
+  for (let s = hours * 3600; s >= 0; s -= 300) hr.push({ t_s: s, v: 70 });
+  for (const [a, b] of sessions) for (let s = a * 60; s >= b * 60; s -= 5) hr.push({ t_s: s, v: 150 });
+  return { v: 1, workouts: [{ sport: "squash", start_s: hours * 3600, end_s: 0, kcal: null, src: "watch", hr }], rhr: [], hrv: [], effort: [] };
+}
+
+test("one dense session inside 3 h of sparse heart rate becomes one squash workout", () => {
+  const scan = dropToScan(hrWindow({ sessions: [[100, 55]] }), NOW);
+  assert.equal(scan.workouts.length, 1);
+  assert.equal(scan.workouts[0].type, "HKWorkoutActivityTypeSquash");
+  assert.ok(Math.abs(scan.workouts[0].min - 45) < 0.2);
+  const merged = mergeDrop(emptyFeatures(), hrWindow({ sessions: [[100, 55]] }), { nowMs: NOW, refDay: dayNumber(NOW) });
+  assert.equal(merged.features.workouts.length, 1);
+  assert.equal(merged.features.workouts[0].hr_sample_ok, true);
+  assert.ok(merged.features.workouts[0].trimp > 0);
+});
+
+test("two sessions, a too-short burst, and a session still in progress", () => {
+  const scan = dropToScan(hrWindow({ sessions: [[170, 140], [100, 70], [40, 35], [8, 0]] }), NOW);
+  assert.deepEqual(scan.workouts.map((w) => Math.round(w.min)), [30, 30]);   // 5-min burst too short; last one still going
+});
+
+test("no dense readings -> no workout; resending the same window changes nothing", () => {
+  assert.equal(dropToScan(hrWindow({}), NOW).workouts.length, 0);
+  const d = hrWindow({ sessions: [[100, 55]] });
+  const once = mergeDrop(emptyFeatures(), d, { nowMs: NOW, refDay: dayNumber(NOW) });
+  const again = mergeDrop(once.features, d, { nowMs: NOW, refDay: once.refDay });
+  assert.deepEqual(again.features, once.features);
+  assert.equal(again.added, 0);
+  assert.deepEqual(splitSessions([]), []);
+});

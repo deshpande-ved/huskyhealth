@@ -29,16 +29,44 @@ export function shiftFeatures(f, shift) {
   return { ...f, days, workouts };
 }
 
+// Workout sessions from heart rate alone (ours): during a workout the Watch records heart rate every few seconds,
+// otherwise every few minutes. A run of readings no more than GAP apart, lasting at least MIN_SESSION, is a session.
+// A session that ended less than SETTLE before sending may still be going on, so it waits for the next drop.
+export const GAP_MS = 30_000;
+export const MIN_SESSION_MS = 10 * 60_000;
+export const SETTLE_MS = 10 * 60_000;
+
+export function splitSessions(hr, sentAt = Infinity) {
+  const out = [];
+  let run = [];
+  const close = () => {
+    if (run.length >= 40 && run[run.length - 1][0] - run[0][0] >= MIN_SESSION_MS && sentAt - run[run.length - 1][0] >= SETTLE_MS) {
+      out.push({ start: run[0][0], end: run[run.length - 1][0] });
+    }
+    run = [];
+  };
+  for (const p of hr) {
+    if (run.length && p[0] - run[run.length - 1][0] > GAP_MS) close();
+    run.push(p);
+  }
+  close();
+  return out;
+}
+
 // Drop (times in seconds before sending) -> the scanner's shape, in absolute ms on this phone only.
+// Each drop workout is a window of heart rate; the sessions inside it become the workouts.
 export function dropToScan(drop, sentAt) {
   const at = (s) => sentAt - s * 1000;
-  const pts = (list) => (list || []).map((x) => [at(x.t_s), x.v]);
+  const pts = (list) => (list || []).map((x) => [at(x.t_s), x.v]).sort((a, b) => a[0] - b[0]);
   const hr = drop.workouts.flatMap((w) => pts(w.hr)).sort((a, b) => a[0] - b[0]);
-  return {
-    samples: { hr, rhr: pts(drop.rhr), hrv: pts(drop.hrv), vo2: [], effort: pts(drop.effort), effortEst: [] },
-    workouts: drop.workouts.map((w) => ({ type: SPORT_TYPE[w.sport] || SPORT_TYPE.other, start: at(w.start_s), end: at(w.end_s),
-      min: (w.start_s - w.end_s) / 60, kcal: w.kcal ?? null, ...(SRC[w.src] || SRC.other) })),
-  };
+  const workouts = drop.workouts.flatMap((w) => {
+    const lo = at(w.start_s), hi = at(w.end_s);
+    return splitSessions(pts(w.hr).filter(([t]) => t >= lo && t <= hi), sentAt).map((s) => ({
+      type: SPORT_TYPE[w.sport] || SPORT_TYPE.other, start: s.start, end: s.end,
+      min: Math.round((s.end - s.start) / 6000) / 10, kcal: null, ...(SRC[w.src] || SRC.other),
+    }));
+  });
+  return { samples: { hr, rhr: pts(drop.rhr), hrv: pts(drop.hrv), vo2: [], effort: pts(drop.effort), effortEst: [] }, workouts };
 }
 
 export function validDrop(d) {
