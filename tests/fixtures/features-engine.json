@@ -1,0 +1,1030 @@
+{
+ "v": 1,
+ "source": "apple_health",
+ "window_days": 60,
+ "max_hr": 196,
+ "days": [
+  {
+   "day": -59,
+   "trimp": 104,
+   "srpe": 200,
+   "rhr": 52,
+   "ln_hrv": 4.06,
+   "vo2": 45
+  },
+  {
+   "day": -58,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 53,
+   "ln_hrv": 4.08,
+   "vo2": null
+  },
+  {
+   "day": -57,
+   "trimp": 70,
+   "srpe": 280,
+   "rhr": 54,
+   "ln_hrv": 4.1,
+   "vo2": null
+  },
+  {
+   "day": -56,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 52,
+   "ln_hrv": 4.12,
+   "vo2": null
+  },
+  {
+   "day": -55,
+   "trimp": 70,
+   "srpe": 240,
+   "rhr": 53,
+   "ln_hrv": 4.14,
+   "vo2": null
+  },
+  {
+   "day": -54,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 54,
+   "ln_hrv": 4.06,
+   "vo2": null
+  },
+  {
+   "day": -53,
+   "trimp": 70,
+   "srpe": 200,
+   "rhr": 52,
+   "ln_hrv": 4.08,
+   "vo2": null
+  },
+  {
+   "day": -52,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 53,
+   "ln_hrv": 4.1,
+   "vo2": null
+  },
+  {
+   "day": -51,
+   "trimp": 104,
+   "srpe": 280,
+   "rhr": 54,
+   "ln_hrv": 4.12,
+   "vo2": null
+  },
+  {
+   "day": -50,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 52,
+   "ln_hrv": 4.14,
+   "vo2": null
+  },
+  {
+   "day": -49,
+   "trimp": 70,
+   "srpe": 240,
+   "rhr": 53,
+   "ln_hrv": 4.06,
+   "vo2": 45.3
+  },
+  {
+   "day": -48,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 54,
+   "ln_hrv": 4.08,
+   "vo2": null
+  },
+  {
+   "day": -47,
+   "trimp": 70,
+   "srpe": 200,
+   "rhr": 52,
+   "ln_hrv": 4.1,
+   "vo2": null
+  },
+  {
+   "day": -46,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 53,
+   "ln_hrv": 4.12,
+   "vo2": null
+  },
+  {
+   "day": -45,
+   "trimp": 70,
+   "srpe": 280,
+   "rhr": 54,
+   "ln_hrv": 4.14,
+   "vo2": null
+  },
+  {
+   "day": -44,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 52,
+   "ln_hrv": 4.06,
+   "vo2": null
+  },
+  {
+   "day": -43,
+   "trimp": 104,
+   "srpe": 240,
+   "rhr": 53,
+   "ln_hrv": 4.08,
+   "vo2": null
+  },
+  {
+   "day": -42,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 54,
+   "ln_hrv": 4.1,
+   "vo2": null
+  },
+  {
+   "day": -41,
+   "trimp": 70,
+   "srpe": 200,
+   "rhr": 52,
+   "ln_hrv": 4.12,
+   "vo2": null
+  },
+  {
+   "day": -40,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 53,
+   "ln_hrv": 4.14,
+   "vo2": null
+  },
+  {
+   "day": -39,
+   "trimp": 70,
+   "srpe": 280,
+   "rhr": 54,
+   "ln_hrv": 4.06,
+   "vo2": 45.6
+  },
+  {
+   "day": -38,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 52,
+   "ln_hrv": 4.08,
+   "vo2": null
+  },
+  {
+   "day": -37,
+   "trimp": 70,
+   "srpe": 240,
+   "rhr": 53,
+   "ln_hrv": 4.1,
+   "vo2": null
+  },
+  {
+   "day": -36,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 54,
+   "ln_hrv": 4.12,
+   "vo2": null
+  },
+  {
+   "day": -35,
+   "trimp": 104,
+   "srpe": 200,
+   "rhr": 52,
+   "ln_hrv": 4.14,
+   "vo2": null
+  },
+  {
+   "day": -34,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 53,
+   "ln_hrv": 4.06,
+   "vo2": null
+  },
+  {
+   "day": -33,
+   "trimp": 70,
+   "srpe": 280,
+   "rhr": 54,
+   "ln_hrv": 4.08,
+   "vo2": null
+  },
+  {
+   "day": -32,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 52,
+   "ln_hrv": 4.1,
+   "vo2": null
+  },
+  {
+   "day": -31,
+   "trimp": 70,
+   "srpe": 240,
+   "rhr": 53,
+   "ln_hrv": 4.12,
+   "vo2": null
+  },
+  {
+   "day": -30,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 54,
+   "ln_hrv": 4.14,
+   "vo2": null
+  },
+  {
+   "day": -29,
+   "trimp": 70,
+   "srpe": 200,
+   "rhr": 52,
+   "ln_hrv": 4.06,
+   "vo2": 45.9
+  },
+  {
+   "day": -28,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 53,
+   "ln_hrv": 4.08,
+   "vo2": null
+  },
+  {
+   "day": -27,
+   "trimp": 104,
+   "srpe": 280,
+   "rhr": 54,
+   "ln_hrv": 4.1,
+   "vo2": null
+  },
+  {
+   "day": -26,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 52,
+   "ln_hrv": 4.12,
+   "vo2": null
+  },
+  {
+   "day": -25,
+   "trimp": 70,
+   "srpe": 240,
+   "rhr": 53,
+   "ln_hrv": 4.14,
+   "vo2": null
+  },
+  {
+   "day": -24,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 54,
+   "ln_hrv": 4.06,
+   "vo2": null
+  },
+  {
+   "day": -23,
+   "trimp": 70,
+   "srpe": 200,
+   "rhr": 52,
+   "ln_hrv": 4.08,
+   "vo2": null
+  },
+  {
+   "day": -22,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 53,
+   "ln_hrv": 4.1,
+   "vo2": null
+  },
+  {
+   "day": -21,
+   "trimp": 70,
+   "srpe": 280,
+   "rhr": 54,
+   "ln_hrv": 4.12,
+   "vo2": null
+  },
+  {
+   "day": -20,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 52,
+   "ln_hrv": 4.14,
+   "vo2": null
+  },
+  {
+   "day": -19,
+   "trimp": 104,
+   "srpe": 240,
+   "rhr": 53,
+   "ln_hrv": 4.06,
+   "vo2": 46.2
+  },
+  {
+   "day": -18,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 54,
+   "ln_hrv": 4.08,
+   "vo2": null
+  },
+  {
+   "day": -17,
+   "trimp": 70,
+   "srpe": 200,
+   "rhr": 52,
+   "ln_hrv": 4.1,
+   "vo2": null
+  },
+  {
+   "day": -16,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 53,
+   "ln_hrv": 4.12,
+   "vo2": null
+  },
+  {
+   "day": -15,
+   "trimp": 70,
+   "srpe": 280,
+   "rhr": 54,
+   "ln_hrv": 4.14,
+   "vo2": null
+  },
+  {
+   "day": -14,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 52,
+   "ln_hrv": 4.06,
+   "vo2": null
+  },
+  {
+   "day": -13,
+   "trimp": 70,
+   "srpe": 240,
+   "rhr": 53,
+   "ln_hrv": 4.08,
+   "vo2": null
+  },
+  {
+   "day": -12,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 54,
+   "ln_hrv": 4.1,
+   "vo2": null
+  },
+  {
+   "day": -11,
+   "trimp": 104,
+   "srpe": 200,
+   "rhr": 52,
+   "ln_hrv": 4.12,
+   "vo2": null
+  },
+  {
+   "day": -10,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 53,
+   "ln_hrv": 4.14,
+   "vo2": null
+  },
+  {
+   "day": -9,
+   "trimp": 70,
+   "srpe": 280,
+   "rhr": 54,
+   "ln_hrv": 4.06,
+   "vo2": 46.5
+  },
+  {
+   "day": -8,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 52,
+   "ln_hrv": 4.08,
+   "vo2": null
+  },
+  {
+   "day": -7,
+   "trimp": 70,
+   "srpe": 240,
+   "rhr": 53,
+   "ln_hrv": 4.1,
+   "vo2": null
+  },
+  {
+   "day": -6,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 54,
+   "ln_hrv": 4.12,
+   "vo2": null
+  },
+  {
+   "day": -5,
+   "trimp": 70,
+   "srpe": 200,
+   "rhr": 52,
+   "ln_hrv": 4.14,
+   "vo2": null
+  },
+  {
+   "day": -4,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 53,
+   "ln_hrv": 4.06,
+   "vo2": null
+  },
+  {
+   "day": -3,
+   "trimp": 104,
+   "srpe": 280,
+   "rhr": 54,
+   "ln_hrv": 4.08,
+   "vo2": null
+  },
+  {
+   "day": -2,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 52,
+   "ln_hrv": 4.1,
+   "vo2": null
+  },
+  {
+   "day": -1,
+   "trimp": 70,
+   "srpe": 240,
+   "rhr": 53,
+   "ln_hrv": 4.12,
+   "vo2": null
+  },
+  {
+   "day": 0,
+   "trimp": 0,
+   "srpe": null,
+   "rhr": 54,
+   "ln_hrv": 4.14,
+   "vo2": null
+  }
+ ],
+ "workouts": [
+  {
+   "day": -59,
+   "sport": "squash",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    6,
+    2
+   ],
+   "trimp": 104,
+   "effort": 5,
+   "srpe": 200,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -57,
+   "sport": "running",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 7,
+   "srpe": 280,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -55,
+   "sport": "squash",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 6,
+   "srpe": 240,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -53,
+   "sport": "running",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 5,
+   "srpe": 200,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -51,
+   "sport": "squash",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    6,
+    2
+   ],
+   "trimp": 104,
+   "effort": 7,
+   "srpe": 280,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -49,
+   "sport": "running",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 6,
+   "srpe": 240,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -47,
+   "sport": "squash",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 5,
+   "srpe": 200,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -45,
+   "sport": "running",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 7,
+   "srpe": 280,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -43,
+   "sport": "squash",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    6,
+    2
+   ],
+   "trimp": 104,
+   "effort": 6,
+   "srpe": 240,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -41,
+   "sport": "running",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 5,
+   "srpe": 200,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -39,
+   "sport": "squash",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 7,
+   "srpe": 280,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -37,
+   "sport": "running",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 6,
+   "srpe": 240,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -35,
+   "sport": "squash",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    6,
+    2
+   ],
+   "trimp": 104,
+   "effort": 5,
+   "srpe": 200,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -33,
+   "sport": "running",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 7,
+   "srpe": 280,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -31,
+   "sport": "squash",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 6,
+   "srpe": 240,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -29,
+   "sport": "running",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 5,
+   "srpe": 200,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -27,
+   "sport": "squash",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    6,
+    2
+   ],
+   "trimp": 104,
+   "effort": 7,
+   "srpe": 280,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -25,
+   "sport": "running",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 6,
+   "srpe": 240,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -23,
+   "sport": "squash",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 5,
+   "srpe": 200,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -21,
+   "sport": "running",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 7,
+   "srpe": 280,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -19,
+   "sport": "squash",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    6,
+    2
+   ],
+   "trimp": 104,
+   "effort": 6,
+   "srpe": 240,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -17,
+   "sport": "running",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 5,
+   "srpe": 200,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -15,
+   "sport": "squash",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 7,
+   "srpe": 280,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -13,
+   "sport": "running",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 6,
+   "srpe": 240,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -11,
+   "sport": "squash",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    6,
+    2
+   ],
+   "trimp": 104,
+   "effort": 5,
+   "srpe": 200,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -9,
+   "sport": "running",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 7,
+   "srpe": 280,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -7,
+   "sport": "squash",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 6,
+   "srpe": 240,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -5,
+   "sport": "running",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 5,
+   "srpe": 200,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -3,
+   "sport": "squash",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    6,
+    2
+   ],
+   "trimp": 104,
+   "effort": 7,
+   "srpe": 280,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  },
+  {
+   "day": -1,
+   "sport": "running",
+   "min": 40,
+   "kcal": 400,
+   "zone_min": [
+    5,
+    10,
+    15,
+    0,
+    0
+   ],
+   "trimp": 70,
+   "effort": 6,
+   "srpe": 240,
+   "source": "Apple Watch",
+   "hr_sample_ok": true
+  }
+ ]
+}

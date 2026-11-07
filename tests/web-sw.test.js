@@ -8,7 +8,7 @@ const src = readFileSync(new URL("../web/sw.js", import.meta.url), "utf8");
 const webPath = (p) => new URL(`../web${p === "/" ? "/index.html" : p}`, import.meta.url);
 
 // E01's own entries. Later stories add theirs here when they grow SHELL.
-const EXPECTED = ["/", "/index.html", "/css/style.css", "/js/app.js",
+const EXPECTED = ["/", "/index.html", "/css/style.css", "/js/app.js", "/js/engine.js",
                   "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 function load() {
