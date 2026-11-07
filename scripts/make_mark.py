@@ -15,6 +15,7 @@ Writes:
   web/icons/icon-192.png        192x192
   web/icons/icon-512.png        512x512, mark inside the maskable safe zone
   web/icons/apple-touch-icon.png 180x180, opaque
+  web/favicon.svg, web/favicon.ico (16/32/48), web/icons/favicon-96x96.png  tab icons, from a coarser grid
 Needs ffmpeg and rsvg-convert. Reads only the photo; no network.
 """
 import json, os, subprocess, sys, tempfile
@@ -26,6 +27,7 @@ GAMMA = 1.0
 RAMP = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. "  # dense -> light
 BASE = "#191724"
 KNOCKOUT = False
+FAV_COLS = 24                     # coarser grid so the mark survives at tab size
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 
 
@@ -55,8 +57,9 @@ def knockout(gray, rgb, cols, rows):
     return seen
 
 
-def to_grid(src, crop):
-    cols, rows = COLS, round(COLS * ASPECT)
+def to_grid(src, crop, cols=None):
+    cols = cols or COLS
+    rows = round(cols * ASPECT)
     gray = grab(src, crop, cols, rows, "gray")
     rgb = grab(src, crop, cols, rows, "rgb24")
     px = sorted(gray)
@@ -107,14 +110,27 @@ def svg(cols, rows, chars, colors, size, inset):
     return "\n".join(out)
 
 
-def render(svg_text, size, dest, tmp):
+def write_ico(pngs, dest):
+    # ICO container holding PNG images (16/32/48), as browsers and Windows accept
+    import struct
+    head = struct.pack("<HHH", 0, 1, len(pngs))
+    entries, blobs, offset = b"", b"", 6 + 16 * len(pngs)
+    for size, data in pngs:
+        entries += struct.pack("<BBBBHHII", size % 256, size % 256, 0, 0, 1, 32, len(data), offset)
+        blobs += data
+        offset += len(data)
+    with open(dest, "wb") as fh:
+        fh.write(head + entries + blobs)
+
+
+def render(svg_text, size, dest, tmp, pix_fmt="rgb24"):
     s = os.path.join(tmp, f"{size}.svg")
     p = os.path.join(tmp, f"{size}.png")
     with open(s, "w") as fh:
         fh.write(svg_text)
     subprocess.run(["rsvg-convert", "-w", str(size), "-h", str(size), "-o", p, s], check=True)
     # flatten to opaque RGB (iOS rejects transparency in the touch icon)
-    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", p, "-pix_fmt", "rgb24", dest], check=True)
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", p, "-pix_fmt", pix_fmt, dest], check=True)
 
 
 if __name__ == "__main__":
@@ -136,4 +152,16 @@ if __name__ == "__main__":
                                   ("apple-touch-icon.png", 180, 0.04)]:
             render(svg(cols, rows, chars, colors, size, inset), size, os.path.join(ROOT, "web", "icons", name), tmp)
             print(f"wrote web/icons/{name}")
+        fc, fr, fch, fco = to_grid(src, crop, FAV_COLS)
+        with open(os.path.join(ROOT, "web", "favicon.svg"), "w") as fh:
+            fh.write(svg(fc, fr, fch, fco, 64, 0.02))
+        render(svg(fc, fr, fch, fco, 96, 0.02), 96, os.path.join(ROOT, "web", "icons", "favicon-96x96.png"), tmp)
+        pngs = []
+        for size in (16, 32, 48):
+            dest = os.path.join(tmp, f"ico-{size}.png")
+            render(svg(fc, fr, fch, fco, size, 0.0), size, dest, tmp, "rgba")
+            with open(dest, "rb") as fh:
+                pngs.append((size, fh.read()))
+        write_ico(pngs, os.path.join(ROOT, "web", "favicon.ico"))
+        print("wrote web/favicon.svg, web/favicon.ico, web/icons/favicon-96x96.png")
     print("\n".join(chars))
