@@ -50,7 +50,8 @@ function dedupe(ws) {
 // scan: { samples, workouts, now, days, source }. `stats` (optional) receives counts for the CLI.
 export function toFeatures(scan, stats = {}) {
   const { samples, workouts, now, days, source = "apple_health" } = scan;
-  const hrMax = samples.hr.reduce((m, [, v]) => Math.max(m, v), -Infinity);
+  // scan.maxHr (optional): a max HR already known from a longer history, e.g. when merging a 3-day sync drop
+  const hrMax = Math.max(samples.hr.reduce((m, [, v]) => Math.max(m, v), -Infinity), scan.maxHr ?? -Infinity);
   const maxHr = Number.isFinite(hrMax) ? Math.round(hrMax) : null;
 
   const rows = workouts.map((w) => {

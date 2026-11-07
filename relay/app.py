@@ -15,7 +15,7 @@ logging.getLogger("werkzeug").disabled = True     # no request lines, no IPs
 app.logger.disabled = True
 
 GENERIC = {400: "bad request", 401: "unauthorized", 403: "forbidden", 404: "not found", 405: "method not allowed",
-           410: "gone", 413: "too large", 422: "rejected", 429: "slow down", 500: "server error"}
+           409: "conflict", 410: "gone", 413: "too large", 422: "rejected", 429: "slow down", 500: "server error"}
 
 
 def generic(code: int):
@@ -56,6 +56,7 @@ class Window:
 
 
 TOKEN_LIMIT = Window(30, 60)
+BOX_LIMIT = Window(30, 60)
 
 
 @app.get("/v1/healthz")
@@ -71,3 +72,8 @@ def token():
     if not TOKEN_LIMIT.allow():
         return generic(429)
     return {"token": mint(kind, ttl=600)}
+
+
+from dropbox import bp as dropbox_bp            # noqa: E402  (registered after the shared helpers exist)
+
+app.register_blueprint(dropbox_bp)

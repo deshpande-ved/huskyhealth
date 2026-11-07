@@ -3,6 +3,9 @@ import { analyze } from "./engine.js";
 import { paint } from "./ascii.js";
 import { createDb, withEffort } from "./db.js";
 import { screenModel, zoneBars, infoLines, storedLine, effortList, onImportMessage } from "./view.js";
+import { CONSENT, pair, unpair, isOn } from "./sync-settings.js";
+import { collect } from "./sync-collect.js";
+import { dayNumber } from "./sync-merge.js";
 
 const HEX_COMMIT = /^[0-9a-f]{7,40}$/;
 const WORKER = "/js/parse-apple.worker.js";
@@ -121,6 +124,8 @@ function startImport(file) {
     if (data.done || data.error) worker.terminate();
     if (data.done) {
       await db.saveFeatures(data.features);
+      const rec = await db.loadRecord("sync");                 // offsets now count from today
+      if (rec) await db.saveRecord("sync", { ...rec, ref_day: dayNumber(Date.now()) });
       state.features = await db.loadFeatures();
       render();
       location.hash = "#today";
@@ -130,10 +135,57 @@ function startImport(file) {
   worker.postMessage({ file });
 }
 
+async function renderSync() {
+  const on = await isOn(db);
+  $("sync-state").textContent = on ? "ON" : "OFF";
+  $("sync-state").className = on ? "z1" : "muted";
+  $("sync-toggle").textContent = on ? "Turn off convenience mode" : "Turn on convenience mode";
+}
+
+function hidePairingCode() {
+  $("sync-code").textContent = "";
+  $("sync-pair").classList.add("hidden");
+}
+
+function wireSync() {
+  $("sync-consent-list").replaceChildren(...CONSENT.map((t) => el("li", { textContent: t })));
+  $("sync-toggle").addEventListener("click", async () => {
+    if (await isOn(db)) {
+      if (!confirm("Turn off convenience mode? This phone deletes its key and the Pi forgets the box.")) return;
+      const { status } = await unpair({ db });
+      hidePairingCode();
+      $("sync-status").textContent = status || "Convenience mode is off.";
+      return renderSync();
+    }
+    $("sync-consent").classList.remove("hidden");
+  });
+  $("sync-cancel").addEventListener("click", () => $("sync-consent").classList.add("hidden"));
+  $("sync-confirm").addEventListener("click", async () => {
+    $("sync-consent").classList.add("hidden");
+    $("sync-status").textContent = "Pairing\u2026";
+    const r = await pair({ db });
+    $("sync-status").textContent = r.ok ? "Convenience mode is on." : r.status;
+    if (r.ok) { $("sync-code").textContent = r.code; $("sync-pair").classList.remove("hidden"); }
+    renderSync();
+  });
+  $("sync-copy").addEventListener("click", () => navigator.clipboard && navigator.clipboard.writeText($("sync-code").textContent));
+  addEventListener("hashchange", hidePairingCode);                  // shown once: gone when you leave the screen
+  document.addEventListener("visibilitychange", () => { if (document.hidden) hidePairingCode(); });
+}
+
+async function syncOnOpen() {
+  const r = await collect({ db });
+  if (r.features) { state.features = r.features; render(); }
+  if (r.status) $("sync-status").textContent = r.status;
+}
+
 async function start() {
   db = createDb();
   try { state.features = await db.loadFeatures(); } catch { state.features = null; }
   render();
+  wireSync();
+  renderSync();
+  syncOnOpen();
   $("import-file").addEventListener("change", (e) => { const f = e.target.files[0]; if (f) startImport(f); e.target.value = ""; });
   $("plain-view").addEventListener("click", (e) => {
     const on = document.body.classList.toggle("plain");
@@ -141,7 +193,10 @@ async function start() {
   });
   $("forget").addEventListener("click", async () => {
     if (!confirm("Forget everything stored on this phone? This cannot be undone.")) return;
+    await unpair({ db });                                       // same turn-off flow first, so the Pi forgets the box
     await db.forgetAll();
+    hidePairingCode();
+    renderSync();
     state.features = null;
     render();
   });

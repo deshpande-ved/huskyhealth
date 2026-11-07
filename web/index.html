@@ -50,6 +50,22 @@
     <section id="settings" aria-label="Settings" class="block">
       <h2>Settings</h2>
       <p id="stored" class="lede">Nothing stored on this phone</p>
+      <article class="panel" id="sync">
+        <h3>Convenience mode</h3>
+        <p class="explain">Optional automatic sync: an iPhone Shortcut sends new workouts, and this app picks them up when you open it. No more exporting.</p>
+        <p>Status: <b id="sync-state" class="muted">OFF</b> <span class="muted">(off by default)</span></p>
+        <p><button id="sync-toggle" type="button">Turn on convenience mode</button></p>
+        <div id="sync-consent" class="hidden">
+          <ul id="sync-consent-list" class="notes"></ul>
+          <p><button id="sync-confirm" type="button">I understand, turn it on</button> <button id="sync-cancel" type="button">Cancel</button></p>
+        </div>
+        <div id="sync-pair" class="hidden">
+          <p class="explain">Paste this pairing code into the <b>HuskyHealth Sync</b> Shortcut once. It is shown only now; keep it private.</p>
+          <p><code id="sync-code"></code></p>
+          <p><button id="sync-copy" type="button">Copy pairing code</button></p>
+        </div>
+        <p id="sync-status" class="explain"></p>
+      </article>
       <p><button id="plain-view" type="button" aria-pressed="false">Plain view</button></p>
       <p><button id="forget" type="button" class="danger">Forget everything</button></p>
     </section>
