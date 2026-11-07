@@ -111,7 +111,7 @@ def test_errors(c):
     assert c.post(url, data=json.dumps(payload()), headers=auth("wrong")).status_code == 403
     assert c.post(url, data=json.dumps(payload())).status_code == 403
     assert c.post(url, data=json.dumps(payload()), headers=auth(b["read"])).status_code == 403
-    assert c.post(url, data="x" * (64 * 1024 + 1), headers=auth(b["write"])).status_code == 413
+    assert c.post(url, data="x" * (128 * 1024 + 1), headers=auth(b["write"])).status_code == 413
     assert c.post(url, data=json.dumps(payload()), headers=auth(b["write"])).status_code == 204
     assert c.post(url, data=json.dumps(payload()), headers=auth(b["write"])).status_code == 409
     assert c.get(url, headers=auth(b["write"])).status_code == 403
@@ -159,11 +159,10 @@ def test_build_sheet_and_demo_docs():
     from pathlib import Path
     docs = Path(__file__).resolve().parents[2] / "docs"
     sheet = (docs / "shortcut-build-sheet.md").read_text()
-    for h in ["## Paste the pairing code", "## Read state.json", "## 15-minute throttle", "## Check for a new workout",
-              "## Build the payload", "## POST the drop", "## Update state.json"]:
+    for h in ["## Paste the pairing code", "## Read recent heart rate", "## Stop unless there was a workout",
+              "## Build the payload", "## POST the drop", "## Triggers"]:
         assert h in sheet, h
-    for t in ["App → Is Opened", "Run Immediately", "Notify When Run", "Apple Watch Workout → Ends", "Charger → Is Disconnected",
-              "only when there is a new workout"]:
+    for t in ["App → Is Opened", "Run Immediately", "Notify When Run", "only when there is a new workout", "Import Question"]:
         assert t in sheet, t
     example = sheet[sheet.index("```json") + 7: sheet.index("```", sheet.index("```json") + 7)]
     dropbox.SyncDrop.model_validate_json(example)

@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 BOXES: dict[str, dict] = {}            # box_id -> {"pub", "write", "read", "drop", "exp"}; RAM only
 _LOCK = threading.Lock()
 TTL = 24 * 3600
-MAX_DROP = 64 * 1024
+MAX_DROP = 128 * 1024                   # ~3 h of workout-rate heart rate as JSON
 DAY3 = 3 * 86400
 
 bp = Blueprint("dropbox", __name__)
