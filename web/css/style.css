@@ -1,0 +1,39 @@
+:root {
+  --base: #191724;
+  --surface: #1f1d2e;
+  --text: #e0def4;
+  --muted: #6e6a86;
+  --foam: #9ccfd8;
+  --pine: #31748f;
+  --gold: #f6c177;
+  --rose: #ebbcba;
+  --love: #eb6f92;
+  --iris: #c4a7e7;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--base);
+  color: var(--text);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+}
+
+main { flex: 1; max-width: 100ch; }
+
+h1 { font-size: 1.4em; font-weight: 700; margin: 1.5em 0 0.5em; }
+
+.muted { color: var(--muted); }
+
+footer { padding: 1em 0; }

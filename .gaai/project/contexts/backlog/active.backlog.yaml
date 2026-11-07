@@ -20,8 +20,9 @@ items:
   epic: E01
   title: "Shell page with About line"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E01S01.story.md
   dependencies: []
@@ -33,8 +34,9 @@ items:
   epic: E01
   title: "Manifest and placeholder icons"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E01S02.story.md
   dependencies: [E01S01]
@@ -46,8 +48,9 @@ items:
   epic: E01
   title: "Service worker with the shell SHELL list"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E01S03.story.md
   dependencies: [E01S01, E01S02]
@@ -59,8 +62,9 @@ items:
   epic: E01
   title: "_headers with the CSP"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E01S04.story.md
   dependencies: []
@@ -72,8 +76,9 @@ items:
   epic: E01
   title: "Check the shell on Cloudflare Pages"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E01S05.story.md
   dependencies: [E01S01, E01S02, E01S03, E01S04]
