@@ -90,8 +90,9 @@ items:
   epic: E02
   title: "Zone minutes, TRIMP and session-RPE"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E02S01.story.md
   dependencies: [E01S03]
@@ -103,8 +104,9 @@ items:
   epic: E02
   title: "Fitness/fatigue and monotony"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E02S02.story.md
   dependencies: [E02S01]
@@ -116,8 +118,9 @@ items:
   epic: E02
   title: "The readiness band"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E02S03.story.md
   dependencies: [E02S02]
@@ -129,8 +132,9 @@ items:
   epic: E02
   title: "Data gates"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E02S04.story.md
   dependencies: [E02S03]
@@ -142,8 +146,9 @@ items:
   epic: E02
   title: "Scenario tests"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E02S05.story.md
   dependencies: [E02S04]
