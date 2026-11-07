@@ -190,3 +190,18 @@ test("no dense readings -> no workout; resending the same window changes nothing
   assert.equal(again.added, 0);
   assert.deepEqual(splitSessions([]), []);
 });
+
+// Real workout types from the "workout starts" automation: a mark labels the session that starts near it.
+test("marks label sessions with the Watch's workout type; unmarked sessions keep the window's sport", () => {
+  const d = hrWindow({ sessions: [[170, 140], [100, 70]], hours: 24 });
+  d.workouts[0].sport = "other";
+  d.marks = [{ sport: "walking", t_s: 100 * 60 + 30 }];          // started 100 min ago (30 s before the readings)
+  const scan = dropToScan(d, NOW);
+  assert.deepEqual(scan.workouts.map((w) => w.type), ["HKWorkoutActivityTypeOther", "HKWorkoutActivityTypeWalking"]);
+  const merged = mergeDrop(emptyFeatures(), d, { nowMs: NOW, refDay: dayNumber(NOW) });
+  assert.deepEqual(merged.features.workouts.map((w) => w.sport), ["other", "walking"]);
+  // the same sessions resent with a different mark don't duplicate
+  const again = mergeDrop(merged.features, { ...d, marks: [{ sport: "squash", t_s: 170 * 60 }] }, { nowMs: NOW, refDay: merged.refDay });
+  assert.equal(again.features.workouts.length, 2);
+  assert.equal(again.added, 0);
+});

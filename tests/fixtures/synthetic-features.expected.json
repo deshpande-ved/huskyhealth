@@ -488,7 +488,7 @@
  "workouts": [
   {
    "day": -3,
-   "sport": "other",
+   "sport": "strength",
    "min": 2,
    "kcal": null,
    "zone_min": [

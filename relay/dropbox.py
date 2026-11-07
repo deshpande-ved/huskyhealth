@@ -32,8 +32,17 @@ class Sample(_Strict):
     v: float = Field(ge=0, le=1000)
 
 
+SyncSport = Literal["squash", "running", "walking", "cycling", "strength", "hiit", "other"]
+
+
+class Mark(_Strict):
+    """A workout type the Watch recorded at workout start (from the 'workout starts' automation)."""
+    sport: SyncSport
+    t_s: int = Field(ge=0, le=10_000_000)          # seconds before sending; old marks are ignored by the phone
+
+
 class SyncWorkout(_Strict):
-    sport: Literal["squash", "running", "other"]
+    sport: SyncSport
     start_s: int = Field(ge=0, le=DAY3)
     end_s: int = Field(ge=0, le=DAY3)
     kcal: float | None = Field(default=None, ge=0, le=10000)
@@ -47,6 +56,7 @@ class SyncDrop(_Strict):
     rhr: list[Sample] = Field(default_factory=list, max_length=50)
     hrv: list[Sample] = Field(default_factory=list, max_length=200)
     effort: list[Sample] = Field(default_factory=list, max_length=50)
+    marks: list[Mark] = Field(default_factory=list, max_length=20)
 
 
 def seal(pub_spki_der: bytes, plaintext: bytes) -> dict:

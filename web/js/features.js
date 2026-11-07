@@ -11,6 +11,10 @@ const mean = (a) => a.reduce((s, v) => s + v, 0) / a.length;
 export function sportOf(type) {
   if (type === "HKWorkoutActivityTypeSquash") return "squash";
   if (type === "HKWorkoutActivityTypeRunning") return "running";
+  if (type === "HKWorkoutActivityTypeWalking") return "walking";
+  if (type === "HKWorkoutActivityTypeCycling") return "cycling";
+  if (type === "HKWorkoutActivityTypeTraditionalStrengthTraining" || type === "HKWorkoutActivityTypeFunctionalStrengthTraining") return "strength";
+  if (type === "HKWorkoutActivityTypeHighIntensityIntervalTraining") return "hiit";
   return "other";
 }
 

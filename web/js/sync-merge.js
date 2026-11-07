@@ -1,7 +1,12 @@
 // web/js/sync-merge.js: fold a decrypted sync drop into the stored features. Day offsets only; no dates kept.
 import { toFeatures } from "./features.js";
 
-const SPORT_TYPE = { squash: "HKWorkoutActivityTypeSquash", running: "HKWorkoutActivityTypeRunning", other: "HKWorkoutActivityTypeOther" };
+const SPORT_TYPE = { squash: "HKWorkoutActivityTypeSquash", running: "HKWorkoutActivityTypeRunning",
+  walking: "HKWorkoutActivityTypeWalking", cycling: "HKWorkoutActivityTypeCycling",
+  strength: "HKWorkoutActivityTypeTraditionalStrengthTraining", hiit: "HKWorkoutActivityTypeHighIntensityIntervalTraining",
+  other: "HKWorkoutActivityTypeOther" };
+// A mark (the Watch's workout type, saved when the workout started) labels the session starting within this window.
+export const MARK_WINDOW_MS = 20 * 60_000;
 const SRC = { watch: { device: "Apple Watch", sourceName: "" }, garmin: { device: "", sourceName: "Garmin" }, other: { device: "", sourceName: "" } };
 
 // Local day number (days since 1970-01-01 in local time); the only "calendar" value, kept in the sync record.
@@ -59,10 +64,16 @@ export function dropToScan(drop, sentAt) {
   const at = (s) => sentAt - s * 1000;
   const pts = (list) => (list || []).map((x) => [at(x.t_s), x.v]).sort((a, b) => a[0] - b[0]);
   const hr = drop.workouts.flatMap((w) => pts(w.hr)).sort((a, b) => a[0] - b[0]);
+  const marks = (drop.marks || []).map((m) => ({ sport: m.sport, t: at(m.t_s) }));
+  const sportFor = (start, fallback) => {
+    const near = marks.filter((m) => Math.abs(m.t - start) <= MARK_WINDOW_MS)
+      .sort((a, b) => Math.abs(a.t - start) - Math.abs(b.t - start));
+    return near.length ? near[0].sport : fallback;
+  };
   const workouts = drop.workouts.flatMap((w) => {
     const lo = at(w.start_s), hi = at(w.end_s);
     return splitSessions(pts(w.hr).filter(([t]) => t >= lo && t <= hi), sentAt).map((s) => ({
-      type: SPORT_TYPE[w.sport] || SPORT_TYPE.other, start: s.start, end: s.end,
+      type: SPORT_TYPE[sportFor(s.start, w.sport)] || SPORT_TYPE.other, start: s.start, end: s.end,
       min: Math.round((s.end - s.start) / 6000) / 10, kcal: null, ...(SRC[w.src] || SRC.other),
     }));
   });
@@ -70,11 +81,12 @@ export function dropToScan(drop, sentAt) {
 }
 
 export function validDrop(d) {
-  return d && d.v === 1 && Array.isArray(d.workouts) && ["rhr", "hrv", "effort"].every((k) => d[k] === undefined || Array.isArray(d[k]))
+  return d && d.v === 1 && Array.isArray(d.workouts) && ["rhr", "hrv", "effort", "marks"].every((k) => d[k] === undefined || Array.isArray(d[k]))
     && d.workouts.every((w) => typeof w.start_s === "number" && typeof w.end_s === "number" && w.start_s >= w.end_s);
 }
 
-const sameWorkout = (a, b) => a.day === b.day && a.sport === b.sport && a.min === b.min && a.trimp === b.trimp;
+// Same session regardless of its label (a resend may carry a mark the first send didn't).
+const sameWorkout = (a, b) => a.day === b.day && a.min === b.min && a.trimp === b.trimp;
 const r1 = (x) => Math.round(x * 10) / 10;
 
 // Returns { features, refDay, added }. Merging the same drop twice changes nothing.

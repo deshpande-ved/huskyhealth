@@ -20,7 +20,7 @@ const EXPECTED = [
   "split-attribute tags: 0",
   "kept samples: hr=21 rhr=3 hrv=3 vo2=1 effort=1 effortEst=1",
   "workouts: 3 (deduped 1)",
-  "by sport: other=1 running=1 squash=1",
+  "by sport: strength=1 running=1 squash=1",
   "by source: Other app=1 Apple Watch=2",
   "effort: user=1 estimated=1 none=1",
   "hr_sample_ok: true=2 false=1",

@@ -9,7 +9,7 @@ const f = JSON.parse(readFileSync(new URL("./fixtures/synthetic-features.expecte
 
 test("unrated workouts listed by sport and age, no dates", () => {
   const list = effortList(f);
-  assert.deepEqual(list, [{ index: 0, sport: "other", age: "3 days ago" }]);
+  assert.deepEqual(list, [{ index: 0, sport: "strength", age: "3 days ago" }]);
   assert.ok(!/\d{4}-\d{2}/.test(JSON.stringify(list)));
 });
 
