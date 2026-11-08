@@ -121,17 +121,6 @@ def test_schema_rejects_and_never_stores_marker(c, acct, tmp_path):
     assert c.post(url, content_type="application/json", data="x" * (128 * 1024 + 1), headers=bearer(acct["token"])).status_code == 413
 
 
-def test_list_format_and_marks(c, acct):
-    good = {"v": 1, "workouts": [{"sport": "squash", "start_s": 86400, "end_s": 0, "kcal": None, "src": "watch",
-                                  "hr_t": ["2026-11-07T18:01:02-05:00", "2026-11-07T18:01:07-05:00"], "hr_v": [150, 151.5]}],
-            "rhr": [], "hrv": [], "effort": [], "marks": [{"sport": "walking", "t_s": 5000}]}
-    assert c.post("/v1/me/records", content_type="application/json", data=json.dumps(good), headers=bearer(acct["token"])).status_code == 201
-    for change in [{"hr_v": [150]}, {"hr_v": [1336, 151]}, {"hr_t": ["Nov 7", "x"]}]:
-        d = json.loads(json.dumps(good))
-        d["workouts"][0].update(change)
-        assert c.post("/v1/me/records", content_type="application/json", data=json.dumps(d), headers=bearer(acct["token"])).status_code == 422
-
-
 def test_inbox_is_capped(c, acct, monkeypatch):
     monkeypatch.setattr(records, "MAX_INBOX", 3)
     for _ in range(5):

@@ -3,7 +3,7 @@ import { requireOptionalNativeModule } from 'expo'
 /**
  * HuskyHealth's HealthKit module (ios/HuskyHealthKitModule.swift + HealthCore.swift).
  * iOS only; null elsewhere. Reads workouts (with their real types) and heart rate on the phone;
- * the only thing that ever leaves is a record POSTed to your own personal API (/v1/me/records).
+ * what leaves is a sealed record for your personal API (/v1/me/records) and your encrypted account vault.
  */
 
 export interface HKWorkoutRow {
@@ -39,9 +39,11 @@ interface HuskyHealthKitNative {
   syncNow(): Promise<SyncResult>
   backfill(days: number): Promise<{ status: number; workouts: number; total: number; daily?: number }>
   seedDemoWorkout(sport: string, minutes: number, endedMinutesAgo: number): Promise<boolean>
-  historyAppend(line: string): void
-  historyList(): string[]
-  historyClear(): void
+  getVault(): Promise<{ status: number; vault: string }>
+  saveVault(json: string): Promise<number>
+  speak(text: string): Promise<{ status: number; words?: { text: string; start_s: number; stop_s: number }[] }>
+  stopSpeaking(): void
+  listen(): Promise<{ status: number; text?: string }>
 }
 
 export const HealthKit = requireOptionalNativeModule<HuskyHealthKitNative>('HuskyHealthKit')

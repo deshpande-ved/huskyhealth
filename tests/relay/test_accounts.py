@@ -70,6 +70,16 @@ def test_vault_needs_session_and_cap(c):
     assert c.post("/v1/account/vault", json={"vault": "not base64!"}, headers={"Authorization": f"Bearer {s}"}).status_code == 422
 
 
+def test_get_vault_returns_the_latest_ciphertext(c):
+    s = create(c).json["session"]
+    auth = {"Authorization": f"Bearer {s}"}
+    assert c.get("/v1/account/vault").status_code == 401
+    assert c.get("/v1/account/vault", headers=auth).json == {"vault": None}
+    blob = base64.b64encode(os.urandom(48)).decode()
+    c.post("/v1/account/vault", json={"vault": blob}, headers=auth)
+    assert c.get("/v1/account/vault", headers=auth).json == {"vault": blob}
+
+
 def test_session_expires(c, monkeypatch):
     s = create(c).json["session"]
     aid, _ = accounts.SESSIONS[s]

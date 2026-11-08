@@ -6,21 +6,13 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { openDrop } from "../web/js/box.js";
 import { makeAccountKeys, fetchRecords } from "../web/js/account.js";
-import { mergeDrop, shiftFeatures, emptyFeatures, dayNumber } from "../web/js/sync-merge.js";
-import { sanitize } from "../web/js/db.js";
+import { dropToVault } from "../web/js/sync-merge.js";
+import { addToVault, featuresFromVault, emptyVault, workoutSummaries } from "../web/js/vault.js";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const PY = existsSync(`${ROOT}.venv/bin/python`) ? `${ROOT}.venv/bin/python` : "python3";
 const NOW = new Date(2026, 10, 7, 18).getTime();
 
-function memDb(features = null) {
-  const recs = new Map();
-  return { features, recs,
-    loadFeatures: async function () { return this.features; },
-    saveFeatures: async function (f) { this.features = sanitize(f); },
-    loadRecord: async (k) => recs.get(k) ?? null,
-    saveRecord: async (k, v) => { if (v == null) recs.delete(k); else recs.set(k, v); } };
-}
 function stubFetch(handler) {
   const calls = [];
   const fn = async (url, opts = {}) => { calls.push({ url, ...opts }); return handler(url, opts); };
@@ -61,20 +53,6 @@ test("fetchRecords: GET with the session, opens each record, skips unreadable on
   assert.equal(r.last, 5);
 });
 
-test("merge is idempotent and shifts offsets by elapsed days", () => {
-  const once = mergeDrop(emptyFeatures(), DROP, { nowMs: NOW, refDay: dayNumber(NOW) });
-  const twice = mergeDrop(once.features, DROP, { nowMs: NOW, refDay: once.refDay });
-  assert.deepEqual(twice.features, once.features);
-  assert.equal(twice.added, 0);
-  const shifted = shiftFeatures(once.features, 2);
-  assert.equal(shifted.workouts[0].day, once.features.workouts[0].day - 2);
-  assert.equal(shifted.days.length, 60);
-  assert.deepEqual(shifted.days.map((d) => d.day), Array.from({ length: 60 }, (_, i) => i - 59));
-  const later = mergeDrop(once.features, { v: 1, workouts: [], rhr: [], hrv: [], effort: [] },
-                          { nowMs: NOW + 2 * 86400000, refDay: once.refDay });
-  assert.equal(later.features.workouts[0].day, once.features.workouts[0].day - 2);
-});
-
 test("UI has no inline code", () => {
   const html = readFileSync(new URL("../web/index.html", import.meta.url), "utf8");
   assert.ok(!/ on[a-z]+=|style="/.test(html));
@@ -83,87 +61,50 @@ test("UI has no inline code", () => {
   }
 });
 
-// Heart-rate-only drops (the Shortcut can't read workouts): sessions come from dense readings.
-import { splitSessions, dropToScan } from "../web/js/sync-merge.js";
+// The vault is the one source: the app writes Apple Health workouts into it, the website folds records into it.
+const DAY = 86400000;
+const timed = (start, min, extra = {}) => ({ date: start.slice(0, 10), start, sport: "squash", min, trimp: 100, kcal: 400,
+  zone_min: [0, 0, 30, 15, 0], effort: null, srpe: null, ...extra });
 
-function hrWindow({ sessions = [], hours = 3 }) {
-  // sparse readings every 5 min across the window, plus dense 5 s readings for each [startMinAgo, endMinAgo]
-  const hr = [];
-  for (let s = hours * 3600; s >= 0; s -= 300) hr.push({ t_s: s, v: 70 });
-  for (const [a, b] of sessions) for (let s = a * 60; s >= b * 60; s -= 5) hr.push({ t_s: s, v: 150 });
-  return { v: 1, workouts: [{ sport: "squash", start_s: hours * 3600, end_s: 0, kcal: null, src: "watch", hr }], rhr: [], hrv: [], effort: [] };
-}
-
-test("one dense session inside 3 h of sparse heart rate becomes one squash workout", () => {
-  const scan = dropToScan(hrWindow({ sessions: [[100, 55]] }), NOW);
-  assert.equal(scan.workouts.length, 1);
-  assert.equal(scan.workouts[0].type, "HKWorkoutActivityTypeSquash");
-  assert.ok(Math.abs(scan.workouts[0].min - 45) < 0.2);
-  const merged = mergeDrop(emptyFeatures(), hrWindow({ sessions: [[100, 55]] }), { nowMs: NOW, refDay: dayNumber(NOW) });
-  assert.equal(merged.features.workouts.length, 1);
-  assert.equal(merged.features.workouts[0].hr_sample_ok, true);
-  assert.ok(merged.features.workouts[0].trimp > 0);
+test("one record is one workout, with the start time the watch recorded", () => {
+  const v = dropToVault(DROP, NOW, NOW);
+  assert.equal(v.workouts.length, 1);
+  assert.equal(v.workouts[0].start, new Date(NOW - 7200 * 1000).toISOString().slice(0, 16));
+  assert.equal(v.workouts[0].min, 60);
+  assert.equal(v.workouts[0].kcal, 500);
 });
 
-test("two sessions, a too-short burst, and a session still in progress", () => {
-  const scan = dropToScan(hrWindow({ sessions: [[170, 140], [100, 70], [40, 35], [8, 0]] }), NOW);
-  assert.deepEqual(scan.workouts.map((w) => Math.round(w.min)), [30, 30]);   // 5-min burst too short; last one still going
+test("the app's copy and the record of the same workout are kept once; the app's numbers win", () => {
+  const rec = dropToVault(DROP, NOW, NOW).workouts[0];
+  const app = { ...rec, start: new Date(Date.parse(`${rec.start}Z`) + 60000).toISOString().slice(0, 16), trimp: 123 };
+  let v = addToVault(emptyVault(), null, [rec], [], { prefer: "existing" });      // the website folds the record first
+  v = addToVault(v, null, [app]);                                                  // then the app writes its own
+  assert.deepEqual(v.workouts.map((w) => w.trimp), [123]);
+  v = addToVault(v, null, [rec], [], { prefer: "existing" });                      // a resent record changes nothing
+  assert.deepEqual(v.workouts.map((w) => w.trimp), [123]);
 });
 
-test("no dense readings -> no workout; resending the same window changes nothing", () => {
-  assert.equal(dropToScan(hrWindow({}), NOW).workouts.length, 0);
-  const d = hrWindow({ sessions: [[100, 55]] });
-  const once = mergeDrop(emptyFeatures(), d, { nowMs: NOW, refDay: dayNumber(NOW) });
-  const again = mergeDrop(once.features, d, { nowMs: NOW, refDay: once.refDay });
-  assert.deepEqual(again.features, once.features);
-  assert.equal(again.added, 0);
-  assert.deepEqual(splitSessions([]), []);
+test("old untimed duplicates (an export filed a day off) heal when the app writes the timed workout", () => {
+  const old = [{ date: "2026-10-20", sport: "squash", min: 45, trimp: 90, zone_min: [0, 0, 30, 15, 0] },
+               { date: "2026-10-21", sport: "squash", min: 46, trimp: 95, zone_min: [0, 0, 30, 15, 0] }];
+  const v = addToVault({ ...emptyVault(), workouts: old }, null, [timed("2026-10-21T00:30", 45)]);
+  assert.equal(v.workouts.length, 1);
+  assert.equal(v.workouts[0].start, "2026-10-21T00:30");
+  // two real sessions on the same day stay two
+  const two = addToVault(emptyVault(), null, [timed("2026-10-21T07:00", 45), timed("2026-10-21T18:00", 45)]);
+  assert.equal(two.workouts.length, 2);
 });
 
-// Real workout types from the "workout starts" automation: a mark labels the session that starts near it.
-test("marks label sessions with the Watch's workout type; unmarked sessions keep the window's sport", () => {
-  const d = hrWindow({ sessions: [[170, 140], [100, 70]], hours: 24 });
-  d.workouts[0].sport = "other";
-  d.marks = [{ sport: "walking", t_s: 100 * 60 + 30 }];          // started 100 min ago (30 s before the readings)
-  const scan = dropToScan(d, NOW);
-  assert.deepEqual(scan.workouts.map((w) => w.type), ["HKWorkoutActivityTypeOther", "HKWorkoutActivityTypeWalking"]);
-  const merged = mergeDrop(emptyFeatures(), d, { nowMs: NOW, refDay: dayNumber(NOW) });
-  assert.deepEqual(merged.features.workouts.map((w) => w.sport), ["other", "walking"]);
-  // the same sessions resent with a different mark don't duplicate
-  const again = mergeDrop(merged.features, { ...d, marks: [{ sport: "squash", t_s: 170 * 60 }] }, { nowMs: NOW, refDay: merged.refDay });
-  assert.equal(again.features.workouts.length, 2);
-  assert.equal(again.added, 0);
-});
-
-test("per-minute averaged heart rate (Shortcut 'Group by Minute') still finds the session, densely enough", () => {
-  const hr = [];
-  for (let s = 86400; s >= 0; s -= 300) hr.push({ t_s: s, v: 70 });          // background every 5 min
-  for (let s = 100 * 60; s >= 55 * 60; s -= 60) hr.push({ t_s: s, v: 150 });  // 45 min of per-minute averages
-  const drop = { v: 1, workouts: [{ sport: "squash", start_s: 86400, end_s: 0, kcal: null, src: "watch", hr }], rhr: [], hrv: [], effort: [] };
-  const { features } = mergeDrop(emptyFeatures(), drop, { nowMs: NOW, refDay: dayNumber(NOW) });
-  assert.equal(features.workouts.length, 1);
-  assert.ok(Math.abs(features.workouts[0].min - 45) < 1.1);
-  assert.equal(features.workouts[0].hr_sample_ok, true);
-});
-
-test("list format (hr_t ISO times + hr_v) from a loop-free Shortcut finds the same session", () => {
-  const sent = NOW;
-  const hr_t = [], hr_v = [];
-  const iso = (ms) => new Date(ms).toISOString();
-  for (let s = 86400; s >= 0; s -= 300) { hr_t.push(iso(sent - s * 1000)); hr_v.push(70); }
-  for (let s = 100 * 60; s >= 55 * 60; s -= 5) { hr_t.push(iso(sent - s * 1000)); hr_v.push(150); }
-  const drop = { v: 1, workouts: [{ sport: "squash", start_s: 86400, end_s: 0, kcal: null, src: "watch", hr_t, hr_v }], rhr: [], hrv: [], effort: [] };
-  const { features } = mergeDrop(emptyFeatures(), drop, { nowMs: NOW, refDay: dayNumber(NOW) });
-  assert.equal(features.workouts.length, 1);
-  assert.ok(Math.abs(features.workouts[0].min - 45) < 0.2);
-  assert.ok(!/\d{4}-\d{2}-\d{2}/.test(JSON.stringify(features)), "no dates stored on the phone");
-});
-
-test("an imported workout and its backfilled copy are the same workout", async () => {
-  const { sameWorkout } = await import("../web/js/sync-merge.js");
-  assert.ok(sameWorkout({ day: -3, min: 45, trimp: 169 }, { day: -3, min: 46.5, trimp: 171 }));
-  assert.ok(!sameWorkout({ day: -3, min: 45 }, { day: -3, min: 60 }));
-  assert.ok(!sameWorkout({ day: -3, min: 45 }, { day: -2, min: 45 }));
+test("the website and the app draw the same today from the same vault", async () => {
+  const { analyze } = await import("../web/js/engine.js");
+  const { todayModel } = await import("../web/js/view.js");
+  const ws = [0, 2, 4, 9, 11, 16, 23].map((d) => timed(new Date(NOW - d * DAY).toISOString().slice(0, 16), 40 + d));
+  const vault = addToVault(emptyVault(), null, ws);
+  const site = featuresFromVault(JSON.parse(JSON.stringify(vault)), NOW);         // the browser's copy
+  const app = featuresFromVault(JSON.parse(JSON.stringify(vault)), NOW);          // the app's copy
+  assert.deepEqual(todayModel(analyze(app), app), todayModel(analyze(site), site));
+  assert.equal(site.workouts.length, 7);
+  assert.ok(!JSON.stringify(workoutSummaries(site, NOW)).includes("undefined"));
 });
 
 test("fetchRecords unwraps the exact receive time sealed inside; deleteRecords sends DELETE upto", async () => {
@@ -181,10 +122,11 @@ test("fetchRecords unwraps the exact receive time sealed inside; deleteRecords s
   assert.equal(del.calls[0].method, "DELETE");
 });
 
-test("calories survive the API merge and show in today's summaries", async () => {
+test("calories survive the API and show in today's summaries", async () => {
   const { todayModel } = await import("../web/js/view.js");
   const { analyze } = await import("../web/js/engine.js");
-  const { features } = mergeDrop(null, DROP, { nowMs: NOW, ageS: 0, refDay: null });
+  const v = dropToVault(DROP, NOW, NOW);
+  const features = featuresFromVault(addToVault(emptyVault(), null, v.workouts, v.days), NOW);
   assert.equal(features.workouts.length, 1);
   assert.equal(features.workouts[0].kcal, 500);
   const m = todayModel(analyze(features), features);

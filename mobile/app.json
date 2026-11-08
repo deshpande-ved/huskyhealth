@@ -15,6 +15,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSHealthShareUsageDescription": "HuskyHealth reads your workouts, heart rate, sleep and VO2 max to work out your training call. When you log in, it seals each workout to your account key before sending it to your API, so only you can read it.",
+        "NSMicrophoneUsageDescription": "HuskyHealth records up to five seconds while you ask a question out loud, to turn it into words. The audio is never stored.",
         "NSHealthUpdateUsageDescription": "Only used in the simulator demo to add a sample workout to Health."
       },
       "entitlements": {

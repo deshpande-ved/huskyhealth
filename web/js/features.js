@@ -73,6 +73,8 @@ function dedupe(ws) {
 // scan: { samples, workouts, now, days, source }. `stats` (optional) receives counts for the CLI.
 export function toFeatures(scan, stats = {}) {
   const { samples, workouts, now, days, source = "apple_health" } = scan;
+  // scan.keepStart (optional): keep each workout's start time (ms), only for the encrypted vault; the Features
+  // JSON itself stays free of timestamps.
   // scan.maxHr (optional): a max HR already known from a longer history, e.g. when merging a 3-day sync drop
   const hrMax = Math.max(samples.hr.reduce((m, [, v]) => Math.max(m, v), -Infinity), scan.maxHr ?? -Infinity);
   const maxHr = Number.isFinite(hrMax) ? Math.round(hrMax) : null;
@@ -88,7 +90,7 @@ export function toFeatures(scan, stats = {}) {
       start: w.start, end: w.end, src: sourceOf(w), nHr: hr.length,
       effortKind: user.length ? "user" : est.length ? "estimated" : "none",
       row: {
-        day: dayOffset(w.start, now), sport: sportOf(w.type), min: r1(w.min),
+        day: dayOffset(w.start, now), ...(scan.keepStart ? { start: w.start } : {}), sport: sportOf(w.type), min: r1(w.min),
         kcal: w.kcal == null ? null : Math.round(w.kcal), zone_min: zm.map(r2), trimp: r1(trimp(zm)),
         effort, srpe: srpe(effort, r1(w.min)), source: sourceOf(w), hr_sample_ok: hr.length > 0 && hr.length >= needed,
       },

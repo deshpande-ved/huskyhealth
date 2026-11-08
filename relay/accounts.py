@@ -152,6 +152,18 @@ def open_account():
     return {"session": _new_session(aid), "vault": rec.get("vault"), "has_pub": bool(rec.get("pub")), "pub": rec.get("pub")}
 
 
+@bp.get("/v1/account/vault")
+def get_vault():
+    """The latest encrypted vault, for a device that is already logged in (another device may have written it)."""
+    aid, err = require_session()
+    if err:
+        return err
+    rec = read_account(aid)
+    if not rec:
+        return _err(404)
+    return {"vault": rec.get("vault")}
+
+
 @bp.post("/v1/account/vault")
 def save_vault():
     aid, err = require_session()

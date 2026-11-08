@@ -2,10 +2,10 @@
 import { analyze } from "./engine.js";
 import { paint, banner } from "./ascii.js";
 import { createDb } from "./db.js";
-import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel, briefText, answerQuestion, hm } from "./view.js";
+import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel, briefText, answerQuestion, hm, WELCOME } from "./view.js";
 import { recordQuestion } from "./voice.js";
-import { signIn, saveVault, deleteAccount, addToVault, makeReport, workoutSummaries, daySummaries, fetchRecords, deleteRecords, newToken, listTokens, revokeToken, featuresFromVault, speakBrief, listenQuestion, RELAY } from "./account.js";
-import { dayNumber, mergeDrop, validDrop } from "./sync-merge.js";
+import { signIn, saveVault, fetchVault, deleteAccount, addToVault, makeReport, workoutSummaries, daySummaries, fetchRecords, deleteRecords, newToken, listTokens, revokeToken, featuresFromVault, speakBrief, listenQuestion, RELAY } from "./account.js";
+import { dayNumber, dropToVault, validDrop } from "./sync-merge.js";
 
 const HEX_COMMIT = /^[0-9a-f]{7,40}$/;
 const WORKER = "/js/parse-apple.worker.js";
@@ -278,7 +278,7 @@ function render() {
     login.addEventListener("click", () => openSheet(true));
     $("hero").replaceChildren(
       ...bannerNode(["HUSKY", "HEALTH"], "HuskyHealth"),
-      el("p", { className: "reason", textContent: "Log in on the HuskyHealth iPhone app and your last 60 days of Apple Watch or Garmin workouts arrive here, encrypted so only you can read them." }),
+      el("p", { className: "reason", textContent: WELCOME }),
       el("div", { className: "cta" }, login, el("label", { className: "button", htmlFor: "import-file", textContent: "import an Apple Health export" }),
         el("a", { href: "/api", textContent: "how the API works" })));
     $("panels").replaceChildren();
@@ -321,12 +321,15 @@ function startImport(file) {
     state.imp = onImportMessage(state.imp, data);
     renderImport();
     if (data.done || data.error) worker.terminate();
-    if (data.done) {
+    if (data.done && state.account) {
+      // logged in: the export goes into the account, and today is drawn from the account like everywhere else
+      await autoSave("import", { workouts: workoutSummaries(data.features), days: daySummaries(data.features) });
+      location.hash = "#today";
+    } else if (data.done) {
       await db.saveFeatures(data.features);
       await db.saveRecord("ref", { day: dayNumber(Date.now()) });   // offsets now count from today
       state.features = await db.loadFeatures();
       render();
-      autoSave("import");
       location.hash = "#today";
     }
   };
@@ -370,48 +373,56 @@ function renderAccount() {
     `${w.date}  ${w.sport.padEnd(9)}${String(Math.round(w.min)).padStart(4)} min  load ${String(Math.round(w.trimp)).padStart(4)}  ${w.kcal != null ? `${String(Math.round(w.kcal)).padStart(4)} kcal` : "        "}  zones ${w.zone_min.map(Math.round).join("/")}${w.effort != null ? `  effort ${w.effort}` : ""}`).join("\n");
 }
 
-async function autoSave(source) {
+// The account's vault is the one source of today, here and in the iPhone app: both draw it with featuresFromVault.
+async function showVault(vault) {
+  state.account.vault = vault;
+  state.features = featuresFromVault(vault);
+  await db.saveFeatures(state.features);
+  await db.saveRecord("ref", { day: dayNumber(Date.now()) });
+  render();
+}
+
+// Merge new entries (an import, records from devices) into the vault, add today's report, encrypt, save, show.
+async function autoSave(source, add = null) {
   const a = state.account;
-  if (!a || !state.features) return;
-  const f = state.features;
+  if (!a) return;
+  let vault = add ? addToVault(a.vault, null, add.workouts, add.days, { prefer: add.prefer || "incoming" }) : a.vault;
+  const f = featuresFromVault(vault);
   const an = analyze(f);
-  const report = makeReport(an, f, todayModel(an, f).call, { source });
-  const vault = addToVault(a.vault, report, workoutSummaries(f), daySummaries(f));
+  vault = addToVault(vault, makeReport(an, f, todayModel(an, f).call, { source }), []);
   acctSay("Encrypting and saving\u2026");
   const r = await saveVault({ account: a, vault });
-  if (r.ok) { a.vault = vault; acctSay(`Saved: report ${fmtAt(report.at)}, ${vault.workouts.length} workouts in your history.`); }
+  if (r.ok) { await showVault(vault); acctSay(`Saved: ${vault.workouts.length} workouts in your history.`); }
   else acctSay(r.status);
   renderAccount();
   return r;
 }
 
-// Records your devices sent since last time: open them here, fold them into today, remember the cursor in the vault.
+// Pick up what other devices wrote: the latest vault (the iPhone app writes it directly), then records sent to the
+// personal API since last time, folded in and saved. The Pi forgets records once they are safely in the vault.
 let pulling = false;
 async function pullInbox(quiet = false) {
   const a = state.account;
   if (!a || pulling) return;
   pulling = true;
   try {
+    const latest = await fetchVault({ account: a });
+    if (latest.ok && latest.vault && JSON.stringify(latest.vault) !== JSON.stringify(a.vault)) await showVault(latest.vault);
     const r = await fetchRecords({ account: a, after: a.vault.inbox || 0 });
     if (!r.ok) { if (!quiet) acctSay(r.status); return; }
     if (!r.records.length) { if (!quiet) acctSay("No new records from your devices."); return; }
-    const now = Date.now();
-    let f = state.features;
-    let ref = (await db.loadRecord("ref"))?.day ?? null;
-    let added = 0;
+    const now = Date.now(), workouts = [], days = [];
     for (const x of r.records) {
       if (!validDrop(x.drop)) continue;
-      const m = mergeDrop(f, x.drop, { nowMs: now, ageS: Math.max(0, now / 1000 - x.at), refDay: ref });
-      f = m.features; ref = m.refDay; added += m.added;
+      const v = dropToVault(x.drop, Math.min(now, x.at * 1000), now, a.vault.max_hr ?? null);
+      workouts.push(...v.workouts); days.push(...v.days);
     }
-    await db.saveFeatures(f);
-    await db.saveRecord("ref", { day: ref });
-    state.features = await db.loadFeatures();
-    render();
     a.vault = { ...a.vault, inbox: r.last };
+    const before = a.vault.workouts.length;
+    const saved = await autoSave("sync", { workouts, days, prefer: "existing" });
+    const added = state.account.vault.workouts.length - before;
     acctSay(`${r.records.length} new record${r.records.length === 1 ? "" : "s"} from your devices, ${added} new workout${added === 1 ? "" : "s"}.`);
-    const saved = added ? await autoSave("sync") : await saveVault({ account: a, vault: a.vault });
-    if (saved && saved.ok) await deleteRecords({ account: a, upto: r.last });   // safely in the vault: the Pi forgets them
+    if (saved && saved.ok) await deleteRecords({ account: a, upto: r.last });
   } finally {
     pulling = false;
   }
@@ -448,18 +459,15 @@ function wireAccount() {
     loginSay("");
     openSheet(false);
     state.account = { username: username.trim().toLowerCase(), session: r.session, keys: r.keys, vault: r.vault };
-    // A browser with no data of its own (a new device, or the other site address): rebuild today from the account.
-    if (!state.features && r.vault.workouts.length) {
-      await db.saveFeatures(featuresFromVault(r.vault));
-      await db.saveRecord("ref", { day: dayNumber(Date.now()) });
-      state.features = await db.loadFeatures();
-      render();
+    // Today comes from the account. A browser that imported an export before logging in seeds a new account with it.
+    if (!r.vault.workouts.length && state.features && state.features.workouts.length) {
+      await autoSave("import", { workouts: workoutSummaries(state.features), days: daySummaries(state.features) });
+    } else {
+      await showVault(r.vault);
     }
-    acctSay(create ? "Account created. Reports save here after each import or sync."
-      : `Logged in. ${r.vault.reports.length} reports, ${r.vault.workouts.length} workouts${state.features && state.features.source === "account" ? "; today rebuilt from your account" : ""}.`);
+    acctSay(create ? "Account created." : `Logged in. ${r.vault.reports.length} reports, ${state.account.vault.workouts.length} workouts.`);
     renderAccount();
     renderTokens();
-    if (create || !r.vault.reports.length) await autoSave("import");
     await pullInbox(true);
   };
   setInterval(() => { if (!document.hidden) pullInbox(true); }, 30_000);   // while logged in: new records within 30 s
