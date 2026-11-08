@@ -67,11 +67,18 @@
       "text": " with your password: on the website, with "
      },
      {
-      "text": "node scripts/huskyhealth.mjs records --user <you>",
+      "text": "node scripts/huskyhealth.mjs history --user <you>",
       "code": true
      },
      {
-      "text": ", or by speaking to it (“how was my week?”) on the today page. Each answer shows the request behind it."
+      "text": " (your whole history) or "
+     },
+     {
+      "text": "records",
+      "code": true
+     },
+     {
+      "text": " (new records not yet picked up), or by speaking to it (“how was my week?”) on the today page. Each answer shows the request behind it."
      }
     ]
    ]
@@ -643,6 +650,19 @@
   {
    "t": "pre",
    "text": "node scripts/huskyhealth.mjs records --user <you>"
+  },
+  {
+   "t": "p",
+   "cls": "lede",
+   "runs": [
+    {
+     "text": "Or your whole saved history, every workout and day, e.g. your last squash session:"
+    }
+   ]
+  },
+  {
+   "t": "pre",
+   "text": "node scripts/huskyhealth.mjs history --user <you> --sport squash --last 1"
   }
  ],
  "methods": [
