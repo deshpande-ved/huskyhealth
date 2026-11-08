@@ -13,16 +13,17 @@
   <link rel="icon" href="/icons/favicon-96x96.png" type="image/png" sizes="96x96">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="preload" href="/fonts/instrument-serif-latin-400-italic.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/css/style.css">
   <script type="module" src="/js/app.js"></script>
 </head>
 <body>
   <main>
     <header class="top">
-      <img id="mark" src="/art/husky.svg" alt="" width="72" height="72">
+      <a class="mark-link" href="#today" aria-label="HuskyHealth, today"><img id="mark" src="/art/husky.svg" alt="" width="72" height="72"></a>
       <div class="brand">
-        <h1>HuskyHealth</h1>
-        <p>training insight from your watch &middot; computed on your phone &middot; encrypted before anything leaves it</p>
+        <h1><a href="#today">HuskyHealth</a></h1>
+        <p>your HealthKit, as a private web API</p>
       </div>
     </header>
     <nav class="tabs" aria-label="Pages"><a href="#today">today</a><a href="#import">import</a><a href="#account">account</a><a href="/api">api</a></nav>
@@ -30,6 +31,24 @@
     <section id="today" aria-label="Today" class="page">
       <div class="hero" id="hero"></div>
       <div class="panels" id="panels"></div>
+    </section>
+
+    <section id="week" aria-label="This week in detail" class="block page detail">
+      <p class="back"><a href="#today">&larr; today</a></p>
+      <h2>This week</h2>
+      <div id="week-body"></div>
+    </section>
+
+    <section id="session" aria-label="Sessions in detail" class="block page detail">
+      <p class="back"><a href="#today">&larr; today</a></p>
+      <h2>Sessions</h2>
+      <div id="session-body"></div>
+    </section>
+
+    <section id="zones" aria-label="Heart-rate zones in detail" class="block page detail">
+      <p class="back"><a href="#today">&larr; today</a></p>
+      <h2>Heart-rate zones</h2>
+      <div id="zones-body"></div>
     </section>
 
 
@@ -44,7 +63,7 @@
 
     <section id="account" aria-label="Account" class="block page">
       <h2>Account</h2>
-      <p class="lede">Optional. An account keeps your past reports and workout summaries so you can look back from any device. Your browser encrypts them with a key made from your password before anything is sent. The Pi stores only that ciphertext, under a hash of your username. It cannot read it, and neither can we. Forget the password and the history is gone for good.</p>
+      <p class="lede">One account for the website, the iPhone app and your API. Everything is encrypted on your device with a key made from your password; the Pi stores only ciphertext and cannot read it. There is no password reset: forget it and the history is gone.</p>
       <div id="acct-out" class="panel">
         <h3>Log in or create an account</h3>
         <p class="explain">Raw heart rate is never saved: only each report (the call, fitness, fatigue, form) and per-workout summaries (date, sport, minutes, load, zone minutes).</p>
