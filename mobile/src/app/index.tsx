@@ -4,17 +4,17 @@
 import { useCallback, useRef, useState } from 'react'
 import { Alert, Pressable, RefreshControl, Text, TextInput, View, useWindowDimensions } from 'react-native'
 import { router, useFocusEffect } from 'expo-router'
-import { openBrowserAsync } from 'expo-web-browser'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Mark } from '../components/mark'
 import { PaperScroll } from '../components/paper'
+import { openRef } from '../components/page-blocks'
 import { TwoPane } from '../components/two-pane'
 import { useDuoLayout } from '../lib/use-duo-layout'
 import { HealthKit } from '../../modules/health-kit'
 import { loadToday, type Today as TodayData } from '../lib/today'
 import { setToday } from '../lib/today-store'
-import { C, bold, mono, RELAY, SITE } from '../lib/theme'
+import { C, bold, mono, RELAY } from '../lib/theme'
 import { todayModel, dateLabel, briefText, answerQuestion, weekDetail, sessionDetail, zoneDetail, WELCOME, todayRows, ROW_PAGE } from '../../../web/js/view.js'
 import { banner } from '../../../web/js/ascii.js'
 
@@ -84,7 +84,7 @@ function Masthead({ user }: { user: string | null }) {
           <Text style={{ ...mono, fontSize: 14, color: C.text, textDecorationLine: 'underline', textDecorationColor: C.love }}>
             <Text style={{ color: C.muted }}>./</Text>today
           </Text>
-          <Text onPress={() => openBrowserAsync(`${SITE}/api`)} style={{ ...mono, fontSize: 14, color: C.text2 }}>
+          <Text onPress={() => router.push('/api')} style={{ ...mono, fontSize: 14, color: C.text2 }}>
             <Text style={{ color: C.muted }}>./</Text>api
           </Text>
         </View>
@@ -224,7 +224,7 @@ export default function Today() {
       {asked?.curl ? (
         <Text selectable style={{ fontFamily: 'SpaceMono', fontSize: 12.8, lineHeight: 19, color: C.text, borderWidth: 1, borderColor: C.rule, padding: 12, marginTop: 8 }}>{asked.curl}</Text>
       ) : null}
-      <Text onPress={() => openBrowserAsync(`${SITE}/#${m.call.ref}`)} style={{ ...mono, color: C.muted, fontSize: 12.8, marginTop: 8, textDecorationLine: 'underline', textDecorationColor: C.love }}>
+      <Text onPress={() => openRef(m.call.ref)} style={{ ...mono, color: C.muted, fontSize: 12.8, marginTop: 8, textDecorationLine: 'underline', textDecorationColor: C.love }}>
         {`method · ${m.call.source.citation} · ${m.call.source.status}`}
       </Text>
       {status ? <Text style={{ ...mono, color: C.text2, fontSize: 14, marginTop: 12 }}>{status}</Text> : null}
@@ -237,7 +237,7 @@ export default function Today() {
           <Text style={{ ...mono, fontSize: 20, lineHeight: 29 }}>{WELCOME}</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginTop: 24 }}>
             <Button label="log in" primary onPress={() => router.push('/sync')} />
-            <Text onPress={() => openBrowserAsync(`${SITE}/api`)} style={{ ...mono, fontSize: 14, textDecorationLine: 'underline', textDecorationColor: C.love }}>how the API works</Text>
+            <Text onPress={() => router.push('/api')} style={{ ...mono, fontSize: 14, textDecorationLine: 'underline', textDecorationColor: C.love }}>how the API works</Text>
           </View>
         </>
       )}

@@ -1,6 +1,6 @@
 // The website's continuous-form paper (body background in web/css/style.css): bands three printed lines tall,
 // paper and band alternating. Drawn behind scrolling content; height follows the content.
-import { useState, type ReactNode } from 'react'
+import { forwardRef, useState, type ComponentRef, type ReactNode } from 'react'
 import { ScrollView, View, type ScrollViewProps } from 'react-native'
 
 import { C, LINE } from '../lib/theme'
@@ -20,13 +20,13 @@ export function Bands({ height }: { height: number }) {
 }
 
 /** A ScrollView on banded paper. */
-export function PaperScroll({ children, contentContainerStyle, ...rest }: ScrollViewProps & { children: ReactNode }) {
+export const PaperScroll = forwardRef<ComponentRef<typeof ScrollView>, ScrollViewProps & { children: ReactNode }>(function PaperScroll({ children, contentContainerStyle, ...rest }, ref) {
   const [h, setH] = useState(0)
   return (
-    <ScrollView style={{ backgroundColor: C.base }} {...rest} contentContainerStyle={contentContainerStyle}
+    <ScrollView ref={ref} style={{ backgroundColor: C.base }} {...rest} contentContainerStyle={contentContainerStyle}
       onContentSizeChange={(_, ch) => setH(ch)}>
       <Bands height={Math.max(h, 2000)} />
       {children}
     </ScrollView>
   )
-}
+})

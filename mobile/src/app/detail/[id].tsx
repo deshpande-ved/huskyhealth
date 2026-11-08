@@ -2,12 +2,12 @@
 // web/js/view.js detailBlocks, so every word, number and table matches. Tables scroll sideways, as on the site.
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
-import { openBrowserAsync } from 'expo-web-browser'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { PaperScroll } from '../../components/paper'
+import { openRef } from '../../components/page-blocks'
 import { getToday } from '../../lib/today-store'
-import { C, bold, mono, SITE } from '../../lib/theme'
+import { C, bold, mono } from '../../lib/theme'
 import { DETAIL_PAGES, detailBlocks } from '../../../../web/js/view.js'
 
 type Cell = string | { ch: string; cls: string } | { stack: { ch: string; cls: string }[] }
@@ -71,7 +71,7 @@ function BlockView({ b }: { b: Block }) {
     )
     case 'table': return <Table head={b.head} rows={b.rows} num={b.num} />
     case 'method': return (
-      <Text onPress={() => openBrowserAsync(`${SITE}/#${b.ref}`)} style={{ ...mono, color: C.muted, fontSize: 12.8, marginTop: 8, textDecorationLine: 'underline', textDecorationColor: C.love }}>
+      <Text onPress={() => openRef(b.ref)} style={{ ...mono, color: C.muted, fontSize: 12.8, marginTop: 8, textDecorationLine: 'underline', textDecorationColor: C.love }}>
         {`method · ${b.source.citation} · ${b.source.status}`}
       </Text>
     )
