@@ -225,8 +225,8 @@ export function zoneDetail(features) {
 export function briefText(model, max = 600) {
   const strip = (s) => String(s || "").replace(/[^A-Za-z0-9 .,;:%'()/\-’–—]/g, "");
   const parts = [`${model.call.headline}.`, model.call.reason];
-  if (model.week && model.week.summary) parts.push(`This week: ${model.week.summary.replace(/^Load/, "load")}`);
   if (model.last && model.last.summary) parts.push(`Last session: ${model.last.summary}`);
+  if (model.week && model.week.summary) parts.push(`This week: ${model.week.summary.replace(/^Load/, "load")}`);
   let text = "";
   for (const p of parts.map(strip)) {
     const next = text ? `${text} ${p}` : p;
@@ -297,7 +297,12 @@ export const WELCOME = "Log in on the HuskyHealth iPhone app and your last 60 da
 // Blocks: { t: "lede" | "subhead" | "empty", text } · { t: "facts", items: [[k, v]] } · { t: "stack", cells }
 //         { t: "table", head, rows, num: [column indexes], narrow } · { t: "method", source, ref }
 // A table cell is a string, { ch, cls } (a coloured label such as Z3) or { stack: cells } (a zone-mix bar).
-export const DETAIL_PAGES = [["week", "This week"], ["session", "Sessions"], ["zones", "Heart-rate zones"], ["sleep", "Sleep"], ["fitness", "VO2 max"]];
+// The order of the rows under today's call, on the website and in the app: zones, last session, this week, VO2 max,
+// then sleep. Each row opens its detail page (row id -> page id).
+export const ROW_ORDER = ["zones", "last", "week", "fitness", "sleep"];
+export const ROW_PAGE = { zones: "zones", last: "session", week: "week", fitness: "fitness", sleep: "sleep" };
+export const todayRows = (model) => ROW_ORDER.map((id) => model[id]).filter(Boolean);
+export const DETAIL_PAGES = [["zones", "Heart-rate zones"], ["session", "Sessions"], ["week", "This week"], ["fitness", "VO2 max"], ["sleep", "Sleep"]];
 const EMPTY_NOTE = { t: "empty", text: "Nothing here yet. Import your export or log in to your account." };
 const dash = "\u2014";
 

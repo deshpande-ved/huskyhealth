@@ -15,7 +15,7 @@ import { HealthKit } from '../../modules/health-kit'
 import { loadToday, type Today as TodayData } from '../lib/today'
 import { setToday } from '../lib/today-store'
 import { C, bold, mono, RELAY, SITE } from '../lib/theme'
-import { todayModel, dateLabel, briefText, answerQuestion, weekDetail, sessionDetail, zoneDetail, WELCOME } from '../../../web/js/view.js'
+import { todayModel, dateLabel, briefText, answerQuestion, weekDetail, sessionDetail, zoneDetail, WELCOME, todayRows, ROW_PAGE } from '../../../web/js/view.js'
 import { banner } from '../../../web/js/ascii.js'
 
 type Cell = { ch: string; cls: string }
@@ -34,10 +34,9 @@ function Button({ label, onPress, primary = false }: { label: string; onPress: (
 }
 
 // A row of the printout (web: a.row): title, one plain sentence, the ASCII figure. The whole row opens its page.
-const PAGE: Record<string, string> = { week: 'week', last: 'session', sleep: 'sleep', fitness: 'fitness', zones: 'zones' }
 function Row({ fig }: { fig: Fig }) {
   return (
-    <Pressable onPress={() => router.push(`/detail/${PAGE[fig.id] ?? fig.id}`)} accessibilityRole="link" accessibilityLabel={`${fig.title}. ${fig.summary || fig.label}`}
+    <Pressable onPress={() => router.push(`/detail/${(ROW_PAGE as Record<string, string>)[fig.id] ?? fig.id}`)} accessibilityRole="link" accessibilityLabel={`${fig.title}. ${fig.summary || fig.label}`}
       style={({ pressed }) => ({ borderBottomWidth: 1, borderColor: C.rule, borderStyle: 'dashed', paddingVertical: 24, paddingHorizontal: 8, gap: 8, backgroundColor: pressed ? C.surface : 'transparent' })}>
       <View>
         <Text style={{ ...bold, fontSize: 20 }}>{fig.title}</Text>
@@ -164,7 +163,7 @@ export default function Today() {
   const f = data?.features
   const an = data?.analysis
   const m = f && an ? todayModel(an, f) : null
-  const figs = (m ? [m.week, m.last, m.sleep, m.fitness, m.zones].filter(Boolean) : []) as Fig[]
+  const figs = (m ? todayRows(m) : []) as Fig[]
 
   // ask your API (web: askNode): keyword intents answered from the page's data, spoken, with the curl behind them
   const answer = (q: string) => {

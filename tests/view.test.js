@@ -132,3 +132,14 @@ test("detail pages are one shared description: every page builds, links its meth
   const app = readFileSync(new URL("../mobile/src/app/detail/[id].tsx", import.meta.url), "utf8");
   assert.match(app, /detailBlocks/);
 });
+
+test("rows run zones, last session, this week, VO2 max, sleep, on the website and in the app", async () => {
+  const { todayRows, ROW_ORDER } = await import("../web/js/view.js");
+  assert.deepEqual(ROW_ORDER, ["zones", "last", "week", "fitness", "sleep"]);
+  const ids = todayRows(m).map((x) => x.id);
+  assert.deepEqual(ids, ROW_ORDER.filter((id) => ids.includes(id)));
+  const app = readFileSync(new URL("../mobile/src/app/index.tsx", import.meta.url), "utf8");
+  const site = readFileSync(new URL("../web/js/app.js", import.meta.url), "utf8");
+  assert.match(app, /todayRows\(m\)/);
+  assert.match(site, /todayRows\(todayModel/);
+});
