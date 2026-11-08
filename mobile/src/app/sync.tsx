@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Alert, Pressable, Text, TextInput, View } from 'react-native'
 import { router } from 'expo-router'
-import { openBrowserAsync } from 'expo-web-browser'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { PaperScroll } from '../components/paper'
@@ -9,7 +8,7 @@ import { TwoPane } from '../components/two-pane'
 import { useDuoLayout } from '../lib/use-duo-layout'
 
 import { HealthKit } from '../../modules/health-kit'
-import { bold, C, mono, RELAY, SITE } from '../lib/theme'
+import { bold, C, mono, RELAY } from '../lib/theme'
 
 // Your HuskyHealth account, as on the website's account page. Log in once: the keys are derived here (the password
 // is never sent), new workouts from your watch go to your personal API by themselves, and History lists the reports
@@ -134,7 +133,7 @@ export default function Account() {
         {!user ? <Pressable onPress={login} style={{ ...btn, backgroundColor: C.text }}><Text style={{ ...btnText, color: C.base }}>{busy ? 'logging in…' : 'log in'}</Text></Pressable> : null}
         {user ? <Pressable onPress={syncNow} style={btn}><Text style={btnText}>sync now</Text></Pressable> : null}
         {user ? <Pressable onPress={seed} style={{ ...btn, borderColor: C.muted }}><Text style={{ ...btnText, color: C.muted }}>demo workout</Text></Pressable> : null}
-        <Pressable onPress={() => openBrowserAsync(`${SITE}/api`)} style={btn}><Text style={btnText}>how the API works</Text></Pressable>
+        <Pressable onPress={() => router.push('/api')} style={btn}><Text style={btnText}>how the API works</Text></Pressable>
         {user ? <Pressable onPress={logout} style={btn}><Text style={btnText}>log out</Text></Pressable> : null}
         {user ? <Pressable onPress={deleteAccount} style={{ ...btn, borderColor: C.love }}><Text style={{ ...btnText, color: C.love }}>delete account</Text></Pressable> : null}
       </View>
