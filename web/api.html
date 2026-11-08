@@ -101,6 +101,11 @@
       <div class="scroll"><pre class="log">node scripts/huskyhealth.mjs records --user &lt;you&gt;</pre></div>
       <p class="lede">Or your whole saved history, every workout and day, e.g. your last squash session:</p>
       <div class="scroll"><pre class="log">node scripts/huskyhealth.mjs history --user &lt;you&gt; --sport squash --last 1</pre></div>
+      <p class="lede">Or with curl, to see exactly what the Pi holds. A session token lets curl fetch your history; it arrives as ciphertext, and only your password opens it, on your machine:</p>
+      <div class="scroll"><pre class="log">export HH_SESSION=$(node scripts/huskyhealth.mjs session --user &lt;you&gt;)
+curl https://veds-pi5.polecat-nominal.ts.net:10000/v1/account/vault \
+  -H "Authorization: Bearer $HH_SESSION" -o vault.json
+node scripts/huskyhealth.mjs open vault.json --user &lt;you&gt; --sport squash --last 1</pre></div>
     </section>
   </main>
   <footer><p>Training insight, not medical advice</p></footer>
