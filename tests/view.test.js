@@ -117,3 +117,18 @@ test("sleep and VO2 max rows: from the days, descriptive, linked to methods; ans
   const none = todayModel(analyze(f), f);
   assert.equal(none.sleep, null); assert.equal(none.fitness === null || typeof none.fitness.summary === "string", true);
 });
+
+test("detail pages are one shared description: every page builds, links its method, and the app opens each one", async () => {
+  const { detailBlocks, DETAIL_PAGES } = await import("../web/js/view.js");
+  const an = analyze(f);
+  for (const [id, title] of DETAIL_PAGES) {
+    const blocks = detailBlocks(id, an, f);
+    assert.ok(title && blocks.length, id);
+    const method = blocks.find((b) => b.t === "method");
+    if (blocks[0].t !== "empty") assert.ok(method && method.source.citation && html.includes(`id="${method.ref}"`), `${id} method`);
+    for (const b of blocks.filter((x) => x.t === "table")) for (const r of b.rows) assert.equal(r.length, b.head.length, `${id} row width`);
+  }
+  assert.deepEqual(detailBlocks("week", an, f, false).map((b) => b.t), ["empty"]);
+  const app = readFileSync(new URL("../mobile/src/app/detail/[id].tsx", import.meta.url), "utf8");
+  assert.match(app, /detailBlocks/);
+});
