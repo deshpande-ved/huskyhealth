@@ -109,3 +109,23 @@ test("report and summaries carry no heart-rate streams", () => {
   assert.deepEqual(Object.keys(w).sort(), ["date", "effort", "min", "sport", "srpe", "trimp", "zone_min"]);
   assert.equal(w.date, "2026-11-05");
 });
+
+test("featuresFromVault: a new browser gets today back from the account (workouts in the window, day offsets from today)", async () => {
+  const { featuresFromVault } = await import("../web/js/account.js");
+  const { analyze } = await import("../web/js/engine.js");
+  const { todayModel } = await import("../web/js/view.js");
+  const now = Date.parse("2026-11-07T20:00:00Z");
+  const vault = { ...emptyVault(), workouts: [
+    { date: "2026-11-07", sport: "squash", min: 45, trimp: 169, zone_min: [0, 7, 12, 11, 15], effort: 7, srpe: 315 },
+    { date: "2026-11-05", sport: "squash", min: 50, trimp: 150, zone_min: [5, 10, 15, 10, 10], effort: null, srpe: null },
+    { date: "2026-08-01", sport: "running", min: 30, trimp: 60, zone_min: [10, 10, 10, 0, 0] },   // outside 60 days
+  ] };
+  const f = featuresFromVault(vault, now);
+  assert.deepEqual(f.workouts.map((w) => [w.day, w.sport]), [[-2, "squash"], [0, "squash"]]);
+  assert.equal(f.days.length, 60);
+  assert.equal(f.days.at(-1).trimp, 169);
+  assert.equal(f.days.at(-1).srpe, 315);
+  const m = todayModel(analyze(f), f);
+  assert.equal(m.call.basis, "from your training load (not enough HRV yet)");
+  assert.match(m.last.label, /^Last session: Squash, today, 45 min, load 169, effort 7 of 10$/);
+});

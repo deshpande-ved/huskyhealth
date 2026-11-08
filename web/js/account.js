@@ -82,6 +82,27 @@ export function workoutSummaries(features, nowMs = Date.now()) {
   }));
 }
 
+// Today's features rebuilt from the vault's workout summaries, for a browser that has none (a new device or site).
+// Day offsets count from today. Daily resting HR and HRV are not in the vault, so the call uses the load rule.
+export function featuresFromVault(vault, nowMs = Date.now(), windowDays = 60) {
+  const today = Date.parse(isoDay(nowMs));
+  const r1 = (x) => Math.round(x * 10) / 10;
+  const workouts = (vault.workouts || [])
+    .map((w) => ({ day: Math.round((Date.parse(w.date) - today) / DAY), sport: w.sport, min: w.min, kcal: null,
+      zone_min: [...(w.zone_min || [0, 0, 0, 0, 0])], trimp: w.trimp, effort: w.effort ?? null, srpe: w.srpe ?? null,
+      source: "account", hr_sample_ok: true }))
+    .filter((w) => Number.isFinite(w.day) && w.day <= 0 && w.day > -windowDays)
+    .sort((a, b) => a.day - b.day);
+  const days = Array.from({ length: windowDays }, (_, i) => {
+    const day = i - (windowDays - 1);
+    const ws = workouts.filter((w) => w.day === day);
+    const rated = ws.filter((w) => w.srpe != null);
+    return { day, trimp: r1(ws.reduce((s, w) => s + (w.trimp || 0), 0)), srpe: rated.length ? r1(rated.reduce((s, w) => s + w.srpe, 0)) : null,
+             rhr: null, ln_hrv: null, vo2: null };
+  });
+  return { v: 1, source: "account", window_days: windowDays, max_hr: null, days, workouts };
+}
+
 // Merge a new report and its workouts into the vault: workouts deduped by date+sport+minutes, newest report first.
 export function addToVault(vault, report, workouts) {
   const key = (w) => `${w.date}|${w.sport}|${Math.round(w.min)}`;
