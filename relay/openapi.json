@@ -393,6 +393,85 @@
           }
         }
       }
+    },
+    "/v1/speak": {
+      "post": {
+        "summary": "Speak a short brief (Gradium TTS). Plain brief text only, at most 600 characters.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "maxLength": 600
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "{ audio (base64 WAV), mime, words: [{ text, start_s, stop_s }] }"
+          },
+          "422": {
+            "description": "Not plain brief text"
+          },
+          "429": {
+            "description": "Slow down; see Retry-After"
+          },
+          "503": {
+            "description": "Speech not set up"
+          }
+        }
+      }
+    },
+    "/v1/listen": {
+      "post": {
+        "summary": "Talk to your API: a spoken question (WAV, at most 5 s) becomes text (Gradium STT). Never stored.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "audio/wav": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "{ text }"
+          },
+          "413": {
+            "description": "Longer than 5 s"
+          },
+          "415": {
+            "description": "Not audio/wav"
+          },
+          "429": {
+            "description": "Slow down; see Retry-After"
+          },
+          "503": {
+            "description": "Speech not set up"
+          }
+        }
+      }
     }
   }
 }

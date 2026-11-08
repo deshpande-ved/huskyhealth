@@ -159,6 +159,10 @@ nav.tabs a[aria-current="page"] { color: var(--ink); text-decoration: underline;
 .caption { margin: 0; flex: 1 1 28ch; max-width: 64ch; font-size: var(--t-sm); color: var(--ink-2); }
 .caption span { transition: color var(--d-fast) var(--ease-std), background-color var(--d-fast) var(--ease-std); }
 .caption span.on { color: var(--paper); background: var(--red); }
+.askbox { margin: var(--s-6) 0 0; max-width: 680px; }
+.ask { display: flex; gap: var(--s-2); }
+.ask input { flex: 1; min-width: 0; }
+.askbox pre.curl { margin: var(--s-3) 0 var(--s-2); padding: var(--s-3); border: 1px dashed var(--rule); white-space: pre-wrap; word-break: break-all; }
 .cta { display: flex; flex-wrap: wrap; gap: var(--s-3); margin: var(--s-6) 0 0; }
 
 /* ---------- today: rows of the printout; the row is the link ---------- */

@@ -192,6 +192,18 @@ export async function speakBrief({ account, text, fetchFn = fetch, relay = RELAY
   return r.status === 200 && r.json && r.json.audio ? { ok: true, ...r.json } : { ok: false, status: r.status };
 }
 
+// Talk to your API: up to 5 s of a spoken question (WAV) to the relay, which asks Gradium for the words.
+export async function listenQuestion({ account, wav, fetchFn = fetch, relay = RELAY }) {
+  try {
+    const res = await fetchFn(`${relay}/v1/listen`, { method: "POST", body: wav,
+      headers: { "Content-Type": "audio/wav", Authorization: `Bearer ${account.session}` } });
+    const j = await res.json().catch(() => null);
+    return res.status === 200 && j ? { ok: true, text: j.text } : { ok: false, status: res.status };
+  } catch {
+    return { ok: false, status: 0 };
+  }
+}
+
 // Delete-after-sync: once records are folded into the encrypted vault, remove them from the Pi.
 export async function deleteRecords({ account, upto, fetchFn = fetch, relay = RELAY }) {
   const r = await call(fetchFn, relay, `/v1/me/records?upto=${Number(upto) || 0}`, null, account.session, "DELETE");

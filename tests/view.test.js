@@ -74,3 +74,28 @@ test("spoken brief: written from the page's numbers, passes the relay's privacy 
   assert.ok(!/\d{5,}|https?|www\.|@/i.test(text));                             // and its SUSPECT pattern
   assert.ok(briefText(m, 60).length <= 60);
 });
+
+test("talk to your API: keyword intents answer from the page's data and show the request behind them", async () => {
+  const { answerQuestion, weekDetail, sessionDetail, zoneDetail } = await import("../web/js/view.js");
+  const a = analyze(f);
+  const ctx = { model: m, week: weekDetail(a, f), session: sessionDetail(a, f), zones: zoneDetail(f), features: f, relay: "https://r" };
+  const ask = (q) => answerQuestion(q, ctx);
+  assert.equal(ask("how was my week?").intent, "week");
+  assert.equal(ask("should I train hard today").intent, "call");
+  assert.equal(ask("what did my heart rate zones look like").intent, "zones");
+  assert.equal(ask("how many calories did I burn").intent, "calories");
+  assert.equal(ask("tell me about my last workout").intent, "last");
+  assert.equal(ask("how many sessions do I have").intent, "count");
+  assert.equal(ask("sing me a song").intent, "unknown");
+  assert.match(ask("how was my week?").curl, /^curl -H "Authorization: Bearer \$HH_SESSION"/);
+  const w = ask("send a 30 minute run to my API");
+  assert.equal(w.intent, "write");
+  assert.match(w.answer, /adds a 30 minute run to your API/);
+  assert.match(w.curl, /curl -X POST "https:\/\/r\/v1\/me\/records"/);
+  assert.ok(w.curl.includes('"sport":"running","start_s":1800,"end_s":0'));
+  for (const q of ["how was my week?", "calories", "zones", "last session", "should I train"]) {
+    const t = ask(q).answer;
+    assert.match(t, /^[A-Za-z0-9 .,;:%'()/\-’–—]+$/, q);              // passes the relay's speech filter
+    assert.ok(!/\d{5,}/.test(t) && t.length <= 600, q);
+  }
+});

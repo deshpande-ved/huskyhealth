@@ -2,8 +2,9 @@
 import { analyze } from "./engine.js";
 import { paint, banner } from "./ascii.js";
 import { createDb } from "./db.js";
-import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel, briefText } from "./view.js";
-import { signIn, saveVault, deleteAccount, addToVault, makeReport, workoutSummaries, fetchRecords, deleteRecords, newToken, listTokens, revokeToken, featuresFromVault, speakBrief } from "./account.js";
+import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel, briefText, answerQuestion } from "./view.js";
+import { recordQuestion } from "./voice.js";
+import { signIn, saveVault, deleteAccount, addToVault, makeReport, workoutSummaries, fetchRecords, deleteRecords, newToken, listTokens, revokeToken, featuresFromVault, speakBrief, listenQuestion, RELAY } from "./account.js";
 import { dayNumber, mergeDrop, validDrop } from "./sync-merge.js";
 
 const HEX_COMMIT = /^[0-9a-f]{7,40}$/;
@@ -94,6 +95,55 @@ async function playBrief(text, btn) {
   } else {
     done();
   }
+}
+
+// Talk to your API: type or say a question; the answer comes from your own data on this device, is spoken, and shows
+// the API request behind it. Typed questions never leave the page; a spoken one (at most 5 s) goes to Gradium for text.
+let recording = null;
+let micConsent = false;
+function askNode(ctx) {
+  const input = el("input", { type: "text", placeholder: "how was my week?", autocomplete: "off" });
+  input.setAttribute("aria-label", "Ask your API");
+  const ask = el("button", { type: "submit", className: "primary", textContent: "ask" });
+  const mic = el("button", { type: "button", className: "mic", textContent: "speak" });
+  mic.classList.toggle("hidden", !state.account || !navigator.mediaDevices || typeof MediaRecorder === "undefined");
+  const heard = el("p", { className: "note hidden" });
+  const curl = el("pre", { className: "log curl hidden" });
+  const copy = el("button", { type: "button", className: "hidden", textContent: "copy curl" });
+  copy.addEventListener("click", () => navigator.clipboard && navigator.clipboard.writeText(curl.textContent));
+  const answer = (q) => {
+    const r = answerQuestion(q, ctx());
+    heard.textContent = `You asked: ${q}`;
+    curl.textContent = r.curl;
+    for (const n of [heard, curl, copy]) n.classList.remove("hidden");
+    if (playing) playing.stop();
+    playBrief(r.answer, ask);
+  };
+  const form = el("form", { className: "ask" }, el("label", { className: "visually-hidden", htmlFor: "ask-q", textContent: "Ask your API" }), input, ask, mic);
+  input.id = "ask-q";
+  form.addEventListener("submit", (e) => { e.preventDefault(); const q = input.value.trim(); if (q) answer(q); });
+  mic.addEventListener("click", async () => {
+    if (recording) { recording.stop(); return; }
+    if (!micConsent && !confirm("Your spoken question (at most 5 seconds) goes to Gradium through the relay to become text. Nothing is stored. Continue?")) return;
+    micConsent = true;
+    heard.classList.remove("hidden"); heard.textContent = "Listening\u2026 (tap again to stop)";
+    mic.textContent = "stop";
+    try {
+      recording = await recordQuestion(async (wav) => {
+        recording = null; mic.textContent = "speak";
+        if (!wav) { heard.textContent = "Did not catch that. Try again or type it."; return; }
+        heard.textContent = "Turning your question into text\u2026";
+        const t = await listenQuestion({ account: state.account, wav });
+        if (!t.ok || !t.text) { heard.textContent = t.status === 503 ? "Speech is not set up on the relay. Type it instead." : "Did not catch that. Try again or type it."; return; }
+        input.value = t.text;
+        answer(t.text);
+      });
+    } catch {
+      recording = null; mic.textContent = "speak";
+      heard.textContent = "No microphone access. Type your question instead.";
+    }
+  });
+  return el("div", { className: "askbox" }, form, heard, curl, copy);
 }
 
 // The call, printed in block letters. It decodes from random ASCII into its letters (skipped with reduced motion).
@@ -195,6 +245,8 @@ function render() {
       el("p", { className: "reason", textContent: call.reason }),
       el("p", { className: "basis", textContent: `${dateLabel(0)}, ${call.basis}.` }),
       el("div", { className: "speak" }, listen, el("p", { id: "caption", className: "caption hidden" })),
+      askNode(() => ({ model: { call, week, last }, week: weekDetail(an, f), session: sessionDetail(an, f), zones: zoneDetail(f),
+        features: state.features, relay: RELAY })),
       methodNode(call.source, call.ref));
     $("panels").replaceChildren(panelNode(week, { href: "#week" }), ...(last ? [panelNode(last, { href: "#session" })] : []),
       panelNode(zones, { href: "#zones" }));

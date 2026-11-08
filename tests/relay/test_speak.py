@@ -28,7 +28,8 @@ class FakeStream(io.BytesIO):
 @pytest.fixture()
 def c(tmp_path, monkeypatch):
     monkeypatch.setattr(accounts, "VAULT_DIR", str(tmp_path))
-    for name, args in {"LOGIN_PER_ACCOUNT": (10, 900), "SESSION_LIMIT": (120, 60), "SPEAK_PER_SESSION": (20, 3600)}.items():
+    for name, args in {"LOGIN_PER_ACCOUNT": (10, 900), "SESSION_LIMIT": (120, 60), "SPEAK_PER_SESSION": (20, 3600),
+                       "LISTEN_PER_SESSION": (30, 3600)}.items():
         monkeypatch.setattr(relay_app, name, relay_app.KeyedWindow(*args))
     monkeypatch.setattr(relay_app, "ACCOUNT_LIMIT", relay_app.Window(100, 60))
     monkeypatch.setattr(relay_app, "CREATE_LIMIT", relay_app.Window(100, 3600))
@@ -119,3 +120,42 @@ def test_nothing_logged(c, session, monkeypatch, caplog):
     gradium_ok(monkeypatch, [])
     c.post("/v1/speak", json={"text": BRIEF}, headers=bearer(session))
     assert BRIEF not in caplog.text
+
+
+
+QUESTION = speak.wav(b"\x02\x00" * 24000)                       # one second of 24 kHz audio
+
+
+def gradium_asr(monkeypatch, sent, lines=None):
+    lines = lines or [{"type": "text", "text": "How was", "start_s": 0.1}, {"type": "text", "text": "my week", "start_s": 0.5},
+                      {"type": "end_text", "stop_s": 0.9}]
+
+    def fake(req, timeout):
+        sent.append({"url": req.full_url, "headers": dict(req.header_items()), "body": req.data})
+        return FakeStream("\n".join(json.dumps(x) for x in lines).encode())
+    monkeypatch.setattr(speak.urllib.request, "urlopen", fake)
+    monkeypatch.setenv("GRADIUM_API_KEY", "test-key")
+
+
+def test_listen_transcribes_a_question(c, session, monkeypatch):
+    sent = []
+    gradium_asr(monkeypatch, sent)
+    r = c.post("/v1/listen", data=QUESTION, content_type="audio/wav", headers=bearer(session))
+    assert r.status_code == 200 and r.json == {"text": "How was my week"}
+    assert len(sent) == 1 and "/api/post/speech/asr?json_config=" in sent[0]["url"] and "language" in sent[0]["url"]
+    assert sent[0]["body"] == QUESTION and sent[0]["headers"]["Content-type"] == "audio/wav"
+
+
+def test_listen_needs_session_wav_and_size_cap(c, session, monkeypatch):
+    sent = []
+    gradium_asr(monkeypatch, sent)
+    assert c.post("/v1/listen", data=QUESTION, content_type="audio/wav").status_code == 401
+    assert c.post("/v1/listen", data=b"not a wav file at all", content_type="audio/wav", headers=bearer(session)).status_code == 422
+    assert c.post("/v1/listen", data=QUESTION, content_type="audio/ogg", headers=bearer(session)).status_code == 415
+    assert c.post("/v1/listen", data=b"RIFF" + b"\0" * 260_000, content_type="audio/wav", headers=bearer(session)).status_code == 413
+    assert sent == []
+
+
+def test_listen_not_set_up(c, session, monkeypatch):
+    monkeypatch.delenv("GRADIUM_API_KEY", raising=False)
+    assert c.post("/v1/listen", data=QUESTION, content_type="audio/wav", headers=bearer(session)).status_code == 503
