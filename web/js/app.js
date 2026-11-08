@@ -2,8 +2,8 @@
 import { analyze } from "./engine.js";
 import { paint, banner } from "./ascii.js";
 import { createDb } from "./db.js";
-import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel } from "./view.js";
-import { signIn, saveVault, deleteAccount, addToVault, makeReport, workoutSummaries, fetchRecords, deleteRecords, newToken, listTokens, revokeToken, featuresFromVault } from "./account.js";
+import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel, briefText } from "./view.js";
+import { signIn, saveVault, deleteAccount, addToVault, makeReport, workoutSummaries, fetchRecords, deleteRecords, newToken, listTokens, revokeToken, featuresFromVault, speakBrief } from "./account.js";
 import { dayNumber, mergeDrop, validDrop } from "./sync-merge.js";
 
 const HEX_COMMIT = /^[0-9a-f]{7,40}$/;
@@ -54,6 +54,46 @@ function panelNode(fig, { href }) {
     fig.rows && fig.rows.length ? figureNode(fig) : el("span"));
   a.setAttribute("aria-label", `${fig.title}. ${fig.summary || fig.label}`);
   return a;
+}
+
+// Listen: Gradium speaks the brief through the relay and each word lights up as it is said. If Gradium is not
+// available, the browser's own voice reads it (on the device, so nothing leaves at all).
+let playing = null;
+async function playBrief(text, btn) {
+  if (playing) { playing.stop(); return; }
+  const cap = $("caption");
+  btn.textContent = "\u2026"; btn.disabled = true;
+  const r = state.account ? await speakBrief({ account: state.account, text }) : { ok: false };
+  btn.disabled = false;
+  const words = r.ok && r.words.length ? r.words : text.split(/\s+/).map((w) => ({ text: w }));
+  const spans = words.map((w) => el("span", { textContent: `${w.text} ` }));
+  cap.replaceChildren(...spans); cap.classList.remove("hidden");
+  const done = () => { playing = null; btn.textContent = "listen"; spans.forEach((s) => s.classList.remove("on")); };
+  btn.textContent = "stop";
+  if (r.ok) {
+    const bytes = Uint8Array.from(atob(r.audio), (ch) => ch.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], { type: r.mime || "audio/wav" }));
+    const audio = new Audio(url);
+    let raf = 0;
+    const tick = () => {
+      const t = audio.currentTime;
+      words.forEach((w, i) => spans[i].classList.toggle("on", t >= w.start_s && t < w.stop_s + 0.05));
+      raf = requestAnimationFrame(tick);
+    };
+    const finish = () => { cancelAnimationFrame(raf); URL.revokeObjectURL(url); done(); };
+    audio.addEventListener("ended", finish);
+    playing = { stop: () => { audio.pause(); finish(); } };
+    audio.play().then(() => { raf = requestAnimationFrame(tick); }).catch(finish);
+  } else if ("speechSynthesis" in window) {
+    const u = new SpeechSynthesisUtterance(text);
+    let i = 0;
+    u.addEventListener("boundary", (e) => { if (e.name === "word") { spans.forEach((s) => s.classList.remove("on")); if (spans[i]) spans[i].classList.add("on"); i++; } });
+    u.addEventListener("end", done);
+    playing = { stop: () => { speechSynthesis.cancel(); done(); } };
+    speechSynthesis.speak(u);
+  } else {
+    done();
+  }
 }
 
 // The call, printed in block letters. It decodes from random ASCII into its letters (skipped with reduced motion).
@@ -147,10 +187,14 @@ function render() {
   const an = analyze(f);
   const { call, week, last, zones } = todayModel(an, f);
   if (state.features) {
+    const listen = el("button", { type: "button", className: "listen", textContent: "listen" });
+    listen.addEventListener("click", () => playBrief(briefText({ call, week, last }), listen));
+    listen.classList.toggle("hidden", !state.account);
     $("hero").replaceChildren(
       ...bannerNode([call.headline.toUpperCase()], call.headline),
       el("p", { className: "reason", textContent: call.reason }),
       el("p", { className: "basis", textContent: `${dateLabel(0)}, ${call.basis}.` }),
+      el("div", { className: "speak" }, listen, el("p", { id: "caption", className: "caption hidden" })),
       methodNode(call.source, call.ref));
     $("panels").replaceChildren(panelNode(week, { href: "#week" }), ...(last ? [panelNode(last, { href: "#session" })] : []),
       panelNode(zones, { href: "#zones" }));
@@ -231,6 +275,8 @@ function renderAccount() {
   $("who-link").classList.toggle("hidden", !a);
   $("who-link").textContent = a ? a.username : "";
   $("acct-name").textContent = a ? a.username : "Account";
+  const listen = document.querySelector("#hero .listen");
+  if (listen) listen.classList.toggle("hidden", !a);
   if (!a) return;
   const { reports, workouts } = a.vault;
   $("acct-reports").replaceChildren(...(reports.length ? reports.map((r) => el("li", {

@@ -189,3 +189,19 @@ export function zoneDetail(features) {
   return { total: total.map((m) => round(m)), minutes: round(sum(total)), stack: stack(total), weeks, sports, names: ZONE_NAMES,
     source: source("zone-minutes"), ref: REF["zone-minutes"] };
 }
+
+// The spoken brief: written from the same numbers the page shows, with fixed templates (no AI reads your data).
+// Plain words only, so it passes the relay's privacy filter (letters, digits, plain punctuation, at most 600 characters).
+export function briefText(model, max = 600) {
+  const strip = (s) => String(s || "").replace(/[^A-Za-z0-9 .,;:%'()/\-’–—]/g, "");
+  const parts = [`${model.call.headline}.`, model.call.reason];
+  if (model.week && model.week.summary) parts.push(`This week: ${model.week.summary.replace(/^Load/, "load")}`);
+  if (model.last && model.last.summary) parts.push(`Last session: ${model.last.summary}`);
+  let text = "";
+  for (const p of parts.map(strip)) {
+    const next = text ? `${text} ${p}` : p;
+    if (next.length > max) break;
+    text = next;
+  }
+  return text;
+}

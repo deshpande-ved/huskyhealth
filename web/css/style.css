@@ -155,6 +155,10 @@ nav.tabs a[aria-current="page"] { color: var(--ink); text-decoration: underline;
 .method { margin: var(--s-2) 0 0; font-size: var(--t-xs); }
 .method a { color: var(--ink-3); }
 .method a:hover { color: var(--red); }
+.speak { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-3); margin: var(--s-4) 0 0; }
+.caption { margin: 0; flex: 1 1 28ch; max-width: 64ch; font-size: var(--t-sm); color: var(--ink-2); }
+.caption span { transition: color var(--d-fast) var(--ease-std), background-color var(--d-fast) var(--ease-std); }
+.caption span.on { color: var(--paper); background: var(--red); }
 .cta { display: flex; flex-wrap: wrap; gap: var(--s-3); margin: var(--s-6) 0 0; }
 
 /* ---------- today: rows of the printout; the row is the link ---------- */
