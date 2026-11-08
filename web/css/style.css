@@ -221,7 +221,9 @@ pre.fig { margin: 0; font-family: var(--mono); font-size: var(--t-xs); line-heig
 
 /* ---------- pages ---------- */
 section.page:not(.active) { display: none; }
-.detail { padding: var(--s-8) 0 var(--s-12); }
+/* every page besides today (details, account, methods, the API page) reads in one centred column, the same
+   width as the rows on today (22rem + 23rem + gap), so nothing hugs the left edge on wide screens */
+.detail { padding: var(--s-8) 0 var(--s-12); max-width: 48rem; margin-inline: auto; }
 .detail > h2 { margin: 0 0 var(--s-4); font-size: var(--t-2xl); line-height: 1.15; letter-spacing: -0.01em; }
 .detail h3 { margin: var(--s-12) 0 var(--s-3); font-size: var(--t-lg); }
 .back { margin: 0 0 var(--s-3); font-size: var(--t-sm); }
