@@ -97,7 +97,7 @@ export default function Today() {
 
       <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
         <Pressable onPress={read} style={{ borderWidth: 1, borderColor: C.foam, padding: 12 }}><Text style={{ ...mono, color: C.foam }}>Refresh</Text></Pressable>
-        <Pressable onPress={() => router.push('/sync')} style={{ borderWidth: 1, borderColor: C.muted, padding: 12 }}><Text style={mono}>Sync</Text></Pressable>
+        <Pressable onPress={() => router.push('/sync')} style={{ borderWidth: 1, borderColor: C.muted, padding: 12 }}><Text style={mono}>Account</Text></Pressable>
         <Pressable onPress={() => router.push('/history')} style={{ borderWidth: 1, borderColor: C.muted, padding: 12 }}><Text style={mono}>History</Text></Pressable>
         <Pressable onPress={seed} style={{ borderWidth: 1, borderColor: C.muted, padding: 12 }}><Text style={{ ...mono, color: C.muted }}>Demo workout</Text></Pressable>
       </View>

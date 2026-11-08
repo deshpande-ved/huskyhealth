@@ -1,0 +1,65 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "HuskyHealth personal API",
+    "version": "1.0.0",
+    "description": "A zero-knowledge REST API for your own Apple Health workouts. Devices POST records with a write token; the server seals each record to your account's RSA public key on arrival and stores only ciphertext. Reading returns that ciphertext: only the private key in your password-encrypted vault opens it, in your browser or the CLI. The server cannot read your records, your username or your password."
+  },
+  "servers": [{ "url": "https://veds-pi5.polecat-nominal.ts.net:10000" }],
+  "components": {
+    "securitySchemes": {
+      "deviceToken": { "type": "http", "scheme": "bearer", "description": "Write-only device token (hhw_...). Make one on the account page or with POST /v1/account/tokens." },
+      "session": { "type": "http", "scheme": "bearer", "description": "1-hour session from POST /v1/account/open (the browser or CLI derives the auth key from your password)." }
+    },
+    "schemas": {
+      "Sample": { "type": "object", "required": ["t_s", "v"], "additionalProperties": false,
+        "properties": { "t_s": { "type": "integer", "minimum": 0, "description": "seconds before sending" }, "v": { "type": "number" } } },
+      "Workout": { "type": "object", "required": ["sport", "start_s", "end_s"], "additionalProperties": false,
+        "properties": {
+          "sport": { "enum": ["squash", "running", "walking", "cycling", "strength", "hiit", "other"] },
+          "start_s": { "type": "integer", "minimum": 0, "maximum": 259200, "description": "seconds before sending" },
+          "end_s": { "type": "integer", "minimum": 0, "maximum": 259200 },
+          "kcal": { "type": ["number", "null"] },
+          "src": { "enum": ["watch", "garmin", "other"] },
+          "hr": { "type": "array", "items": { "$ref": "#/components/schemas/Sample" }, "maxItems": 4000 },
+          "hr_t": { "type": "array", "items": { "type": "string", "format": "date-time" }, "maxItems": 4000 },
+          "hr_v": { "type": "array", "items": { "type": "number", "minimum": 20, "maximum": 300 }, "maxItems": 4000 } } },
+      "Record": { "type": "object", "required": ["v"], "additionalProperties": false,
+        "description": "One batch of health data. No names, places, GPS or device names are accepted.",
+        "properties": {
+          "v": { "const": 1 },
+          "workouts": { "type": "array", "items": { "$ref": "#/components/schemas/Workout" }, "maxItems": 20 },
+          "rhr": { "type": "array", "items": { "$ref": "#/components/schemas/Sample" }, "description": "resting heart rate" },
+          "hrv": { "type": "array", "items": { "$ref": "#/components/schemas/Sample" }, "description": "HRV SDNN, ms" },
+          "effort": { "type": "array", "items": { "$ref": "#/components/schemas/Sample" }, "description": "Watch effort rating 1-10" } } },
+      "Sealed": { "type": "object", "properties": {
+          "id": { "type": "integer" }, "at": { "type": "integer", "description": "unix seconds received" },
+          "key": { "type": "string", "description": "AES-256 key wrapped with RSA-OAEP(SHA-256)" },
+          "nonce": { "type": "string" }, "ct": { "type": "string", "description": "AES-256-GCM ciphertext of the Record" } } }
+    }
+  },
+  "paths": {
+    "/v1/me/records": {
+      "post": { "summary": "Add a record", "security": [{ "deviceToken": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Record" } } } },
+        "responses": { "201": { "description": "Stored, encrypted. Returns { id, at }." }, "401": { "description": "Bad token" },
+          "409": { "description": "Account has no key yet: log in on the website once" }, "422": { "description": "Not a valid record (never echoed)" } } },
+      "get": { "summary": "List your records (ciphertext)", "security": [{ "session": [] }],
+        "parameters": [{ "name": "after", "in": "query", "schema": { "type": "integer" }, "description": "only records with id > after" }],
+        "responses": { "200": { "description": "{ records: Sealed[], last }", "content": { "application/json": { "schema": {
+          "type": "object", "properties": { "records": { "type": "array", "items": { "$ref": "#/components/schemas/Sealed" } }, "last": { "type": "integer" } } } } } } } }
+    },
+    "/v1/account/tokens": {
+      "post": { "summary": "New device write token (shown once)", "security": [{ "session": [] }], "responses": { "201": { "description": "{ id, token, scope }" } } },
+      "get": { "summary": "List device tokens (ids only)", "security": [{ "session": [] }], "responses": { "200": { "description": "{ tokens: [{ id, scope, created }] }" } } }
+    },
+    "/v1/account/tokens/{id}": {
+      "delete": { "summary": "Revoke a device token", "security": [{ "session": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "204": { "description": "Revoked" } } }
+    },
+    "/v1/account/open": {
+      "post": { "summary": "Log in with the derived auth key", "description": "id = SHA-256('huskyhealth:' + username); auth = bytes 32-64 of PBKDF2-SHA256(password, 'huskyhealth-v1:' + username, 600000, 64). The password never leaves the client.",
+        "responses": { "200": { "description": "{ session, vault (ciphertext), has_pub }" }, "401": { "description": "Wrong username or password" } } }
+    }
+  }
+}

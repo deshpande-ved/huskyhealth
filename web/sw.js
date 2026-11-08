@@ -1,11 +1,11 @@
 // web/sw.js: app shell cached; works with no network; /v1/ never cached.
 // SHELL grows per epic: each story adds the offline files it creates and bumps CACHE.
-const CACHE = "huskyhealth-v16";
+const CACHE = "huskyhealth-v17";
 const SHELL = ["/", "/css/style.css", "/js/app.js", "/js/engine.js", "/js/features.js",
                "/js/ascii.js", "/js/view.js", "/js/db.js",
-               "/js/box.js", "/js/sync-settings.js", "/js/sync-collect.js", "/js/sync-merge.js", "/js/account.js",
+               "/js/box.js", "/js/sync-merge.js", "/js/account.js",
                "/js/parse-apple.worker.js", "/vendor/fflate.esm.js",
-               "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png",
+               "/api.html", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png",
                "/favicon.ico", "/favicon.svg", "/icons/favicon-96x96.png", "/art/husky.svg"];
 
 self.addEventListener("install", (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL))));

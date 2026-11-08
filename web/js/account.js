@@ -4,8 +4,12 @@
 //                 first 32 = AES-256-GCM vault key (never leaves this browser, non-extractable)
 //                 last 32  = auth key, sent to the Pi, which stores only a scrypt hash of it
 //   vault    -> JSON -> gzip -> AES-GCM (id as associated data) -> base64 -> the Pi
+//   records  -> any device POSTs to /v1/me/records with a write token; the Pi seals each one to this account's
+//               RSA public key. The private key is kept only inside the vault, so only you can read them.
 // Forget the password and the vault cannot be opened by anyone, including us.
-import { RELAY } from "./sync-settings.js";
+import { openDrop } from "./box.js";
+
+export const RELAY = "https://veds-pi5.polecat-nominal.ts.net:10000";
 
 export const ROUNDS = 600_000;                 // OWASP 2023 guidance for PBKDF2-HMAC-SHA256
 export const MAX_REPORTS = 365;
@@ -52,7 +56,7 @@ export async function unseal(keys, blob) {
   return JSON.parse(td.decode(await pipe(new Uint8Array(pt), new DecompressionStream("gzip"))));
 }
 
-export const emptyVault = () => ({ v: 1, reports: [], workouts: [] });
+export const emptyVault = () => ({ v: 1, reports: [], workouts: [], inbox: 0, rsa: null });
 
 const isoDay = (ms) => new Date(ms).toISOString().slice(0, 10);
 
@@ -84,6 +88,7 @@ export function addToVault(vault, report, workouts) {
   const byKey = new Map((vault.workouts || []).map((w) => [key(w), w]));
   for (const w of workouts) byKey.set(key(w), w);
   return {
+    ...vault,
     v: 1,
     reports: [report, ...(vault.reports || [])].slice(0, MAX_REPORTS),
     workouts: [...byKey.values()].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
@@ -91,11 +96,12 @@ export function addToVault(vault, report, workouts) {
 }
 
 // ---- relay calls. All return { ok, ... } and never throw. ----
-async function call(fetchFn, relay, path, body, session) {
+async function call(fetchFn, relay, path, body, session, method = "POST") {
   const headers = { "Content-Type": "application/json" };
   if (session) headers.Authorization = `Bearer ${session}`;
+  const url = path.startsWith("/") ? `${relay}${path}` : `${relay}/v1/account/${path}`;
   try {
-    const res = await fetchFn(`${relay}/v1/account/${path}`, { method: "POST", headers, body: body ? JSON.stringify(body) : undefined });
+    const res = await fetchFn(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
     const json = res.status === 204 ? null : await res.json().catch(() => null);
     return { status: res.status, json };
   } catch {
@@ -120,9 +126,53 @@ export async function signIn({ username, password, create = false, fetchFn = fet
   if (r.status !== 200 && r.status !== 201) return { ok: false, status: say(r.status) };
   let vault = emptyVault();
   if (r.json.vault) {
-    try { vault = await unseal(keys, r.json.vault); } catch { return { ok: false, status: "Could not decrypt your history." }; }
+    try { vault = { ...emptyVault(), ...(await unseal(keys, r.json.vault)) }; } catch { return { ok: false, status: "Could not decrypt your history." }; }
   }
-  return { ok: true, session: r.json.session, keys: { id: keys.id, key: keys.key }, vault };
+  const account = { session: r.json.session, keys: { id: keys.id, key: keys.key } };
+  // First login since the personal API: make the account keypair here; only the public half goes to the Pi.
+  if (!vault.rsa || !r.json.has_pub) {
+    const pair = await makeAccountKeys();
+    const k = await call(fetchFn, relay, "pubkey", { pub: pair.pub }, account.session);
+    if (k.status !== 204) return { ok: false, status: say(k.status) };
+    vault = { ...vault, rsa: pair.pkcs8 };
+    const saved = await saveVault({ account, vault, fetchFn, relay });
+    if (!saved.ok) return { ok: false, status: saved.status };
+  }
+  account.privateKey = await crypto.subtle.importKey("pkcs8", unb64(vault.rsa), { name: "RSA-OAEP", hash: "SHA-256" }, false, ["decrypt"]);
+  return { ok: true, ...account, vault };
+}
+
+// RSA-OAEP 2048 keypair for the inbox. The private key is exported once, straight into the vault (encrypted).
+export async function makeAccountKeys() {
+  const pair = await crypto.subtle.generateKey(
+    { name: "RSA-OAEP", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, true, ["encrypt", "decrypt"]);
+  return { pub: b64(new Uint8Array(await crypto.subtle.exportKey("spki", pair.publicKey))),
+           pkcs8: b64(new Uint8Array(await crypto.subtle.exportKey("pkcs8", pair.privateKey))) };
+}
+
+// New records since `after`, opened here. Returns { ok, records: [{ id, at, drop }], last }.
+export async function fetchRecords({ account, after = 0, fetchFn = fetch, relay = RELAY, open = openDrop }) {
+  const r = await call(fetchFn, relay, `/v1/me/records?after=${Number(after) || 0}`, null, account.session, "GET");
+  if (r.status !== 200) return { ok: false, status: r.status === 401 ? "Session expired. Log in again." : say(r.status) };
+  const records = [];
+  for (const x of r.json.records) {
+    try { records.push({ id: x.id, at: x.at, drop: await open(account.privateKey, x) }); } catch { /* unreadable: skip */ }
+  }
+  return { ok: true, records, last: r.json.last };
+}
+
+// Device write tokens: shown once; the Pi keeps a hash. Any device holding one can POST /v1/me/records.
+export async function newToken({ account, fetchFn = fetch, relay = RELAY }) {
+  const r = await call(fetchFn, relay, "tokens", { scope: "write" }, account.session);
+  return r.status === 201 ? { ok: true, ...r.json } : { ok: false, status: r.status === 409 ? "Ten tokens is the limit. Revoke one first." : say(r.status) };
+}
+export async function listTokens({ account, fetchFn = fetch, relay = RELAY }) {
+  const r = await call(fetchFn, relay, "tokens", null, account.session, "GET");
+  return r.status === 200 ? { ok: true, tokens: r.json.tokens } : { ok: false, status: say(r.status) };
+}
+export async function revokeToken({ account, id, fetchFn = fetch, relay = RELAY }) {
+  const r = await call(fetchFn, relay, `tokens/${encodeURIComponent(id)}`, null, account.session, "DELETE");
+  return r.status === 204 ? { ok: true } : { ok: false, status: say(r.status) };
 }
 
 export async function saveVault({ account, vault, fetchFn = fetch, relay = RELAY }) {
