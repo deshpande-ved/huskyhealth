@@ -89,7 +89,7 @@ function Masthead({ user }: { user: string | null }) {
       <View style={{ flex: 1, gap: 8 }}>
         <View>
           <Text style={{ ...bold, fontSize: 24, lineHeight: 27 }}>HuskyHealth</Text>
-          <Text style={{ ...mono, color: C.text2, fontSize: 14, marginTop: 2 }}>Your workouts, as an API only you can read.</Text>
+          <Text style={{ ...mono, color: C.text2, fontSize: 14, marginTop: 2 }}>Zero knowledge, personal API.</Text>
         </View>
         <View style={{ flexDirection: 'row', gap: 24 }}>
           <Text style={{ ...mono, fontSize: 14, color: C.text, textDecorationLine: 'underline', textDecorationColor: C.love /* ./today: the page you are on */ }}>
