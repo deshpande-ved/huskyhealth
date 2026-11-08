@@ -148,7 +148,20 @@ def open_account():
     ok = hmac.compare_digest(_hash(auth, salt), base64.b64decode(rec["hash"]) if rec else b"\1" * 32)
     if not rec or not ok:
         return _err(401)
-    return {"session": _new_session(aid), "vault": rec.get("vault"), "has_pub": bool(rec.get("pub"))}
+    # the public key is public by design: devices use it to seal records before sending them
+    return {"session": _new_session(aid), "vault": rec.get("vault"), "has_pub": bool(rec.get("pub")), "pub": rec.get("pub")}
+
+
+@bp.get("/v1/account/vault")
+def get_vault():
+    """The latest encrypted vault, for a device that is already logged in (another device may have written it)."""
+    aid, err = require_session()
+    if err:
+        return err
+    rec = read_account(aid)
+    if not rec:
+        return _err(404)
+    return {"vault": rec.get("vault")}
 
 
 @bp.post("/v1/account/vault")

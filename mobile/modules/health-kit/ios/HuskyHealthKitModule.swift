@@ -29,6 +29,12 @@ public class HuskyHealthKitModule: Module {
       return ["ok": true, "status": 200, "background": bg]
     }
 
+    AsyncFunction("deleteAccount") { (relay: String, username: String, password: String) async -> Int in
+      let status = await Account.deleteAccount(relay: relay, username: username, password: password)
+      if status == 204 { await HealthCore.stopBackgroundSync() }
+      return status
+    }
+
     AsyncFunction("unpair") { () async in
       await HealthCore.stopBackgroundSync()
       SyncConfig.clear()
@@ -37,6 +43,11 @@ public class HuskyHealthKitModule: Module {
     Function("user") { SyncConfig.load() != nil ? SyncConfig.user : nil }
 
     Function("isPaired") { SyncConfig.load() != nil }
+
+    // Minutes asleep per night as [[wakeMs, minutes]], for the engine on this device (Today screen).
+    AsyncFunction("getSleep") { (startMs: Double, endMs: Double) async throws -> [[Double]] in
+      try await HealthCore.sleepNights(from: Date(timeIntervalSince1970: startMs / 1000), to: Date(timeIntervalSince1970: endMs / 1000))
+    }
 
     AsyncFunction("syncNow") { () async -> [String: Any] in
       await HealthCore.syncNow()
@@ -51,8 +62,13 @@ public class HuskyHealthKitModule: Module {
     }
 
     // History of reports and debriefs: on this phone only (file protection: complete).
-    Function("historyAppend") { (line: String) throws in try HealthCore.historyAppend(line) }
-    Function("historyList") { HealthCore.historyList() }
-    Function("historyClear") { HealthCore.historyClear() }
+    // The account vault (HealthCore.swift): the same encrypted history the website reads and writes.
+    AsyncFunction("getVault") { () async -> [String: Any] in await Vault.get() }
+    AsyncFunction("saveVault") { (json: String) async -> Int in await Vault.put(json) }
+
+    // Voice, as on the website: Gradium speaks today's call; a spoken question comes back as words.
+    AsyncFunction("speak") { (text: String) async -> [String: Any] in await Voice.speak(text) }
+    Function("stopSpeaking") { Voice.stop() }
+    AsyncFunction("listen") { () async -> [String: Any] in await Voice.listen() }
   }
 }

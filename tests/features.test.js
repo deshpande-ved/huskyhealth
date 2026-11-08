@@ -5,7 +5,7 @@ import { toFeatures, sportOf, sourceOf, dayOffset } from "../web/js/features.js"
 
 const NOW = new Date(2026, 10, 7, 18).getTime();
 const at = (dd, h, m = 0, s = 0) => new Date(2026, 10, dd, h, m, s).getTime();
-const empty = () => ({ hr: [], rhr: [], hrv: [], vo2: [], effort: [], effortEst: [] });
+const empty = () => ({ hr: [], rhr: [], hrv: [], vo2: [], effort: [], effortEst: [], sleep: [] });
 const watch = { sourceName: "Pat Example Watch", device: "<<HKDevice>, name:Test Apple Watch, manufacturer:Apple Inc., model:Watch>" };
 const wk = (o) => ({ type: "HKWorkoutActivityTypeSquash", start: at(6, 12), end: at(6, 12, 2), min: 2, kcal: null, ...watch, ...o });
 const run = (samples, workouts, days = 60) => toFeatures({ samples, workouts, now: NOW, days });
@@ -80,9 +80,22 @@ test("days: sums, means, nulls", () => {
   s.vo2 = [[at(6, 13), 45.2]];
   const f = run(s, [], 3);
   assert.deepEqual(f.days, [
-    { day: -2, trimp: 0, srpe: null, rhr: null, ln_hrv: null, vo2: null },
-    { day: -1, trimp: 0, srpe: null, rhr: 53, ln_hrv: 4.171, vo2: 45.2 },   // (ln 60 + ln 70) / 2
-    { day: 0, trimp: 0, srpe: null, rhr: null, ln_hrv: null, vo2: null },
+    { day: -2, trimp: 0, srpe: null, rhr: null, ln_hrv: null, vo2: null, sleep_min: null },
+    { day: -1, trimp: 0, srpe: null, rhr: 53, ln_hrv: 4.171, vo2: 45.2, sleep_min: null },   // (ln 60 + ln 70) / 2
+    { day: 0, trimp: 0, srpe: null, rhr: null, ln_hrv: null, vo2: null, sleep_min: null },
   ]);
   assert.equal(f.max_hr, null);
+});
+
+
+test("sleep nights: overlaps merged, a 3 h gap starts a new night, naps dropped, night counted on the day you woke", async () => {
+  const { sleepNights } = await import("../web/js/features.js");
+  const h = 3_600_000, t0 = Date.UTC(2026, 10, 6, 23);
+  const spans = [[t0, t0 + 3 * h], [t0 + 2 * h, t0 + 7 * h],              // Watch and phone overlap: 7 h, not 8
+                 [t0 + 12 * h, t0 + 12.5 * h]];                          // a 30-minute nap: not a night
+  assert.deepEqual(sleepNights(spans), [[t0 + 7 * h, 420]]);
+  const s = empty();
+  s.sleep = sleepNights(spans);
+  const f = toFeatures({ samples: s, workouts: [], now: t0 + 9 * h, days: 3 });
+  assert.equal(f.days.at(-1).sleep_min, 420);
 });

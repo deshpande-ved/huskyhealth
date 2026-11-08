@@ -70,6 +70,18 @@
       <div id="zones-body"></div>
     </section>
 
+    <section id="sleep" aria-label="Sleep in detail" class="page detail">
+      <p class="back"><a href="#today">&larr; today</a></p>
+      <h2>Sleep</h2>
+      <div id="sleep-body"></div>
+    </section>
+
+    <section id="fitness" aria-label="VO2 max in detail" class="page detail">
+      <p class="back"><a href="#today">&larr; today</a></p>
+      <h2>VO2 max</h2>
+      <div id="fitness-body"></div>
+    </section>
+
     <section id="account" aria-label="Account" class="page detail">
       <h2 id="acct-name">Account</h2>
       <p id="acct-status" class="status" role="status"></p>
@@ -153,6 +165,12 @@
         <p>Measures: whether your HRV baseline is long enough.</p>
         <p>Formula: at least 14 days with HRV before the last 7.</p>
         <p>Source: HuskyHealth · <span class="status">ours</span></p>
+      </article>
+      <article id="ref-sleep" class="card">
+        <h3>Sleep</h3>
+        <p>Measures: how long you slept, against your own usual.</p>
+        <p>Formula: minutes asleep per night (core, deep, REM; never in bed or awake), counted on the day you woke; last night against your 7-night average.</p>
+        <p>Source: Apple sleep stages &middot; <span class="status">descriptive</span> (shown beside the call, not part of it)</p>
       </article>
       <article id="ref-load-call" class="card">
         <h3>Load call (when HRV is thin)</h3>

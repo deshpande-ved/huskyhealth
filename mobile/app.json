@@ -6,15 +6,16 @@
     "orientation": "portrait",
     "icon": "../web/icons/icon-512.png",
     "scheme": "huskyhealth",
-    "userInterfaceStyle": "dark",
-    "backgroundColor": "#191724",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#f3efe3",
     "ios": {
       "bundleIdentifier": "dev.huskyhealth.companion",
       "buildNumber": "1",
       "supportsTablet": false,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSHealthShareUsageDescription": "HuskyHealth reads your workouts and heart rate to compute your training load and readiness on this phone. Nothing is stored on any server.",
+        "NSHealthShareUsageDescription": "HuskyHealth reads your workouts, heart rate, sleep and VO2 max to work out your training call. When you log in, it seals each workout to your account key before sending it to your API, so only you can read it.",
+        "NSMicrophoneUsageDescription": "HuskyHealth records up to five seconds while you ask a question out loud, to turn it into words. The audio is never stored.",
         "NSHealthUpdateUsageDescription": "Only used in the simulator demo to add a sample workout to Health."
       },
       "entitlements": {
@@ -25,7 +26,7 @@
     },
     "plugins": [
       "expo-router",
-      ["expo-splash-screen", { "backgroundColor": "#191724", "image": "../web/icons/icon-512.png", "imageWidth": 120 }],
+      ["expo-splash-screen", { "backgroundColor": "#f3efe3", "dark": { "backgroundColor": "#16140f" }, "image": "../web/icons/icon-512.png", "imageWidth": 120 }],
       "expo-secure-store",
       "expo-status-bar"
     ],

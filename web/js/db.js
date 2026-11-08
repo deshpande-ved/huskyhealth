@@ -6,7 +6,7 @@ const DB = "huskyhealth";
 const STORE = "features";
 const KEY = "current";
 
-const DAY_KEYS = ["day", "trimp", "srpe", "rhr", "ln_hrv", "vo2"];
+const DAY_KEYS = ["day", "trimp", "srpe", "rhr", "ln_hrv", "vo2", "sleep_min"];
 const WORKOUT_KEYS = ["day", "sport", "min", "kcal", "zone_min", "trimp", "effort", "srpe", "source", "hr_sample_ok"];
 const pick = (o, keys) => Object.fromEntries(keys.filter((k) => k in o).map((k) => [k, o[k]]));
 

@@ -9,13 +9,13 @@ import json
 import os
 import secrets
 import time
-from typing import Annotated, Literal
+from typing import Literal
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from flask import Blueprint, request
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 MAX_RECORD = 128 * 1024                 # ~3 h of workout-rate heart rate as JSON
 MAX_INBOX = 400                         # records kept per account; the oldest are dropped first
@@ -39,16 +39,6 @@ class Sample(_Strict):
 SyncSport = Literal["squash", "running", "walking", "cycling", "strength", "hiit", "other"]
 
 
-class Mark(_Strict):
-    """A workout type the Watch recorded at workout start (from the 'workout starts' automation)."""
-    sport: SyncSport
-    t_s: int = Field(ge=0, le=10_000_000)          # seconds before sending; old marks are ignored by the phone
-
-
-IsoTime = Annotated[str, StringConstraints(pattern=r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$", max_length=40)]
-Bpm = Annotated[float, Field(ge=20, le=300)]                 # a real heart rate; catches per-minute sums
-
-
 class SyncWorkout(_Strict):
     sport: SyncSport
     start_s: int = Field(ge=0, le=WINDOW)
@@ -56,15 +46,6 @@ class SyncWorkout(_Strict):
     kcal: float | None = Field(default=None, ge=0, le=10000)
     src: Literal["watch", "garmin", "other"] = "watch"
     hr: list[Sample] = Field(default_factory=list, max_length=4000)
-    # List format (no per-reading loop in Shortcuts): parallel lists of ISO 8601 times and heart rates.
-    hr_t: list[IsoTime] = Field(default_factory=list, max_length=4000)
-    hr_v: list[Bpm] = Field(default_factory=list, max_length=4000)
-
-    @model_validator(mode="after")
-    def _same_length(self):
-        if len(self.hr_t) != len(self.hr_v):
-            raise ValueError("hr_t and hr_v differ in length")
-        return self
 
 
 class SyncDrop(_Strict):
@@ -73,7 +54,8 @@ class SyncDrop(_Strict):
     rhr: list[Sample] = Field(default_factory=list, max_length=120)
     hrv: list[Sample] = Field(default_factory=list, max_length=400)
     effort: list[Sample] = Field(default_factory=list, max_length=50)
-    marks: list[Mark] = Field(default_factory=list, max_length=20)
+    vo2: list[Sample] = Field(default_factory=list, max_length=120)      # VO2 max estimates, ml/kg/min
+    sleep: list[Sample] = Field(default_factory=list, max_length=120)    # minutes asleep per night, at the time you woke
 
 
 def seal(pub_spki_der: bytes, plaintext: bytes) -> dict:
@@ -138,6 +120,25 @@ def _writer():
     return None
 
 
+def client_sealed(raw: bytes):
+    """{"sealed": {"key", "nonce", "ct"}} from a device that encrypted the record itself -> the envelope, else None.
+    Shape only: an RSA-2048/4096 wrapped key, a 12-byte nonce, ciphertext plus a 16-byte tag."""
+    try:
+        body = json.loads(raw)
+    except ValueError:
+        return None
+    env = body.get("sealed") if isinstance(body, dict) and set(body) == {"sealed"} else None
+    if not isinstance(env, dict) or set(env) != {"key", "nonce", "ct"} or not all(isinstance(v, str) for v in env.values()):
+        return None
+    try:
+        key, nonce, ct = (base64.b64decode(env[k], validate=True) for k in ("key", "nonce", "ct"))
+    except ValueError:
+        return None
+    if len(key) not in (256, 512) or len(nonce) != 12 or not 16 < len(ct) <= MAX_RECORD:
+        return None
+    return {"key": env["key"], "nonce": env["nonce"], "ct": env["ct"]}
+
+
 @bp.post("/v1/me/records")
 def post_record():
     import accounts
@@ -158,14 +159,20 @@ def post_record():
     raw = request.get_data(cache=False)
     if len(raw) > MAX_RECORD:
         return _err(413)
-    try:
-        SyncDrop.model_validate_json(raw)                # never echo or log the error: it contains input
-    except ValidationError:
-        return _err(422)
     now = int(time.time())
-    # The exact receive time travels inside the ciphertext (the client needs it to place workouts in time);
-    # only the hour is stored in the clear, so the Pi keeps as little timing metadata as possible.
-    sealed = seal(base64.b64decode(rec["pub"]), json.dumps({"received": now, "record": json.loads(raw)}).encode())
+    presealed = client_sealed(raw)
+    if presealed:
+        # Sealed on the device (the iPhone app): the relay never sees the record, not even in memory. It can only
+        # check the envelope; the app builds records from a fixed field list and the website validates on opening.
+        sealed = presealed
+    else:
+        try:
+            SyncDrop.model_validate_json(raw)            # never echo or log the error: it contains input
+        except ValidationError:
+            return _err(422)
+        # Sealed here, in memory, for clients that cannot encrypt (curl, scripts). The exact receive time travels
+        # inside the ciphertext; only the hour is stored in the clear.
+        sealed = seal(base64.b64decode(rec["pub"]), json.dumps({"received": now, "record": json.loads(raw)}).encode())
     del raw
     with accounts.LOCK:
         acct = accounts.read_account(aid) or rec

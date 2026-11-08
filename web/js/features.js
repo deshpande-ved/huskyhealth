@@ -18,6 +18,25 @@ export function sportOf(type) {
   return "other";
 }
 
+// Asleep spans [[startMs, endMs]] -> nights [[wakeMs, minutes]]: overlaps merged (Watch + phone), a gap of 3 h or
+// more starts a new night, naps under an hour dropped. Same rule as the iOS app (HealthCore.sleepNights).
+export function sleepNights(spans) {
+  const merged = [];
+  for (const [a, b] of [...spans].sort((x, y) => x[0] - y[0])) {
+    const last = merged[merged.length - 1];
+    if (last && a <= last[1]) last[1] = Math.max(last[1], b); else merged.push([a, b]);
+  }
+  const nights = [];
+  let end = null, min = 0;
+  for (const [a, b] of merged) {
+    if (end != null && a - end >= 3 * 3_600_000) { nights.push([end, Math.round(min)]); min = 0; }
+    min += (b - a) / 60_000;
+    end = b;
+  }
+  if (end != null && min > 0) nights.push([end, Math.round(min)]);
+  return nights.filter(([, m]) => m >= 60);
+}
+
 // Normalized source label; the raw sourceName (often the owner's name) is never kept.
 export function sourceOf({ device = "", sourceName = "" }) {
   if (/Watch/.test(device) && /Apple/.test(device)) return "Apple Watch";
@@ -54,6 +73,8 @@ function dedupe(ws) {
 // scan: { samples, workouts, now, days, source }. `stats` (optional) receives counts for the CLI.
 export function toFeatures(scan, stats = {}) {
   const { samples, workouts, now, days, source = "apple_health" } = scan;
+  // scan.keepStart (optional): keep each workout's start time (ms), only for the encrypted vault; the Features
+  // JSON itself stays free of timestamps.
   // scan.maxHr (optional): a max HR already known from a longer history, e.g. when merging a 3-day sync drop
   const hrMax = Math.max(samples.hr.reduce((m, [, v]) => Math.max(m, v), -Infinity), scan.maxHr ?? -Infinity);
   const maxHr = Number.isFinite(hrMax) ? Math.round(hrMax) : null;
@@ -69,7 +90,7 @@ export function toFeatures(scan, stats = {}) {
       start: w.start, end: w.end, src: sourceOf(w), nHr: hr.length,
       effortKind: user.length ? "user" : est.length ? "estimated" : "none",
       row: {
-        day: dayOffset(w.start, now), sport: sportOf(w.type), min: r1(w.min),
+        day: dayOffset(w.start, now), ...(scan.keepStart ? { start: w.start } : {}), sport: sportOf(w.type), min: r1(w.min),
         kcal: w.kcal == null ? null : Math.round(w.kcal), zone_min: zm.map(r2), trimp: r1(trimp(zm)),
         effort, srpe: srpe(effort, r1(w.min)), source: sourceOf(w), hr_sample_ok: hr.length > 0 && hr.length >= needed,
       },
@@ -90,6 +111,7 @@ export function toFeatures(scan, stats = {}) {
   const rhr = byDay(samples.rhr);
   const hrv = byDay(samples.hrv.filter(([, v]) => v > 0));
   const vo2 = byDay(samples.vo2);
+  const sleep = byDay(samples.sleep || []);
 
   const dayRows = Array.from({ length: days }, (_, i) => {
     const day = i - (days - 1);
@@ -102,6 +124,7 @@ export function toFeatures(scan, stats = {}) {
       rhr: rhr.has(day) ? r1(mean(rhr.get(day))) : null,
       ln_hrv: hrv.has(day) ? r3(mean(hrv.get(day).map(Math.log))) : null,
       vo2: vo2.has(day) ? r1(vo2.get(day)[vo2.get(day).length - 1]) : null,
+      sleep_min: sleep.has(day) ? Math.round(sleep.get(day).reduce((s, v) => s + v, 0)) : null,
     };
   });
   stats.daysWithHrv = dayRows.filter((d) => d.ln_hrv != null).length;

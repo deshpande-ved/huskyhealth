@@ -18,7 +18,7 @@ const status = () => execFileSync("git", ["status", "--porcelain"], { cwd: ROOT,
 const EXPECTED = [
   "lines scanned: 66",
   "split-attribute tags: 0",
-  "kept samples: hr=21 rhr=3 hrv=3 vo2=1 effort=1 effortEst=1",
+  "kept samples: hr=21 rhr=3 hrv=3 vo2=1 effort=1 effortEst=1 sleep=0",
   "workouts: 3 (deduped 1)",
   "by sport: strength=1 running=1 squash=1",
   "by source: Other app=1 Apple Watch=2",

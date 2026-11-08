@@ -1,3 +1,4 @@
+import AVFoundation
 import CommonCrypto
 import CryptoKit
 import Foundation
@@ -14,7 +15,7 @@ import Security
 /// - The only thing that leaves the phone is a record POSTed to your own personal API (/v1/me/records), sent to the
 ///   relay the user paired with, which encrypts it to a key held by the user's phone
 ///   and keeps only ciphertext, in memory, until it is collected (max 24 h).
-/// - History stays on the phone, in a file iOS encrypts while the phone is locked.
+/// - History lives in the account vault, encrypted on the phone before it goes to the relay (below).
 enum HealthCore {
   static let store = HKHealthStore()
 
@@ -45,7 +46,7 @@ enum HealthCore {
   }()
 
   static var readTypes: Set<HKObjectType> {
-    var s: Set<HKObjectType> = [HKObjectType.workoutType()]
+    var s: Set<HKObjectType> = [HKObjectType.workoutType(), HKCategoryType(.sleepAnalysis)]
     for id in quantityIds.values { s.insert(HKQuantityType(id)) }
     return s
   }
@@ -59,6 +60,33 @@ enum HealthCore {
     guard HKHealthStore.isHealthDataAvailable() else { return false }
     try await store.requestAuthorization(toShare: shareTypes, read: readTypes)
     return true
+  }
+
+  // MARK: - Sleep
+
+  /// Minutes asleep per night (core, deep, REM or unspecified asleep; never in bed or awake), keyed to the moment
+  /// you woke, as [[wakeMs, minutes]]. Overlapping sources (Watch and phone) are merged so time is not counted twice.
+  static func sleepNights(from start: Date, to end: Date) async throws -> [[Double]] {
+    let pred = HKQuery.predicateForSamples(withStart: start, end: end, options: [])
+    let d = HKSampleQueryDescriptor(predicates: [.categorySample(type: HKCategoryType(.sleepAnalysis), predicate: pred)],
+                                    sortDescriptors: [SortDescriptor(\.startDate)])
+    let asleep: Set<Int> = [HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue, HKCategoryValueSleepAnalysis.asleepCore.rawValue,
+                            HKCategoryValueSleepAnalysis.asleepDeep.rawValue, HKCategoryValueSleepAnalysis.asleepREM.rawValue]
+    let spans = try await d.result(for: store).filter { asleep.contains($0.value) }.map { ($0.startDate, $0.endDate) }
+    // merge overlaps, then split into nights at gaps of 3 h or more
+    var merged: [(Date, Date)] = []
+    for (a, b) in spans {
+      if let last = merged.last, a <= last.1 { merged[merged.count - 1].1 = max(last.1, b) } else { merged.append((a, b)) }
+    }
+    var nights: [[Double]] = []
+    var nightEnd: Date? = nil, minutes = 0.0
+    for (a, b) in merged {
+      if let e = nightEnd, a.timeIntervalSince(e) >= 3 * 3600 { nights.append([ms(e), minutes.rounded()]); minutes = 0 }
+      minutes += b.timeIntervalSince(a) / 60
+      nightEnd = b
+    }
+    if let e = nightEnd, minutes > 0 { nights.append([ms(e), minutes.rounded()]) }
+    return nights.filter { $0[1] >= 60 }                     // naps under an hour are not a night
   }
 
   // MARK: - Sports
@@ -160,12 +188,14 @@ enum HealthCore {
       ])
       effort += try await quantity("effort", from: w.startDate, to: w.endDate.addingTimeInterval(3600)).map(tS)
     }
-    var rhr: [[String: Any]] = [], hrv: [[String: Any]] = []
+    var rhr: [[String: Any]] = [], hrv: [[String: Any]] = [], vo2: [[String: Any]] = [], sleep: [[String: Any]] = []
     if let d = daily {
       rhr = Array(try await quantity("rhr", from: d.from, to: d.to).suffix(120)).map(tS)
       hrv = Array(try await quantity("hrv", from: d.from, to: d.to).suffix(400)).map(tS)
+      vo2 = Array(try await quantity("vo2", from: d.from, to: d.to).suffix(120)).map(tS)
+      sleep = Array(try await sleepNights(from: d.from.addingTimeInterval(-86400), to: d.to).suffix(120)).map(tS)
     }
-    let body: [String: Any] = ["v": 1, "workouts": items, "rhr": rhr, "hrv": hrv, "effort": Array(effort.suffix(50))]
+    let body: [String: Any] = ["v": 1, "workouts": items, "rhr": rhr, "hrv": hrv, "vo2": vo2, "sleep": sleep, "effort": Array(effort.suffix(50))]
     // JSONSerialization raises an Objective-C exception (a crash) on non-JSON values; check first so it throws instead.
     guard JSONSerialization.isValidJSONObject(body) else { throw NSError(domain: "HuskyHealth", code: 1) }
     return try JSONSerialization.data(withJSONObject: body)
@@ -183,7 +213,8 @@ enum HealthCore {
     req.httpMethod = "POST"
     req.setValue("application/json", forHTTPHeaderField: "Content-Type")
     req.setValue("Bearer \(cfg.token)", forHTTPHeaderField: "Authorization")
-    req.httpBody = body
+    // sealed on this device when the account key is known; otherwise the relay seals it in memory on arrival
+    req.httpBody = SyncConfig.pub.flatMap { Seal.envelope(record: body, pub: $0) } ?? body
     req.timeoutInterval = 30
     for attempt in 0..<2 {
       guard let (_, resp) = try? await URLSession.shared.data(for: req), let http = resp as? HTTPURLResponse else { return -1 }
@@ -283,32 +314,6 @@ enum HealthCore {
     try await builder.endCollection(at: end)
     return try await builder.finishWorkout() != nil
   }
-
-  // MARK: - On-phone history (reports and debriefs never leave the phone)
-
-  static var historyURL: URL {
-    FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-      .appendingPathComponent("history.jsonl")
-  }
-
-  static func historyAppend(_ line: String) throws {
-    let url = historyURL
-    try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-    if !FileManager.default.fileExists(atPath: url.path) {
-      FileManager.default.createFile(atPath: url.path, contents: nil, attributes: [.protectionKey: FileProtectionType.complete])
-    }
-    let h = try FileHandle(forWritingTo: url)
-    defer { try? h.close() }
-    try h.seekToEnd()
-    try h.write(contentsOf: Data((line.replacingOccurrences(of: "\n", with: " ") + "\n").utf8))
-  }
-
-  static func historyList() -> [String] {
-    guard let s = try? String(contentsOf: historyURL, encoding: .utf8) else { return [] }
-    return s.split(separator: "\n").map(String.init)
-  }
-
-  static func historyClear() { try? FileManager.default.removeItem(at: historyURL) }
 }
 
 /// Pairing for convenience mode. The write secret lives in the Keychain; box id and relay in UserDefaults.
@@ -345,7 +350,9 @@ struct SyncConfig {
     defaults.removeObject(forKey: "hh.relay")
     defaults.removeObject(forKey: "hh.lastEnd")
     defaults.removeObject(forKey: "hh.user")
+    defaults.removeObject(forKey: "hh.pub")
     SecItemDelete([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service] as CFDictionary)
+    Secrets.clear()
   }
 
   static var lastEnd: Date? {
@@ -357,6 +364,12 @@ struct SyncConfig {
     get { defaults.string(forKey: "hh.user") }
     set { defaults.set(newValue, forKey: "hh.user") }
   }
+
+  /// The account's RSA public key (SPKI, base64). Public by design; records are sealed to it on this device.
+  static var pub: String? {
+    get { defaults.string(forKey: "hh.pub") }
+    set { defaults.set(newValue, forKey: "hh.pub") }
+  }
 }
 
 /// Account login, same derivation as the website (web/js/account.js), so the password never leaves this phone:
@@ -364,7 +377,7 @@ struct SyncConfig {
 ///   auth = bytes 32..<64 of PBKDF2-HMAC-SHA256(password, "huskyhealth-v1:" + username, 600 000, 64)
 /// The first 32 bytes (the vault key) are thrown away: this phone only ever needs a write token.
 enum Account {
-  static func derive(username: String, password: String) -> (id: String, auth: String)? {
+  static func derive(username: String, password: String) -> (id: String, auth: String, key: Data)? {
     let u = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     guard !u.isEmpty, !password.isEmpty else { return nil }
     let id = SHA256.hash(data: Data("huskyhealth:\(u)".utf8)).map { String(format: "%02x", $0) }.joined()
@@ -374,8 +387,9 @@ enum Account {
                                   CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256), 600_000, &out, out.count)
     guard rc == kCCSuccess else { return nil }
     let auth = Data(out[32..<64]).base64EncodedString()
+    let key = Data(out[0..<32])                         // the vault key: stays in this phone's Keychain (Secrets)
     for i in out.indices { out[i] = 0 }
-    return (id, auth)
+    return (id, auth, key)
   }
 
   private static func post(_ url: URL, _ body: [String: Any], bearer: String? = nil) async -> (Int, [String: Any]) {
@@ -394,10 +408,285 @@ enum Account {
     guard let base = URL(string: relay), let k = derive(username: username, password: password) else { return 422 }
     let (s1, open) = await post(base.appendingPathComponent("v1/account/open"), ["id": k.id, "auth": k.auth])
     guard s1 == 200, let session = open["session"] as? String else { return s1 }
+    SyncConfig.pub = open["pub"] as? String
     let (s2, tok) = await post(base.appendingPathComponent("v1/account/tokens"), ["scope": "write", "days": 365], bearer: session)
     guard s2 == 201, let token = tok["token"] as? String, SyncConfig.save(relay: relay, token: token) else { return s2 == 201 ? 500 : s2 }
+    guard Secrets.save(id: k.id, auth: k.auth, key: k.key) else { return 500 }
+    Vault.session = (session, Date())
     SyncConfig.user = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     SyncConfig.lastEnd = nil
     return 200
+  }
+
+  /// Delete the account (and its encrypted history and records on the relay), then forget it on this device.
+  /// Needs the password again: the app never keeps a session. Returns an HTTP-ish status (204 = deleted).
+  static func deleteAccount(relay: String, username: String, password: String) async -> Int {
+    guard let base = URL(string: relay), let k = derive(username: username, password: password) else { return 422 }
+    let (s1, open) = await post(base.appendingPathComponent("v1/account/open"), ["id": k.id, "auth": k.auth])
+    guard s1 == 200, let session = open["session"] as? String else { return s1 }
+    let (s2, _) = await post(base.appendingPathComponent("v1/account/delete"), [:], bearer: session)
+    if s2 == 204 { SyncConfig.clear() }
+    return s2
+  }
+}
+
+/// Seal a record on this device, so the relay only ever handles ciphertext: AES-256-GCM for the record, the key
+/// wrapped with RSA-OAEP-SHA256 to the account's public key. Same envelope the relay makes (relay/records.py seal),
+/// so the website opens both the same way.
+enum Seal {
+  static func publicKey(spki b64: String) -> SecKey? {
+    guard let der = Data(base64Encoded: b64), der.count == 294 else { return nil }   // RSA-2048 SPKI, as the browser makes
+    let pkcs1 = der.subdata(in: 24..<der.count)                                      // drop the SPKI header: Security wants PKCS#1
+    let attrs: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeyClass as String: kSecAttrKeyClassPublic,
+                                kSecAttrKeySizeInBits as String: 2048]
+    return SecKeyCreateWithData(pkcs1 as CFData, attrs as CFDictionary, nil)
+  }
+
+  static func envelope(record: Data, pub: String, received: Int = Int(Date().timeIntervalSince1970)) -> Data? {
+    guard let key = publicKey(spki: pub), let rec = try? JSONSerialization.jsonObject(with: record),
+          let inner = try? JSONSerialization.data(withJSONObject: ["received": received, "record": rec]) else { return nil }
+    let aes = SymmetricKey(size: .bits256)
+    let nonce = AES.GCM.Nonce()
+    guard let box = try? AES.GCM.seal(inner, using: aes, nonce: nonce) else { return nil }
+    let raw = aes.withUnsafeBytes { Data($0) }
+    guard let wrapped = SecKeyCreateEncryptedData(key, .rsaEncryptionOAEPSHA256, raw as CFData, nil) as Data? else { return nil }
+    let env: [String: Any] = ["sealed": ["key": wrapped.base64EncodedString(), "nonce": Data(nonce).base64EncodedString(),
+                                         "ct": (box.ciphertext + box.tag).base64EncodedString()]]
+    return try? JSONSerialization.data(withJSONObject: env)
+  }
+}
+
+// MARK: - Account vault and voice
+
+/// The account vault on the phone: the same encrypted history the website reads, so the app and the website draw
+/// today from one source. The vault key and auth key are derived from the password at log in (Account.derive) and
+/// kept only in this phone's Keychain, readable after first unlock, never backed up or synced. The relay sees
+/// ciphertext only, exactly as with the browser: JSON -> gzip -> AES-256-GCM (account id as associated data).
+enum Secrets {
+  private static let service = "dev.huskyhealth.companion.account"
+
+  static func save(id: String, auth: String, key: Data) -> Bool {
+    let payload: [String: String] = ["id": id, "auth": auth, "key": key.base64EncodedString()]
+    guard let data = try? JSONSerialization.data(withJSONObject: payload) else { return false }
+    let base: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
+                               kSecAttrAccount as String: "account"]
+    SecItemDelete(base as CFDictionary)
+    var add = base
+    add[kSecValueData as String] = data
+    add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+    return SecItemAdd(add as CFDictionary, nil) == errSecSuccess
+  }
+
+  static func load() -> (id: String, auth: String, key: SymmetricKey)? {
+    let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
+                            kSecAttrAccount as String: "account", kSecReturnData as String: true]
+    var out: AnyObject?
+    guard SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess, let d = out as? Data,
+          let o = try? JSONSerialization.jsonObject(with: d) as? [String: String],
+          let id = o["id"], let auth = o["auth"], let k = o["key"].flatMap({ Data(base64Encoded: $0) }), k.count == 32
+    else { return nil }
+    return (id, auth, SymmetricKey(data: k))
+  }
+
+  static func clear() {
+    SecItemDelete([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service] as CFDictionary)
+    Vault.session = nil
+  }
+}
+
+enum Vault {
+  /// The account session, in memory only (1 h on the relay). Opened again when it expires.
+  static var session: (token: String, at: Date)?
+
+  private static func relay() -> URL? { SyncConfig.load()?.relay }
+
+  private static func request(_ path: String, method: String, body: Data? = nil, type: String = "application/json",
+                              auth: String? = nil) async -> (Int, Data) {
+    guard let base = relay() else { return (0, Data()) }
+    var req = URLRequest(url: base.appendingPathComponent(path))
+    req.httpMethod = method
+    if body != nil { req.setValue(type, forHTTPHeaderField: "Content-Type") }
+    if let auth { req.setValue("Bearer \(auth)", forHTTPHeaderField: "Authorization") }
+    req.httpBody = body
+    req.timeoutInterval = 30
+    guard let (data, resp) = try? await URLSession.shared.data(for: req) else { return (0, Data()) }
+    return ((resp as? HTTPURLResponse)?.statusCode ?? 0, data)
+  }
+
+  /// A live session: the cached one if it is under 55 minutes old, else a fresh log in with the stored auth key.
+  static func open(force: Bool = false) async -> String? {
+    if !force, let s = session, Date().timeIntervalSince(s.at) < 55 * 60 { return s.token }
+    guard let k = Secrets.load(), let body = try? JSONSerialization.data(withJSONObject: ["id": k.id, "auth": k.auth])
+    else { return nil }
+    let (status, data) = await request("v1/account/open", method: "POST", body: body)
+    guard status == 200, let o = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let token = o["session"] as? String else { return nil }
+    session = (token, Date())
+    return token
+  }
+
+  /// Call with the session, opening a new one once if the relay says it expired.
+  static func withSession(_ call: (String) async -> (Int, Data)) async -> (Int, Data) {
+    guard let s = await open() else { return (401, Data()) }
+    let r = await call(s)
+    if r.0 != 401 { return r }
+    guard let fresh = await open(force: true) else { return r }
+    return await call(fresh)
+  }
+
+  /// The decrypted vault as JSON text ("" when the account has none yet).
+  static func get() async -> [String: Any] {
+    guard let k = Secrets.load() else { return ["status": 401, "vault": ""] }
+    let (status, data) = await withSession { s in await request("v1/account/vault", method: "GET", auth: s) }
+    guard status == 200, let o = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+      return ["status": status, "vault": ""]
+    }
+    guard let blob = o["vault"] as? String else { return ["status": 200, "vault": ""] }
+    guard let json = unseal(blob, key: k.key, id: k.id) else { return ["status": 422, "vault": ""] }
+    return ["status": 200, "vault": json]
+  }
+
+  /// Encrypt and save the vault. Returns the relay's status (204 = saved).
+  static func put(_ json: String) async -> Int {
+    guard let k = Secrets.load(), let blob = seal(json, key: k.key, id: k.id),
+          let body = try? JSONSerialization.data(withJSONObject: ["vault": blob]) else { return 422 }
+    return await withSession { s in await request("v1/account/vault", method: "POST", body: body, auth: s) }.0
+  }
+
+  // version byte 1 | 12-byte nonce | ciphertext + 16-byte tag, base64; the same layout as web/js/account.js seal()
+  static func seal(_ json: String, key: SymmetricKey, id: String) -> String? {
+    guard let packed = Gzip.compress(Data(json.utf8)),
+          let box = try? AES.GCM.seal(packed, using: key, nonce: AES.GCM.Nonce(), authenticating: Data(id.utf8)) else { return nil }
+    return (Data([1]) + Data(box.nonce) + box.ciphertext + box.tag).base64EncodedString()
+  }
+
+  static func unseal(_ blob: String, key: SymmetricKey, id: String) -> String? {
+    guard let raw = Data(base64Encoded: blob), raw.count > 29, raw.first == 1,
+          let nonce = try? AES.GCM.Nonce(data: raw.subdata(in: 1..<13)),
+          let box = try? AES.GCM.SealedBox(nonce: nonce, ciphertext: raw.subdata(in: 13..<(raw.count - 16)), tag: raw.suffix(16)),
+          let packed = try? AES.GCM.open(box, using: key, authenticating: Data(id.utf8)),
+          let plain = Gzip.decompress(packed) else { return nil }
+    return String(data: plain, encoding: .utf8)
+  }
+}
+
+/// gzip (RFC 1952) around Apple's raw DEFLATE, so the browser's CompressionStream("gzip") reads what the phone wrote.
+enum Gzip {
+  private static let table: [UInt32] = (0..<256).map { i -> UInt32 in
+    var c = UInt32(i)
+    for _ in 0..<8 { c = c & 1 != 0 ? 0xEDB8_8320 ^ (c >> 1) : c >> 1 }
+    return c
+  }
+
+  static func crc32(_ data: Data) -> UInt32 {
+    var c: UInt32 = 0xFFFF_FFFF
+    for b in data { c = table[Int((c ^ UInt32(b)) & 0xFF)] ^ (c >> 8) }
+    return c ^ 0xFFFF_FFFF
+  }
+
+  private static func le32(_ v: UInt32) -> Data { withUnsafeBytes(of: v.littleEndian) { Data($0) } }
+
+  static func compress(_ data: Data) -> Data? {
+    guard let deflated = try? (data as NSData).compressed(using: .zlib) as Data else { return nil }
+    return Data([0x1F, 0x8B, 8, 0, 0, 0, 0, 0, 0, 0xFF]) + deflated + le32(crc32(data)) + le32(UInt32(truncatingIfNeeded: data.count))
+  }
+
+  static func decompress(_ gz: Data) -> Data? {
+    let b = [UInt8](gz)
+    guard b.count > 18, b[0] == 0x1F, b[1] == 0x8B, b[2] == 8 else { return nil }
+    let flags = b[3]
+    var i = 10
+    if flags & 4 != 0 { guard i + 2 <= b.count else { return nil }; i += 2 + Int(b[i]) + Int(b[i + 1]) << 8 }
+    if flags & 8 != 0 { while i < b.count, b[i] != 0 { i += 1 }; i += 1 }
+    if flags & 16 != 0 { while i < b.count, b[i] != 0 { i += 1 }; i += 1 }
+    if flags & 2 != 0 { i += 2 }
+    guard i < b.count - 8 else { return nil }
+    guard let out = try? (Data(b[i..<(b.count - 8)]) as NSData).decompressed(using: .zlib) as Data,
+          crc32(out) == UInt32(b[b.count - 8]) | UInt32(b[b.count - 7]) << 8 | UInt32(b[b.count - 6]) << 16 | UInt32(b[b.count - 5]) << 24
+    else { return nil }
+    return out
+  }
+}
+
+/// Voice, as on the website: today's call spoken by Gradium (/v1/speak) and a spoken question turned into words
+/// (/v1/listen). Both need the account session; nothing is stored on the phone or the relay.
+enum Voice {
+  private static var player: AVAudioPlayer?
+  private static var recorder: AVAudioRecorder?
+
+  /// Speak `text`; returns the word timings so the screen can follow along. status 200 = playing.
+  static func speak(_ text: String) async -> [String: Any] {
+    guard let body = try? JSONSerialization.data(withJSONObject: ["text": text]) else { return ["status": 422] }
+    let (status, data) = await Vault.withSession { s in
+      await requestSpeech("v1/speak", body: body, type: "application/json", session: s)
+    }
+    guard status == 200, let o = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let audio = (o["audio"] as? String).flatMap({ Data(base64Encoded: $0) }) else { return ["status": status] }
+    try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio)
+    try? AVAudioSession.sharedInstance().setActive(true)
+    player = try? AVAudioPlayer(data: audio)
+    guard player?.play() == true else { return ["status": 500] }
+    return ["status": 200, "words": o["words"] ?? []]
+  }
+
+  static func stop() { player?.stop(); player = nil }
+
+  /// Record up to five seconds, send them to /v1/listen, return the words. status 403 = no microphone permission.
+  static func listen(seconds: Double = 4.8) async -> [String: Any] {
+    let allowed: Bool
+    if #available(iOS 17.0, *) { allowed = await AVAudioApplication.requestRecordPermission() }
+    else { allowed = await withCheckedContinuation { c in AVAudioSession.sharedInstance().requestRecordPermission { c.resume(returning: $0) } } }
+    guard allowed else { return ["status": 403] }
+    let session = AVAudioSession.sharedInstance()
+    try? session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
+    try? session.setActive(true)
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("question.wav")
+    let settings: [String: Any] = [AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: 24_000, AVNumberOfChannelsKey: 1,
+                                   AVLinearPCMBitDepthKey: 16, AVLinearPCMIsFloatKey: false, AVLinearPCMIsBigEndianKey: false]
+    guard let rec = try? AVAudioRecorder(url: url, settings: settings), rec.record() else { return ["status": 500] }
+    recorder = rec
+    try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+    rec.stop()
+    recorder = nil
+    defer { try? FileManager.default.removeItem(at: url) }
+    guard let file = try? Data(contentsOf: url), let wav = cleanWav(file) else { return ["status": 500] }
+    let (status, data) = await Vault.withSession { s in await requestSpeech("v1/listen", body: wav, type: "audio/wav", session: s) }
+    guard status == 200, let o = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return ["status": status] }
+    return ["status": 200, "text": o["text"] as? String ?? ""]
+  }
+
+  private static func requestSpeech(_ path: String, body: Data, type: String, session: String) async -> (Int, Data) {
+    guard let base = SyncConfig.load()?.relay else { return (0, Data()) }
+    var req = URLRequest(url: base.appendingPathComponent(path))
+    req.httpMethod = "POST"
+    req.setValue(type, forHTTPHeaderField: "Content-Type")
+    req.setValue("Bearer \(session)", forHTTPHeaderField: "Authorization")
+    req.httpBody = body
+    req.timeoutInterval = 30
+    guard let (data, resp) = try? await URLSession.shared.data(for: req) else { return (0, Data()) }
+    return ((resp as? HTTPURLResponse)?.statusCode ?? 0, data)
+  }
+
+  /// Core Audio's WAV carries extra chunks (FLLR padding); keep only a plain 44-byte header and the samples.
+  static func cleanWav(_ file: Data) -> Data? {
+    let b = [UInt8](file)
+    var i = 12
+    while i + 8 <= b.count {
+      let id = String(bytes: b[i..<(i + 4)], encoding: .ascii)
+      let size = Int(b[i + 4]) | Int(b[i + 5]) << 8 | Int(b[i + 6]) << 16 | Int(b[i + 7]) << 24
+      if id == "data" {
+        let pcm = Data(b[(i + 8)..<min(b.count, i + 8 + size)])
+        func le32(_ v: Int) -> Data { withUnsafeBytes(of: UInt32(v).littleEndian) { Data($0) } }
+        func le16(_ v: Int) -> Data { withUnsafeBytes(of: UInt16(v).littleEndian) { Data($0) } }
+        var out = Data("RIFF".utf8)
+        out.append(le32(36 + pcm.count)); out.append(Data("WAVEfmt ".utf8)); out.append(le32(16))
+        out.append(le16(1)); out.append(le16(1)); out.append(le32(24_000)); out.append(le32(48_000))
+        out.append(le16(2)); out.append(le16(16)); out.append(Data("data".utf8)); out.append(le32(pcm.count))
+        out.append(pcm)
+        return out
+      }
+      i += 8 + size + (size & 1)
+    }
+    return nil
   }
 }

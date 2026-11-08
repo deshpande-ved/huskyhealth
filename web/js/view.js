@@ -10,7 +10,7 @@ export const REF = {
   "zone-minutes": "ref-zone-minutes", trimp: "ref-trimp", srpe: "ref-srpe",
   "fitness-fatigue": "ref-fitness-fatigue", monotony: "ref-monotony", readiness: "ref-readiness",
   "data-check": "ref-data-check", baseline: "ref-baseline", "load-spike": "ref-load-spike",
-  "vo2-trend": "ref-vo2-trend", "load-call": "ref-load-call", "sport-view": "ref-sport-view",
+  "vo2-trend": "ref-vo2-trend", "load-call": "ref-load-call", sleep: "ref-sleep", "sport-view": "ref-sport-view",
   "hr-density": "ref-zone-minutes", "max-hr": "ref-zone-minutes", "rate-effort": "ref-srpe",
 };
 
@@ -77,10 +77,40 @@ function lastBlock(features) {
     explain: "Minutes in each heart-rate zone. Effort is your rating on the Watch.", stats, label, plain: label, rows: zones };
 }
 
+export const hm = (min) => `${Math.floor(min / 60)} h ${String(Math.round(min % 60)).padStart(2, "0")} min`;
+
+// 5. Sleep: last night against your usual, and the last seven nights as bars (descriptive; the call does not use it).
+function sleepBlock(analysis) {
+  const s = analysis.sleep;
+  if (!s || s.last == null) return null;
+  const top = Math.max(600, ...s.nights7.map((n) => n.min || 0));
+  const rows = s.nights7.map((n) => cells(`${dayName(n.day).padEnd(4)}${n.min == null ? "\u00b7".repeat(20) + "  \u2014" : `${bar((n.min / top) * 100)} ${hm(n.min).replace(" min", "m").replace(" h ", "h")}`}`,
+    n.min == null ? "muted" : n.min >= (s.avg7 || 0) ? "z1" : "z3"));
+  const usual = s.avg7 != null ? `, against your usual ${hm(s.avg7)}` : "";
+  const summary = `${s.lastDay === 0 ? "Last night" : `${-s.lastDay} nights ago`} you slept ${hm(s.last)}${usual}.`;
+  return { id: "sleep", ref: REF.sleep, source: s.source, title: "Sleep", summary, label: summary, plain: summary, rows };
+}
+
+// 6. VO2 max: the latest estimate and its trend over four weeks.
+function fitnessBlock(analysis, features) {
+  const pts = features.days.filter((d) => d.vo2 != null);
+  if (!pts.length) return null;
+  const latest = pts[pts.length - 1];
+  const t = analysis.vo2Trend.value;
+  const trend = t == null ? "" : Math.abs(t) < 0.3 ? ", steady over four weeks" : `, ${t > 0 ? "up" : "down"} ${round(Math.abs(t), 1)} over four weeks`;
+  const summary = `VO2 max ${round(latest.vo2, 1)} ml/kg/min${trend}.`;
+  const lo = Math.min(...pts.map((p) => p.vo2)) - 2, hi = Math.max(...pts.map((p) => p.vo2)) + 2;
+  const rows = pts.slice(-5).map((p) => cells(`${ago(p.day).padEnd(12)}${bar(((p.vo2 - lo) / Math.max(hi - lo, 1)) * 100)} ${round(p.vo2, 1)}`, "z2"));
+  return { id: "fitness", ref: REF["vo2-trend"], source: analysis.vo2Trend.source, title: "VO2 max", summary, label: summary, plain: summary, rows };
+}
+
+const dayName = (day) => new Date(Date.now() + day * 86_400_000).toLocaleDateString("en-US", { weekday: "short" });
+
 // The whole today screen. Website, iOS app and API share this one model.
 export function todayModel(analysis, features) {
   const call = callBlock(analysis.today);
-  return { call: { ...call, plain: call.label }, week: weekBlock(features, analysis.today), last: lastBlock(features), zones: zoneBars(features) };
+  return { call: { ...call, plain: call.label }, week: weekBlock(features, analysis.today), last: lastBlock(features), zones: zoneBars(features),
+           sleep: sleepBlock(analysis), fitness: fitnessBlock(analysis, features) };
 }
 
 export const figureText = (fig) => fig.rows.map((r) => r.map((c) => c.ch).join(""));
@@ -226,6 +256,12 @@ export function answerQuestion(question, { model, week, session, zones, features
       curl: `curl -X POST "${relay}/v1/me/records" \\\n  -H "Authorization: Bearer $HH_TOKEN" -H "Content-Type: application/json" \\\n  -d '${body}'` };
   }
   if (!n) return { intent: "empty", answer: "There are no workouts yet. Log in on the iPhone app and your last 60 days arrive here.", curl: read };
+  if (/sleep|slept|bed|rest(ed)? last night/.test(q)) {
+    return { intent: "sleep", curl: read, answer: plain(model.sleep ? model.sleep.summary : "There is no sleep data yet. Wear your Watch to bed and it arrives with your next sync.") };
+  }
+  if (/vo2|fitness|cardio|aerobic/.test(q)) {
+    return { intent: "vo2", curl: read, answer: plain(model.fitness ? model.fitness.summary : "There is no VO2 max estimate yet. The Watch makes one after outdoor walks, runs or hikes.") };
+  }
   if (/calor|kcal|burn|energy/.test(q)) {
     const wk = week.days.reduce((s, d) => s + (d.kcal || 0), 0);
     const L = session.last;
@@ -251,5 +287,8 @@ export function answerQuestion(question, { model, week, session, zones, features
   if (/api|curl|request|endpoint/.test(q)) {
     return { intent: "api", curl: read, answer: "Your workouts come from your own API: records your devices send, opened with your private key on this device." };
   }
-  return { intent: "unknown", curl: read, answer: "Ask about today's call, this week, your last session, heart-rate zones, calories, or how many workouts you have." };
+  return { intent: "unknown", curl: read, answer: "Ask about today's call, this week, your last session, sleep, VO2 max, heart-rate zones, calories, or how many workouts you have." };
 }
+
+// The logged-out welcome, word for word on the website and in the iPhone app.
+export const WELCOME = "Log in on the HuskyHealth iPhone app and your last 60 days of Apple Watch or Garmin workouts arrive on every screen, encrypted so only you can read them.";

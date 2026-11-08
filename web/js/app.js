@@ -2,10 +2,10 @@
 import { analyze } from "./engine.js";
 import { paint, banner } from "./ascii.js";
 import { createDb } from "./db.js";
-import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel, briefText, answerQuestion } from "./view.js";
+import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel, briefText, answerQuestion, hm, WELCOME } from "./view.js";
 import { recordQuestion } from "./voice.js";
-import { signIn, saveVault, deleteAccount, addToVault, makeReport, workoutSummaries, fetchRecords, deleteRecords, newToken, listTokens, revokeToken, featuresFromVault, speakBrief, listenQuestion, RELAY } from "./account.js";
-import { dayNumber, mergeDrop, validDrop } from "./sync-merge.js";
+import { signIn, saveVault, fetchVault, deleteAccount, addToVault, makeReport, workoutSummaries, daySummaries, fetchRecords, deleteRecords, newToken, listTokens, revokeToken, featuresFromVault, speakBrief, listenQuestion, RELAY } from "./account.js";
+import { dayNumber, dropToVault, validDrop } from "./sync-merge.js";
 
 const HEX_COMMIT = /^[0-9a-f]{7,40}$/;
 const WORKER = "/js/parse-apple.worker.js";
@@ -214,6 +214,27 @@ function renderSession(a, f) {
     methodNode(s.source, s.ref));
 }
 
+function renderSleep(an, f) {
+  const nights = f.days.filter((d) => d.sleep_min != null).slice(-14).reverse();
+  if (!state.features || !nights.length) return $("sleep-body").replaceChildren(emptyNote());
+  const s = an.sleep;
+  $("sleep-body").replaceChildren(
+    el("p", { className: "lede", textContent: `Last night ${hm(s.last)}. Your 7-night average is ${hm(s.avg7)}${s.avg28 != null ? `, 28-night ${hm(s.avg28)}` : ""}.` }),
+    table(["night", "asleep", "vs 7-night average"], nights.map((d) => [dateLabel(d.day), hm(d.sleep_min),
+      `${d.sleep_min >= s.avg7 ? "+" : "\u2212"}${hm(Math.abs(d.sleep_min - s.avg7))}`]), [1, 2]),
+    methodNode(s.source, "ref-sleep"));
+}
+
+function renderFitness(an, f) {
+  const pts = f.days.filter((d) => d.vo2 != null).reverse();
+  if (!state.features || !pts.length) return $("fitness-body").replaceChildren(emptyNote());
+  const t = an.vo2Trend.value;
+  $("fitness-body").replaceChildren(
+    el("p", { className: "lede", textContent: `Apple estimates VO2 max after outdoor walks, runs and hikes. ${t == null ? "" : `Over four weeks it moved ${t >= 0 ? "up" : "down"} ${Math.abs(Math.round(t * 10) / 10)} ml/kg/min.`}` }),
+    table(["day", "VO2 max (ml/kg/min)"], pts.map((d) => [dateLabel(d.day), String(Math.round(d.vo2 * 10) / 10)]), [1], true),
+    methodNode(an.vo2Trend.source, "ref-vo2-trend"));
+}
+
 function renderZones(f) {
   if (!state.features || !f.workouts.length) return $("zones-body").replaceChildren(emptyNote());
   const z = zoneDetail(f);
@@ -238,24 +259,26 @@ function render() {
   const { call, week, last, zones } = todayModel(an, f);
   if (state.features) {
     const listen = el("button", { type: "button", className: "listen", textContent: "listen" });
-    listen.addEventListener("click", () => playBrief(briefText({ call, week, last }), listen));
+    listen.addEventListener("click", () => playBrief(briefText({ call, week, last, sleep: todayModel(an, f).sleep }), listen));
     listen.classList.toggle("hidden", !state.account);
     $("hero").replaceChildren(
       ...bannerNode([call.headline.toUpperCase()], call.headline),
       el("p", { className: "reason", textContent: call.reason }),
       el("p", { className: "basis", textContent: `${dateLabel(0)}, ${call.basis}.` }),
       el("div", { className: "speak" }, listen, el("p", { id: "caption", className: "caption hidden" })),
-      askNode(() => ({ model: { call, week, last }, week: weekDetail(an, f), session: sessionDetail(an, f), zones: zoneDetail(f),
+      askNode(() => ({ model: { call, week, last, ...(({ sleep, fitness }) => ({ sleep, fitness }))(todayModel(an, f)) }, week: weekDetail(an, f), session: sessionDetail(an, f), zones: zoneDetail(f),
         features: state.features, relay: RELAY })),
       methodNode(call.source, call.ref));
+    const { sleep, fitness } = todayModel(an, f);
     $("panels").replaceChildren(panelNode(week, { href: "#week" }), ...(last ? [panelNode(last, { href: "#session" })] : []),
+      ...(sleep ? [panelNode(sleep, { href: "#sleep" })] : []), ...(fitness ? [panelNode(fitness, { href: "#fitness" })] : []),
       panelNode(zones, { href: "#zones" }));
   } else {
     const login = el("button", { type: "button", className: "primary", textContent: "log in" });
     login.addEventListener("click", () => openSheet(true));
     $("hero").replaceChildren(
       ...bannerNode(["HUSKY", "HEALTH"], "HuskyHealth"),
-      el("p", { className: "reason", textContent: "Log in on the HuskyHealth iPhone app and your last 60 days of Apple Watch or Garmin workouts arrive here, encrypted so only you can read them." }),
+      el("p", { className: "reason", textContent: WELCOME }),
       el("div", { className: "cta" }, login, el("label", { className: "button", htmlFor: "import-file", textContent: "import an Apple Health export" }),
         el("a", { href: "/api", textContent: "how the API works" })));
     $("panels").replaceChildren();
@@ -263,14 +286,16 @@ function render() {
   renderWeek(an, f);
   renderSession(an, f);
   renderZones(f);
+  renderSleep(an, f);
+  renderFitness(an, f);
   $("stored").textContent = storedLine(state.features);
 }
 
 // One page at a time. Method links (#ref-*) open the methods page at that card.
 function route() {
   const h = location.hash.slice(1) || "today";
-  const page = h.startsWith("ref-") ? "references" : ["today", "week", "session", "zones", "import", "account", "references"].includes(h) ? h : "today";
-  const tab = ["week", "session", "zones", "references"].includes(page) ? "today" : page;   // details live under ./today
+  const page = h.startsWith("ref-") ? "references" : ["today", "week", "session", "zones", "sleep", "fitness", "import", "account", "references"].includes(h) ? h : "today";
+  const tab = ["week", "session", "zones", "sleep", "fitness", "references"].includes(page) ? "today" : page;   // details live under ./today
   if (page === "account" && !state.account) openSheet(true);
   for (const s of document.querySelectorAll("section.page")) s.classList.toggle("active", s.id === page);
   for (const a of document.querySelectorAll("nav.tabs a")) {
@@ -296,12 +321,15 @@ function startImport(file) {
     state.imp = onImportMessage(state.imp, data);
     renderImport();
     if (data.done || data.error) worker.terminate();
-    if (data.done) {
+    if (data.done && state.account) {
+      // logged in: the export goes into the account, and today is drawn from the account like everywhere else
+      await autoSave("import", { workouts: workoutSummaries(data.features), days: daySummaries(data.features) });
+      location.hash = "#today";
+    } else if (data.done) {
       await db.saveFeatures(data.features);
       await db.saveRecord("ref", { day: dayNumber(Date.now()) });   // offsets now count from today
       state.features = await db.loadFeatures();
       render();
-      autoSave("import");
       location.hash = "#today";
     }
   };
@@ -329,6 +357,9 @@ function renderAccount() {
   $("acct-name").textContent = a ? a.username : "Account";
   const listen = document.querySelector("#hero .listen");
   if (listen) listen.classList.toggle("hidden", !a);
+  // the microphone needs a session too (Gradium speech-to-text through the relay): show it as soon as you log in
+  const mic = document.querySelector("#hero .mic");
+  if (mic) mic.classList.toggle("hidden", !a || !navigator.mediaDevices || typeof MediaRecorder === "undefined");
   if (!a) return;
   const { reports, workouts } = a.vault;
   $("acct-reports").replaceChildren(...(reports.length ? reports.map((r) => el("li", {
@@ -342,48 +373,56 @@ function renderAccount() {
     `${w.date}  ${w.sport.padEnd(9)}${String(Math.round(w.min)).padStart(4)} min  load ${String(Math.round(w.trimp)).padStart(4)}  ${w.kcal != null ? `${String(Math.round(w.kcal)).padStart(4)} kcal` : "        "}  zones ${w.zone_min.map(Math.round).join("/")}${w.effort != null ? `  effort ${w.effort}` : ""}`).join("\n");
 }
 
-async function autoSave(source) {
+// The account's vault is the one source of today, here and in the iPhone app: both draw it with featuresFromVault.
+async function showVault(vault) {
+  state.account.vault = vault;
+  state.features = featuresFromVault(vault);
+  await db.saveFeatures(state.features);
+  await db.saveRecord("ref", { day: dayNumber(Date.now()) });
+  render();
+}
+
+// Merge new entries (an import, records from devices) into the vault, add today's report, encrypt, save, show.
+async function autoSave(source, add = null) {
   const a = state.account;
-  if (!a || !state.features) return;
-  const f = state.features;
+  if (!a) return;
+  let vault = add ? addToVault(a.vault, null, add.workouts, add.days, { prefer: add.prefer || "incoming" }) : a.vault;
+  const f = featuresFromVault(vault);
   const an = analyze(f);
-  const report = makeReport(an, f, todayModel(an, f).call, { source });
-  const vault = addToVault(a.vault, report, workoutSummaries(f));
+  vault = addToVault(vault, makeReport(an, f, todayModel(an, f).call, { source }), []);
   acctSay("Encrypting and saving\u2026");
   const r = await saveVault({ account: a, vault });
-  if (r.ok) { a.vault = vault; acctSay(`Saved: report ${fmtAt(report.at)}, ${vault.workouts.length} workouts in your history.`); }
+  if (r.ok) { await showVault(vault); acctSay(`Saved: ${vault.workouts.length} workouts in your history.`); }
   else acctSay(r.status);
   renderAccount();
   return r;
 }
 
-// Records your devices sent since last time: open them here, fold them into today, remember the cursor in the vault.
+// Pick up what other devices wrote: the latest vault (the iPhone app writes it directly), then records sent to the
+// personal API since last time, folded in and saved. The Pi forgets records once they are safely in the vault.
 let pulling = false;
 async function pullInbox(quiet = false) {
   const a = state.account;
   if (!a || pulling) return;
   pulling = true;
   try {
+    const latest = await fetchVault({ account: a });
+    if (latest.ok && latest.vault && JSON.stringify(latest.vault) !== JSON.stringify(a.vault)) await showVault(latest.vault);
     const r = await fetchRecords({ account: a, after: a.vault.inbox || 0 });
     if (!r.ok) { if (!quiet) acctSay(r.status); return; }
     if (!r.records.length) { if (!quiet) acctSay("No new records from your devices."); return; }
-    const now = Date.now();
-    let f = state.features;
-    let ref = (await db.loadRecord("ref"))?.day ?? null;
-    let added = 0;
+    const now = Date.now(), workouts = [], days = [];
     for (const x of r.records) {
       if (!validDrop(x.drop)) continue;
-      const m = mergeDrop(f, x.drop, { nowMs: now, ageS: Math.max(0, now / 1000 - x.at), refDay: ref });
-      f = m.features; ref = m.refDay; added += m.added;
+      const v = dropToVault(x.drop, Math.min(now, x.at * 1000), now, a.vault.max_hr ?? null);
+      workouts.push(...v.workouts); days.push(...v.days);
     }
-    await db.saveFeatures(f);
-    await db.saveRecord("ref", { day: ref });
-    state.features = await db.loadFeatures();
-    render();
     a.vault = { ...a.vault, inbox: r.last };
+    const before = a.vault.workouts.length;
+    const saved = await autoSave("sync", { workouts, days, prefer: "existing" });
+    const added = state.account.vault.workouts.length - before;
     acctSay(`${r.records.length} new record${r.records.length === 1 ? "" : "s"} from your devices, ${added} new workout${added === 1 ? "" : "s"}.`);
-    const saved = added ? await autoSave("sync") : await saveVault({ account: a, vault: a.vault });
-    if (saved && saved.ok) await deleteRecords({ account: a, upto: r.last });   // safely in the vault: the Pi forgets them
+    if (saved && saved.ok) await deleteRecords({ account: a, upto: r.last });
   } finally {
     pulling = false;
   }
@@ -420,18 +459,15 @@ function wireAccount() {
     loginSay("");
     openSheet(false);
     state.account = { username: username.trim().toLowerCase(), session: r.session, keys: r.keys, vault: r.vault };
-    // A browser with no data of its own (a new device, or the other site address): rebuild today from the account.
-    if (!state.features && r.vault.workouts.length) {
-      await db.saveFeatures(featuresFromVault(r.vault));
-      await db.saveRecord("ref", { day: dayNumber(Date.now()) });
-      state.features = await db.loadFeatures();
-      render();
+    // Today comes from the account. A browser that imported an export before logging in seeds a new account with it.
+    if (!r.vault.workouts.length && state.features && state.features.workouts.length) {
+      await autoSave("import", { workouts: workoutSummaries(state.features), days: daySummaries(state.features) });
+    } else {
+      await showVault(r.vault);
     }
-    acctSay(create ? "Account created. Reports save here after each import or sync."
-      : `Logged in. ${r.vault.reports.length} reports, ${r.vault.workouts.length} workouts${state.features && state.features.source === "account" ? "; today rebuilt from your account" : ""}.`);
+    acctSay(create ? "Account created." : `Logged in. ${r.vault.reports.length} reports, ${state.account.vault.workouts.length} workouts.`);
     renderAccount();
     renderTokens();
-    if (create || !r.vault.reports.length) await autoSave("import");
     await pullInbox(true);
   };
   setInterval(() => { if (!document.hidden) pullInbox(true); }, 30_000);   // while logged in: new records within 30 s

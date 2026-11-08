@@ -1,4 +1,4 @@
-// From Colère Nu (Ved's app): two panes split on the iPhone Duo's fold. Only the theme import differs.
+// From Colère Nu (Ved's app): two panes split on the iPhone Duo's fold. Only the theme differs (colours read at render, so dark mode applies).
 import { StyleSheet, View, useWindowDimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -65,7 +65,7 @@ export function TwoPane({
     return (
       <View style={styles.flex}>
         <View style={lift ? styles.collapsed : { height: topHeight }}>{top}</View>
-        {lift ? null : layout.splitRows.gap > 0 ? <View style={{ height: layout.splitRows.gap }} /> : <View style={styles.rule} />}
+        {lift ? null : layout.splitRows.gap > 0 ? <View style={{ height: layout.splitRows.gap }} /> : <View style={[styles.rule, { backgroundColor: C.rule }]} />}
         <View style={lift ? { height: liftedHeight } : styles.flex}>{bottom}</View>
       </View>
     )
@@ -75,7 +75,7 @@ export function TwoPane({
   return (
     <View style={styles.row}>
       <View style={{ width: leftWidth }}>{left}</View>
-      {layout.split.gap > 0 ? <View style={{ width: layout.split.gap }} /> : <View style={styles.divider} />}
+      {layout.split.gap > 0 ? <View style={{ width: layout.split.gap }} /> : <View style={[styles.divider, { backgroundColor: C.rule }]} />}
       <View style={styles.flex}>{right}</View>
     </View>
   )
@@ -89,7 +89,7 @@ const MIN_ROW = 240
 const styles = StyleSheet.create({
   row: { flex: 1, flexDirection: 'row' },
   flex: { flex: 1 },
-  divider: { width: 1, backgroundColor: C.rule },
-  rule: { height: 1, backgroundColor: C.rule },
+  divider: { width: 1 },
+  rule: { height: 1 },
   collapsed: { height: 0, overflow: 'hidden' },
 })

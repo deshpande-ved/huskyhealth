@@ -75,7 +75,7 @@
           <tr><td>GET</td><td><code>/v1/openapi.json</code></td><td>none</td><td>the full OpenAPI 3.1 spec</td></tr>
         </tbody>
       </table></div>
-      <p class="note">Base URL <code class="wrap">https://veds-pi5.polecat-nominal.ts.net:10000</code>. A record holds workouts (sport, start and end as seconds before sending, heart rate), resting heart rate, HRV and Watch effort. Names, places, GPS and device names are rejected.</p>
+      <p class="note">Base URL <code class="wrap">https://veds-pi5.polecat-nominal.ts.net:10000</code>. A record holds workouts (sport, start and end as seconds before sending, heart rate), resting heart rate, HRV, VO2 max, minutes asleep per night and Watch effort. Names, places, GPS and device names are rejected.</p>
 
       <h3>Limits</h3>
       <div class="scroll"><table class="data">
@@ -88,7 +88,7 @@
           <tr><td>bodies</td><td>JSON only; records up to 128 KB</td></tr>
         </tbody>
       </table></div>
-      <p class="note">Over a limit you get <code>429</code> with <code>Retry-After</code>. Errors are always <code>{ "error", "status" }</code>; every response carries <code>API-Version: 1</code>.</p>
+      <p class="note">Over a limit you get <code>429</code> with <code>Retry-After</code>. Errors are always <code>{ "error", "status" }</code>; every response carries <code>API-Version: 1.1</code>. Version 1.1 added <code>vo2</code> and <code>sleep</code> to records; changes inside <code>/v1/</code> only ever add fields.</p>
 
       <h3>Try it</h3>
       <p class="lede">Make a device token on your <a href="/#account">account</a>, then send a run:</p>

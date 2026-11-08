@@ -8,12 +8,12 @@
 //               RSA public key. The private key is kept only inside the vault, so only you can read them.
 // Forget the password and the vault cannot be opened by anyone, including us.
 import { openDrop } from "./box.js";
+import { emptyVault } from "./vault.js";
+export { emptyVault, makeReport, workoutSummaries, daySummaries, featuresFromVault, addToVault, mergeWorkouts, sameSession, MAX_REPORTS } from "./vault.js";
 
 export const RELAY = "https://veds-pi5.polecat-nominal.ts.net:10000";
 
 export const ROUNDS = 600_000;                 // OWASP 2023 guidance for PBKDF2-HMAC-SHA256
-export const MAX_REPORTS = 365;
-const DAY = 86_400_000;
 const te = new TextEncoder();
 const td = new TextDecoder();
 
@@ -54,66 +54,6 @@ export async function unseal(keys, blob) {
   if (raw[0] !== 1) throw new Error("unknown vault version");
   const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: raw.slice(1, 13), additionalData: te.encode(keys.id) }, keys.key, raw.slice(13));
   return JSON.parse(td.decode(await pipe(new Uint8Array(pt), new DecompressionStream("gzip"))));
-}
-
-export const emptyVault = () => ({ v: 1, reports: [], workouts: [], inbox: 0, rsa: null });
-
-const isoDay = (ms) => new Date(ms).toISOString().slice(0, 10);
-
-// One report: what the screen said, as numbers and words. No raw heart rate.
-export function makeReport(analysis, features, call, { nowMs = Date.now(), source = "import", brief = null } = {}) {
-  const ff = analysis.fitnessFatigue;
-  const ws = features.workouts || [];
-  return {
-    at: new Date(nowMs).toISOString(), source,
-    call: call.headline, reason: call.reason,
-    fitness: Math.round(ff.fitness), fatigue: Math.round(ff.fatigue), form: Math.round(ff.form),
-    workouts: ws.length, minutes: Math.round(ws.reduce((s, w) => s + (w.min || 0), 0)),
-    load: Math.round(ws.reduce((s, w) => s + (w.trimp || 0), 0)),
-    brief,
-  };
-}
-
-// Per-workout summaries with real dates (inside the vault only): sport, minutes, load, zone minutes, effort.
-export function workoutSummaries(features, nowMs = Date.now()) {
-  return (features.workouts || []).map((w) => ({
-    date: isoDay(nowMs + w.day * DAY), sport: w.sport, min: w.min, trimp: w.trimp, kcal: w.kcal ?? null,
-    zone_min: w.zone_min, effort: w.effort ?? null, srpe: w.srpe ?? null,
-  }));
-}
-
-// Today's features rebuilt from the vault's workout summaries, for a browser that has none (a new device or site).
-// Day offsets count from today. Daily resting HR and HRV are not in the vault, so the call uses the load rule.
-export function featuresFromVault(vault, nowMs = Date.now(), windowDays = 60) {
-  const today = Date.parse(isoDay(nowMs));
-  const r1 = (x) => Math.round(x * 10) / 10;
-  const workouts = (vault.workouts || [])
-    .map((w) => ({ day: Math.round((Date.parse(w.date) - today) / DAY), sport: w.sport, min: w.min, kcal: w.kcal ?? null,
-      zone_min: [...(w.zone_min || [0, 0, 0, 0, 0])], trimp: w.trimp, effort: w.effort ?? null, srpe: w.srpe ?? null,
-      source: "account", hr_sample_ok: true }))
-    .filter((w) => Number.isFinite(w.day) && w.day <= 0 && w.day > -windowDays)
-    .sort((a, b) => a.day - b.day);
-  const days = Array.from({ length: windowDays }, (_, i) => {
-    const day = i - (windowDays - 1);
-    const ws = workouts.filter((w) => w.day === day);
-    const rated = ws.filter((w) => w.srpe != null);
-    return { day, trimp: r1(ws.reduce((s, w) => s + (w.trimp || 0), 0)), srpe: rated.length ? r1(rated.reduce((s, w) => s + w.srpe, 0)) : null,
-             rhr: null, ln_hrv: null, vo2: null };
-  });
-  return { v: 1, source: "account", window_days: windowDays, max_hr: null, days, workouts };
-}
-
-// Merge a new report and its workouts into the vault: workouts deduped by date+sport+minutes, newest report first.
-export function addToVault(vault, report, workouts) {
-  const key = (w) => `${w.date}|${w.sport}|${Math.round(w.min)}`;
-  const byKey = new Map((vault.workouts || []).map((w) => [key(w), w]));
-  for (const w of workouts) byKey.set(key(w), w);
-  return {
-    ...vault,
-    v: 1,
-    reports: [report, ...(vault.reports || [])].slice(0, MAX_REPORTS),
-    workouts: [...byKey.values()].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
-  };
 }
 
 // ---- relay calls. All return { ok, ... } and never throw. ----
@@ -222,6 +162,15 @@ export async function listTokens({ account, fetchFn = fetch, relay = RELAY }) {
 export async function revokeToken({ account, id, fetchFn = fetch, relay = RELAY }) {
   const r = await call(fetchFn, relay, `tokens/${encodeURIComponent(id)}`, null, account.session, "DELETE");
   return r.status === 204 ? { ok: true } : { ok: false, status: say(r.status) };
+}
+
+// The latest vault (another device, such as the iPhone app, may have written it since log in).
+export async function fetchVault({ account, fetchFn = fetch, relay = RELAY }) {
+  const r = await call(fetchFn, relay, "vault", null, account.session, "GET");
+  if (r.status !== 200) return { ok: false, status: r.status === 401 ? "Session expired. Log in again." : say(r.status) };
+  if (!r.json.vault) return { ok: true, vault: null };
+  try { return { ok: true, vault: { ...emptyVault(), ...(await unseal(account.keys, r.json.vault)) } }; }
+  catch { return { ok: false, status: "Could not decrypt your history." }; }
 }
 
 export async function saveVault({ account, vault, fetchFn = fetch, relay = RELAY }) {
