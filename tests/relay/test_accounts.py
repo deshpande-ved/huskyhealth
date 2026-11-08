@@ -89,7 +89,7 @@ def test_disk_holds_nothing_readable(c, tmp_path):
     files = list(tmp_path.iterdir())
     assert [f.name for f in files] == [f"{AID}.json"]
     raw = files[0].read_text()
-    assert "ved" not in raw and AUTH not in raw and set(__import__("json").loads(raw)) == {"v", "salt", "hash", "vault"}
+    assert "ved" not in raw and AUTH not in raw and set(__import__("json").loads(raw)) == {"v", "salt", "hash", "vault", "pub", "tokens"}
 
 
 def test_rate_limited(c, monkeypatch):

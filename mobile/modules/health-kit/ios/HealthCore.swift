@@ -1,3 +1,5 @@
+import CommonCrypto
+import CryptoKit
 import Foundation
 import HealthKit
 import Security
@@ -9,7 +11,7 @@ import Security
 /// Privacy rules this file keeps:
 /// - Reads only workouts, heart rate, resting HR, HRV, VO2 max and effort scores.
 ///   Never routes, ECGs or clinical records.
-/// - The only thing that leaves the phone is the convenience-mode drop, sent to the
+/// - The only thing that leaves the phone is a record POSTed to your own personal API (/v1/me/records), sent to the
 ///   relay the user paired with, which encrypts it to a key held by the user's phone
 ///   and keeps only ciphertext, in memory, until it is collected (max 24 h).
 /// - History stays on the phone, in a file iOS encrypts while the phone is locked.
@@ -162,15 +164,15 @@ enum HealthCore {
       let since = SyncConfig.lastEnd ?? Date().addingTimeInterval(-86400)
       let (body, newest, count) = try await dropPayload(since: since.addingTimeInterval(1))
       if count == 0 { return ["status": 0, "workouts": 0, "reason": "no new workouts"] }
-      var req = URLRequest(url: cfg.relay.appendingPathComponent("v1/drop/\(cfg.box)"))
+      var req = URLRequest(url: cfg.relay.appendingPathComponent("v1/me/records"))
       req.httpMethod = "POST"
       req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-      req.setValue("Bearer \(cfg.write)", forHTTPHeaderField: "Authorization")
+      req.setValue("Bearer \(cfg.token)", forHTTPHeaderField: "Authorization")
       req.httpBody = body
       req.timeoutInterval = 20
       let (_, resp) = try await URLSession.shared.data(for: req)
       let status = (resp as? HTTPURLResponse)?.statusCode ?? 0
-      if status == 204, let newest { SyncConfig.lastEnd = newest }
+      if status == 201, let newest { SyncConfig.lastEnd = newest }
       return ["status": status, "workouts": count]
     } catch {
       return ["status": -1, "workouts": 0, "reason": "could not reach the relay"]
@@ -260,44 +262,90 @@ enum HealthCore {
 /// Pairing for convenience mode. The write secret lives in the Keychain; box id and relay in UserDefaults.
 struct SyncConfig {
   let relay: URL
-  let box: String
-  let write: String
+  let token: String           // device write token: can add records to your account, never read them
 
   private static let defaults = UserDefaults.standard
   private static let service = "dev.huskyhealth.companion.sync"
 
-  static func save(relay: String, box: String, write: String) -> Bool {
-    guard let url = URL(string: relay), url.scheme == "https", !box.isEmpty, !write.isEmpty else { return false }
+  static func save(relay: String, token: String) -> Bool {
+    guard let url = URL(string: relay), url.scheme == "https", token.hasPrefix("hhw_") else { return false }
     defaults.set(url.absoluteString, forKey: "hh.relay")
-    defaults.set(box, forKey: "hh.box")
     let base: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
-                               kSecAttrAccount as String: "write"]
+                               kSecAttrAccount as String: "token"]
     SecItemDelete(base as CFDictionary)
     var add = base
-    add[kSecValueData as String] = Data(write.utf8)
+    add[kSecValueData as String] = Data(token.utf8)
     add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
     return SecItemAdd(add as CFDictionary, nil) == errSecSuccess
   }
 
   static func load() -> SyncConfig? {
-    guard let r = defaults.string(forKey: "hh.relay"), let url = URL(string: r), let box = defaults.string(forKey: "hh.box") else { return nil }
+    guard let r = defaults.string(forKey: "hh.relay"), let url = URL(string: r) else { return nil }
     let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
-                            kSecAttrAccount as String: "write", kSecReturnData as String: true]
+                            kSecAttrAccount as String: "token", kSecReturnData as String: true]
     var out: AnyObject?
     guard SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess, let d = out as? Data,
-          let write = String(data: d, encoding: .utf8) else { return nil }
-    return SyncConfig(relay: url, box: box, write: write)
+          let token = String(data: d, encoding: .utf8) else { return nil }
+    return SyncConfig(relay: url, token: token)
   }
 
   static func clear() {
     defaults.removeObject(forKey: "hh.relay")
-    defaults.removeObject(forKey: "hh.box")
     defaults.removeObject(forKey: "hh.lastEnd")
+    defaults.removeObject(forKey: "hh.user")
     SecItemDelete([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service] as CFDictionary)
   }
 
   static var lastEnd: Date? {
     get { defaults.object(forKey: "hh.lastEnd") as? Date }
     set { defaults.set(newValue, forKey: "hh.lastEnd") }
+  }
+
+  static var user: String? {
+    get { defaults.string(forKey: "hh.user") }
+    set { defaults.set(newValue, forKey: "hh.user") }
+  }
+}
+
+/// Account login, same derivation as the website (web/js/account.js), so the password never leaves this phone:
+///   id   = SHA-256("huskyhealth:" + username)
+///   auth = bytes 32..<64 of PBKDF2-HMAC-SHA256(password, "huskyhealth-v1:" + username, 600 000, 64)
+/// The first 32 bytes (the vault key) are thrown away: this phone only ever needs a write token.
+enum Account {
+  static func derive(username: String, password: String) -> (id: String, auth: String)? {
+    let u = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    guard !u.isEmpty, !password.isEmpty else { return nil }
+    let id = SHA256.hash(data: Data("huskyhealth:\(u)".utf8)).map { String(format: "%02x", $0) }.joined()
+    let salt = Array("huskyhealth-v1:\(u)".utf8)
+    var out = [UInt8](repeating: 0, count: 64)
+    let rc = CCKeyDerivationPBKDF(CCPBKDFAlgorithm(kCCPBKDF2), password, password.utf8.count, salt, salt.count,
+                                  CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256), 600_000, &out, out.count)
+    guard rc == kCCSuccess else { return nil }
+    let auth = Data(out[32..<64]).base64EncodedString()
+    for i in out.indices { out[i] = 0 }
+    return (id, auth)
+  }
+
+  private static func post(_ url: URL, _ body: [String: Any], bearer: String? = nil) async -> (Int, [String: Any]) {
+    var req = URLRequest(url: url)
+    req.httpMethod = "POST"
+    req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    if let bearer { req.setValue("Bearer \(bearer)", forHTTPHeaderField: "Authorization") }
+    req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+    req.timeoutInterval = 20
+    guard let (data, resp) = try? await URLSession.shared.data(for: req) else { return (0, [:]) }
+    return ((resp as? HTTPURLResponse)?.statusCode ?? 0, (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:])
+  }
+
+  /// Log in, make this phone's own write token, keep it in the Keychain. Returns an HTTP-ish status (200 = ok).
+  static func login(relay: String, username: String, password: String) async -> Int {
+    guard let base = URL(string: relay), let k = derive(username: username, password: password) else { return 422 }
+    let (s1, open) = await post(base.appendingPathComponent("v1/account/open"), ["id": k.id, "auth": k.auth])
+    guard s1 == 200, let session = open["session"] as? String else { return s1 }
+    let (s2, tok) = await post(base.appendingPathComponent("v1/account/tokens"), ["scope": "write"], bearer: session)
+    guard s2 == 201, let token = tok["token"] as? String, SyncConfig.save(relay: relay, token: token) else { return s2 == 201 ? 500 : s2 }
+    SyncConfig.user = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    SyncConfig.lastEnd = nil
+    return 200
   }
 }

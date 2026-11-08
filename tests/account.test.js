@@ -23,11 +23,12 @@ function fakeRelay() {
       const rec = store.get(b.id);
       if (!rec || rec.auth !== b.auth) return res(401, { error: "unauthorized" });
       sessions.set("s-" + b.id, b.id);
-      return res(200, { session: "s-" + b.id, vault: rec.vault });
+      return res(200, { session: "s-" + b.id, vault: rec.vault, has_pub: Boolean(rec.pub) });
     }
     const id = sessions.get((headers.Authorization || "").slice(7));
     if (!id) return res(401, { error: "unauthorized" });
     if (path === "vault") { store.get(id).vault = b.vault; return res(204); }
+    if (path === "pubkey") { store.get(id).pub = b.pub; return res(204); }
     if (path === "delete") { store.delete(id); return res(204); }
     return res(404, {});
   };
@@ -67,7 +68,10 @@ test("sign up, save, log in elsewhere: history comes back; the relay never saw u
   assert.equal(again.vault.reports[0].call, MARK);
   assert.equal(again.vault.workouts[0].sport, "squash");
 
+  assert.ok(relay.store.values().next().value.pub, "public key reached the relay");
+  assert.ok(again.privateKey && again.vault.rsa, "private key only inside the vault");
   const wire = relay.seen.map((s) => s.body).join("\n");
+  assert.ok(!wire.includes(again.vault.rsa), "private key never sent in clear");
   for (const secret of ["ved", "correct horse", MARK, "squash"]) assert.ok(!wire.includes(secret), `relay saw ${secret}`);
 
   assert.equal((await signIn({ username: "ved", password: "wrong", ...opts })).status, "Wrong username or password.");

@@ -1,9 +1,11 @@
-# relay/app.py: the HuskyHealth relay. RAM only except account vaults (ciphertext only, see accounts.py);
+# relay/app.py: the HuskyHealth relay. RAM only except accounts (ciphertext, hashes and public keys: accounts.py,
+# records.py);
 # /v1/ only, and it never logs or echoes input.
 import logging
 import threading
 import time
 from collections import deque
+from pathlib import Path
 
 from flask import Flask, request
 from werkzeug.exceptions import HTTPException
@@ -57,13 +59,21 @@ class Window:
 
 
 TOKEN_LIMIT = Window(30, 60)
-BOX_LIMIT = Window(30, 60)
+RECORD_LIMIT = Window(120, 60)
 ACCOUNT_LIMIT = Window(20, 60)              # create/open: each runs scrypt, so keep it low
 
 
 @app.get("/v1/healthz")
 def healthz():
     return "ok", 200, {"Content-Type": "text/plain; charset=utf-8"}
+
+
+_OPENAPI = (Path(__file__).with_name("openapi.json")).read_text()
+
+
+@app.get("/v1/openapi.json")
+def openapi():
+    return _OPENAPI, 200, {"Content-Type": "application/json"}
 
 
 @app.post("/v1/token")
@@ -76,9 +86,9 @@ def token():
     return {"token": mint(kind, ttl=600)}
 
 
-from dropbox import bp as dropbox_bp            # noqa: E402  (registered after the shared helpers exist)
+from records import bp as records_bp            # noqa: E402  (registered after the shared helpers exist)
 
-app.register_blueprint(dropbox_bp)
+app.register_blueprint(records_bp)
 
 from accounts import bp as accounts_bp          # noqa: E402
 
