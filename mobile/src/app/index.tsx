@@ -55,7 +55,9 @@ function Row({ fig }: { fig: Fig }) {
 
 // The call in block letters (web: .banner), sized to fit the column like the website's min(20px, width / cols*0.62).
 function Banner({ words, width }: { words: string[]; width: number }) {
-  const blocks: string[][] = words.map((w) => banner(w.toUpperCase()))
+  let blocks: string[][]
+  try { blocks = words.map((w) => banner(w.toUpperCase())) }
+  catch { return <Text style={{ ...bold, color: C.love, fontSize: 28, marginBottom: 24 }}>{words.join(' ')}</Text> }   // a character the font lacks
   const cols = Math.max(...blocks.flat().map((l) => l.length))
   const size = Math.min(20, width / (cols * 0.62))
   return (
@@ -226,7 +228,7 @@ export default function Today() {
     </View>
   ) : (
     <View style={{ paddingTop: 48, paddingBottom: 32 }}>
-      <Banner words={user ? ['…'] : ['HUSKY', 'HEALTH']} width={bannerWidth} />
+      <Banner words={['HUSKY', 'HEALTH']} width={bannerWidth} />
       {user ? <Text style={{ ...mono, color: C.text2, fontSize: 14 }}>{status}</Text> : (
         <>
           <Text style={{ ...mono, fontSize: 20, lineHeight: 29 }}>{WELCOME}</Text>
