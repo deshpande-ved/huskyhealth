@@ -55,7 +55,7 @@ test("every method link points at a card on the methods page", () => {
 
 test("removed screens stay removed; log in lives top right; no device-specific copy", () => {
   for (const id of ["settings", "effort", "caveats", "plain-view", "sync-toggle", "import"]) assert.ok(!html.includes(`id="${id}"`), id);
-  assert.match(html, /<nav class="tabs" aria-label="Pages"><a href="#today">today<\/a><a href="\/api">api<\/a><\/nav>/);
+  assert.match(html, /<nav class="tabs" aria-label="Pages"><a href="#today">today<\/a><a href="\/api">api<\/a><a href="#references">methods<\/a><\/nav>/);
   assert.ok(html.indexOf('id="who-btn"') > html.indexOf('<nav class="tabs"') && html.includes('<form id="login" class="sheet hidden"'));
   const app = readFileSync(new URL("../web/js/app.js", import.meta.url), "utf8");
   const view = readFileSync(new URL("../web/js/view.js", import.meta.url), "utf8");
@@ -142,4 +142,14 @@ test("rows run zones, last session, this week, VO2 max, sleep, on the website an
   const site = readFileSync(new URL("../web/js/app.js", import.meta.url), "utf8");
   assert.match(app, /todayRows\(m\)/);
   assert.match(site, /todayRows\(todayModel/);
+});
+
+test("logged out: who it is for, at most 70 words, the same on the website and in the app", async () => {
+  const { ABOUT } = await import("../web/js/view.js");
+  assert.ok(ABOUT.split(/\s+/).length <= 70);
+  assert.match(ABOUT, /Northeastern/);
+  assert.match(ABOUT, /REST API/);
+  assert.match(ABOUT, /Gradium/);
+  assert.match(readFileSync(new URL("../web/js/app.js", import.meta.url), "utf8"), /textContent: ABOUT/);
+  assert.match(readFileSync(new URL("../mobile/src/app/index.tsx", import.meta.url), "utf8"), /\{ABOUT\}/);
 });

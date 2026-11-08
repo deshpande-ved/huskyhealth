@@ -15,7 +15,7 @@ import { HealthKit } from '../../modules/health-kit'
 import { loadToday, type Today as TodayData } from '../lib/today'
 import { setToday } from '../lib/today-store'
 import { C, bold, mono, RELAY, link, methodLink, filled } from '../lib/theme'
-import { todayModel, dateLabel, briefText, answerQuestion, weekDetail, sessionDetail, zoneDetail, WELCOME, todayRows, ROW_PAGE } from '../../../web/js/view.js'
+import { todayModel, dateLabel, briefText, answerQuestion, weekDetail, sessionDetail, zoneDetail, WELCOME, ABOUT, todayRows, ROW_PAGE } from '../../../web/js/view.js'
 import { banner } from '../../../web/js/ascii.js'
 
 type Cell = { ch: string; cls: string }
@@ -89,7 +89,7 @@ function Masthead({ user }: { user: string | null }) {
       <View style={{ flex: 1, gap: 8 }}>
         <View>
           <Text style={{ ...bold, fontSize: 24, lineHeight: 27 }}>HuskyHealth</Text>
-          <Text style={{ ...mono, color: C.text2, fontSize: 14, marginTop: 2 }}>Your workouts, as an API only you can read.</Text>
+          <Text style={{ ...mono, color: C.text2, fontSize: 14, marginTop: 2 }}>Zero knowledge, personal API.</Text>
         </View>
         <View style={{ flexDirection: 'row', gap: 24 }}>
           <Text style={{ ...mono, fontSize: 14, color: C.text, textDecorationLine: 'underline', textDecorationColor: C.love /* ./today: the page you are on */ }}>
@@ -97,6 +97,9 @@ function Masthead({ user }: { user: string | null }) {
           </Text>
           <Text onPress={() => router.push('/api')} style={{ ...link(), fontSize: 14, textDecorationLine: 'none' }}>
             <Text style={{ opacity: 0.6 }}>./</Text>api
+          </Text>
+          <Text onPress={() => router.push('/methods')} style={{ ...link(), fontSize: 14, textDecorationLine: 'none' }}>
+            <Text style={{ opacity: 0.6 }}>./</Text>methods
           </Text>
         </View>
       </View>
@@ -260,6 +263,7 @@ export default function Today() {
       {user ? <Text style={{ ...mono, color: C.text2, fontSize: 14 }}>{status}</Text> : (
         <>
           <Text style={{ ...mono, fontSize: 20, lineHeight: 29 }}>{WELCOME}</Text>
+          <Text style={{ ...mono, fontSize: 15, lineHeight: 24, color: C.text2, marginTop: 16 }}>{ABOUT}</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginTop: 24 }}>
             <Button label="log in" primary onPress={() => router.push('/sync')} />
             <Text onPress={() => router.push('/api')} style={{ ...link(), fontSize: 14 }}>how the API works</Text>

@@ -2,7 +2,7 @@
 import { analyze } from "./engine.js";
 import { paint, banner } from "./ascii.js";
 import { createDb } from "./db.js";
-import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel, briefText, answerQuestion, hm, WELCOME, DETAIL_PAGES, detailBlocks, todayRows, ROW_PAGE } from "./view.js";
+import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel, briefText, answerQuestion, hm, WELCOME, ABOUT, DETAIL_PAGES, detailBlocks, todayRows, ROW_PAGE } from "./view.js";
 import { recordQuestion } from "./voice.js";
 import { signIn, saveVault, fetchVault, deleteAccount, addToVault, makeReport, workoutSummaries, daySummaries, fetchRecords, deleteRecords, newToken, listTokens, revokeToken, featuresFromVault, speakBrief, listenQuestion, RELAY } from "./account.js";
 import { dayNumber, dropToVault, validDrop } from "./sync-merge.js";
@@ -107,7 +107,7 @@ function askNode(ctx, speakRow) {
   const ask = el("button", { type: "submit", className: "enter", textContent: "\u21b5" });
   ask.setAttribute("aria-label", "ask");
   const mic = el("button", { type: "button", className: "cmd mic", textContent: "speak" });
-  mic.classList.toggle("hidden", !state.account || !navigator.mediaDevices || typeof MediaRecorder === "undefined");
+  mic.classList.toggle("hidden", !navigator.mediaDevices || typeof MediaRecorder === "undefined");
   const heard = el("p", { className: "out hidden" });
   const curl = el("pre", { className: "log curl hidden" });
   const copy = el("button", { type: "button", className: "cmd hidden", textContent: "copy" });
@@ -130,6 +130,8 @@ function askNode(ctx, speakRow) {
   input.id = "ask-q";
   form.addEventListener("submit", (e) => { e.preventDefault(); const q = input.value.trim(); if (q) answer(q); });
   mic.addEventListener("click", async () => {
+    // speaking needs a session (Gradium speech-to-text through the relay): log in first, then it works
+    if (!state.account) { openSheet(true); loginSay("Log in to ask out loud."); return; }
     if (recording) { recording.stop(); return; }
     if (!micConsent && !confirm("Your spoken question (at most 5 seconds) goes to Gradium through the relay to become text. Nothing is stored. Continue?")) return;
     micConsent = true;
@@ -211,7 +213,6 @@ function render() {
   if (state.features) {
     const listen = el("button", { type: "button", className: "cmd listen", textContent: "listen" });
     listen.addEventListener("click", () => playBrief(briefText({ call, week, last, sleep: todayModel(an, f).sleep }), listen));
-    listen.classList.toggle("hidden", !state.account);
     const speakRow = el("div", { className: "speak" }, listen, el("p", { id: "caption", className: "caption hidden" }));
     $("hero").replaceChildren(
       ...bannerNode([call.headline.toUpperCase()], call.headline),
@@ -228,7 +229,8 @@ function render() {
     $("hero").replaceChildren(
       ...bannerNode(["HUSKY", "HEALTH"], "HuskyHealth"),
       el("p", { className: "reason", textContent: WELCOME }),
-      el("div", { className: "cta" }, login, el("label", { className: "button", htmlFor: "import-file", textContent: "import an Apple Health export" }),
+      el("p", { className: "about", textContent: ABOUT }),
+      el("div", { className: "cta" }, login,
         el("a", { href: "/api", textContent: "how the API works" })));
     $("panels").replaceChildren();
   }
@@ -240,7 +242,7 @@ function render() {
 function route() {
   const h = location.hash.slice(1) || "today";
   const page = h.startsWith("ref-") ? "references" : ["today", "week", "session", "zones", "sleep", "fitness", "import", "account", "references"].includes(h) ? h : "today";
-  const tab = ["week", "session", "zones", "sleep", "fitness", "references"].includes(page) ? "today" : page;   // details live under ./today
+  const tab = ["week", "session", "zones", "sleep", "fitness"].includes(page) ? "today" : page;   // details live under ./today; methods has its own tab
   if (page === "account" && !state.account) openSheet(true);
   for (const s of document.querySelectorAll("section.page")) s.classList.toggle("active", s.id === page);
   for (const a of document.querySelectorAll("nav.tabs a")) {
@@ -300,11 +302,6 @@ function renderAccount() {
   $("who-link").classList.toggle("hidden", !a);
   $("who-link").textContent = a ? a.username : "";
   $("acct-name").textContent = a ? a.username : "Account";
-  const listen = document.querySelector("#hero .listen");
-  if (listen) listen.classList.toggle("hidden", !a);
-  // the microphone needs a session too (Gradium speech-to-text through the relay): show it as soon as you log in
-  const mic = document.querySelector("#hero .mic");
-  if (mic) mic.classList.toggle("hidden", !a || !navigator.mediaDevices || typeof MediaRecorder === "undefined");
   if (!a) return;
   const { reports, workouts } = a.vault;
   $("acct-reports").replaceChildren(...(reports.length ? reports.map((r) => el("li", {
@@ -432,7 +429,7 @@ function wireAccount() {
   $("acct-create").addEventListener("click", () => go(true));
   $("who-btn").addEventListener("click", () => openSheet($("login").classList.contains("hidden")));
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") openSheet(false); });
-  document.addEventListener("click", (e) => { if (!e.target.closest(".who") && !e.target.closest(".cta")) openSheet(false); });
+  document.addEventListener("click", (e) => { if (!e.target.closest(".who, .cta, .mic")) openSheet(false); });
   $("acct-save").addEventListener("click", () => (state.features ? autoSave("manual") : acctSay("Nothing to report yet.")));
   $("acct-logout").addEventListener("click", () => { state.account = null; hideToken(); renderAccount(); location.hash = "#today"; });
   $("acct-delete").addEventListener("click", async () => {

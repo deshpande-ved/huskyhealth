@@ -21,7 +21,7 @@ Live: website https://huskyhealth.pages.dev (main) = staging; relay on the Pi be
 https://veds-pi5.polecat-nominal.ts.net:10000. Ved runs Pi restarts himself (auto mode blocks remote deploys).
 
 ## What the product is now
-"Your workouts, as an API only you can read." A zero-knowledge personal REST API for watch workouts, a daily
+"Zero knowledge, personal API." A zero-knowledge personal REST API for watch workouts, a daily
 training call from published science, voice from Gradium, an iOS companion. Works for Apple Watch and for
 Garmin (Garmin Connect writes into Apple Health; the app tags those workouts `garmin`). Anything else that writes
 workouts to Apple Health (Whoop, Oura, Polar) comes along partially; no native Whoop or Garmin connector.
@@ -71,7 +71,7 @@ workouts to Apple Health (Whoop, Oura, Polar) comes along partially; no native W
 - Zero-knowledge accounts + personal API replace convenience mode and drop boxes; rule is now "nothing readable
   stored on the Pi"; records are a short-lived encrypted queue (delete after sync, 30-day expiry).
 - Keep Expo (TypeScript UI + Swift data layer) for the hackathon; SwiftUI rewrite is post-hackathon.
-- Dot-matrix ASCII design, Space Mono, tagline "Your workouts, as an API only you can read."
+- Dot-matrix ASCII design, Space Mono, tagline "Zero knowledge, personal API." (was "Your workouts, as an API only you can read." until 2026-11-08)
 - No location of any kind (DEC-13 stands; Ved said "no location").
 - No Goose code or reverse-engineered Whoop protocol (DEC-5 stands); Whoop/Garmin native connectors run on the
   phone (tokens stay on the device) or via sealed-on-arrival push, post-hackathon.
