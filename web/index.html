@@ -25,7 +25,7 @@
         <p>training insight from your watch &middot; computed on your phone &middot; encrypted before anything leaves it</p>
       </div>
     </header>
-    <nav class="tabs" aria-label="Pages"><a href="#today">today</a><a href="#import">import</a><a href="#account">account</a><a href="/api.html">api</a></nav>
+    <nav class="tabs" aria-label="Pages"><a href="#today">today</a><a href="#import">import</a><a href="#account">account</a><a href="/api">api</a></nav>
 
     <section id="today" aria-label="Today" class="page">
       <div class="hero" id="hero"></div>
@@ -60,7 +60,7 @@
         </article>
         <article class="panel" id="api">
           <h3>Your API</h3>
-          <p class="explain">Apple has no web API for your Health data, so here is yours. The HuskyHealth iPhone app (or any script) sends workouts to <code>POST /v1/me/records</code> with a device token. The Pi encrypts each one to your account's key the moment it arrives and keeps only ciphertext. Only you can read them, here, after logging in. <a href="/api.html">API docs</a></p>
+          <p class="explain">Apple has no web API for your Health data, so here is yours. The HuskyHealth iPhone app (or any script) sends workouts to <code>POST /v1/me/records</code> with a device token. The Pi encrypts each one to your account's key the moment it arrives and keeps only ciphertext. Only you can read them, here, after logging in. <a href="/api">API docs</a></p>
           <p><button id="api-new" type="button">New device token</button> <button id="api-pull" type="button">Check for new records</button></p>
           <div id="api-token" class="hidden">
             <p class="explain">Shown once. Use it as <code>Authorization: Bearer &lt;token&gt;</code>. It can only add records, never read them. Keep it private.</p>
