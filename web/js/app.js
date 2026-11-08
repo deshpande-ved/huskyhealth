@@ -1,9 +1,9 @@
 // web/js/app.js: app entry and the only DOM wiring. No inline JS anywhere (CSP script-src 'self').
 import { analyze } from "./engine.js";
-import { paint } from "./ascii.js";
+import { paint, banner } from "./ascii.js";
 import { createDb } from "./db.js";
-import { todayModel, storedLine, onImportMessage } from "./view.js";
-import { signIn, saveVault, deleteAccount, addToVault, makeReport, workoutSummaries, fetchRecords, newToken, listTokens, revokeToken, featuresFromVault } from "./account.js";
+import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel } from "./view.js";
+import { signIn, saveVault, deleteAccount, addToVault, makeReport, workoutSummaries, fetchRecords, deleteRecords, newToken, listTokens, revokeToken, featuresFromVault } from "./account.js";
 import { dayNumber, mergeDrop, validDrop } from "./sync-merge.js";
 
 const HEX_COMMIT = /^[0-9a-f]{7,40}$/;
@@ -41,21 +41,102 @@ function figureNode(fig) {
   pre.setAttribute("role", "img");
   pre.setAttribute("aria-label", fig.label);
   paint(pre, fig.rows);
-  return el("a", { className: "fig-link", href: `#${fig.ref}` }, pre);
+  return pre;
 }
 
-// A terminal-window panel: title in the border, one-line explanation, figure, legend, key numbers, method link.
-function panelNode(fig, extraClass = "") {
-  const kids = [el("h3", { textContent: fig.title })];
-  if (fig.explain) kids.push(el("p", { className: "explain", textContent: fig.explain }));
-  if (fig.rows && fig.rows.length) kids.push(figureNode(fig), el("p", { className: "plain-text", textContent: fig.plain }));
-  if (fig.legend) kids.push(el("ul", { className: "legend" }, ...fig.legend.map(([ch, cls, text]) =>
-    el("li", {}, el("b", { className: cls, textContent: ch }), text))));
-  if (fig.stats && fig.stats.length) kids.push(el("dl", { className: "stats" }, ...fig.stats.map((s) =>
-    el("div", {}, el("dd", { className: s.cls || "", textContent: s.v }), el("dt", { textContent: s.k })))));
-  if (fig.source) kids.push(el("p", { className: "method" },
-    el("a", { href: `#${fig.ref}`, textContent: `method: ${fig.source.citation} \u00b7 ${fig.source.status}` })));
-  return el("article", { className: `panel ${extraClass}`.trim() }, ...kids);
+const methodNode = (src, ref) => el("p", { className: "method" },
+  el("a", { href: `#${ref}`, textContent: `method \u00b7 ${src.citation} \u00b7 ${src.status}` }));
+
+// A row of the printout: title and one plain sentence, the figure. The whole row is the link.
+function panelNode(fig, { href }) {
+  const a = el("a", { className: "row", href },
+    el("div", {}, el("h3", { textContent: fig.title }), el("p", { textContent: fig.summary || fig.label })),
+    fig.rows && fig.rows.length ? figureNode(fig) : el("span"));
+  a.setAttribute("aria-label", `${fig.title}. ${fig.summary || fig.label}`);
+  return a;
+}
+
+// The call, printed in block letters. It decodes from random ASCII into its letters (skipped with reduced motion).
+const NOISE = "@#%&*+=-:;.";
+function bannerNode(words, label) {
+  const lines = words.flatMap((w, i) => [...(i ? [""] : []), ...banner(w)]);
+  const pre = el("pre", { className: "banner", textContent: lines.join("\n") });
+  pre.setAttribute("aria-hidden", "true");
+  pre.style.setProperty("--cols", String(Math.max(...lines.map((l) => l.length))));
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const cols = Math.max(...lines.map((l) => l.length));
+    const t0 = performance.now(), D = 720;
+    const frame = (t) => {
+      const p = (t - t0) / D;
+      pre.textContent = lines.map((l) => [...l].map((ch, i) =>
+        ch === " " || p >= 0.25 + (i / cols) * 0.7 ? ch : NOISE[(Math.random() * NOISE.length) | 0]).join("")).join("\n");
+      if (p < 1) requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }
+  return [el("h2", { className: "visually-hidden", textContent: label }), pre];
+}
+
+// Small table helper: headers, rows of cells (strings or nodes); numeric columns right-aligned.
+function table(headers, rows, numeric = [], narrow = false) {
+  const cell = (tag, v, i) => { const c = el(tag, {}, v ?? "\u2014"); if (numeric.includes(i)) c.className = "num"; return c; };
+  return el("div", { className: "scroll" }, el("table", { className: narrow ? "data narrow" : "data" },
+    el("thead", {}, el("tr", {}, ...headers.map((h, i) => cell("th", h, i)))),
+    el("tbody", {}, ...rows.map((r) => el("tr", {}, ...r.map((v, i) => cell("td", v, i)))))));
+}
+const cellsSpan = (cells) => el("span", { className: "stack" }, ...cells.map((c) => el("span", { className: c.cls, textContent: c.ch })));
+const sectionTitle = (text) => el("h3", { className: "subhead", textContent: text });
+const emptyNote = () => el("p", { className: "explain", textContent: "Nothing here yet. Import your export or log in to your account." });
+
+function renderWeek(a, f) {
+  if (!state.features) return $("week-body").replaceChildren(emptyNote());
+  const w = weekDetail(a, f);
+  $("week-body").replaceChildren(
+    el("p", { className: "lede", textContent: w.ratio == null ? "No training in the last four weeks yet."
+      : `This week's load is ${w.acute}, ${w.ratio} % of your usual week (${w.usual}).` }),
+    sectionTitle("Day by day"),
+    table(["day", "sessions", "load", "kcal"], w.days.map((d) => [d.date,
+      d.sessions.length ? d.sessions.map((x) => `${x.sport} ${x.min} min${x.effort != null ? ` \u00b7 effort ${x.effort}` : ""}`).join(", ") : "rest",
+      d.load ? String(d.load) : "\u2014", d.kcal ? String(d.kcal) : "\u2014"]), [2, 3]),
+    sectionTitle("Week by week"),
+    table(["week", "load", "", "sessions", "minutes", "kcal"], w.weeks.map((x, i) => [x.name, String(x.load),
+      cellsSpan([{ ch: x.bar, cls: i === 0 ? "z1" : "z2" }]), String(x.sessions), String(x.minutes), x.kcal ? String(x.kcal) : "\u2014"]), [1, 3, 4, 5]),
+    methodNode(w.source, w.ref));
+}
+
+function renderSession(a, f) {
+  if (!state.features || !f.workouts.length) return $("session-body").replaceChildren(emptyNote());
+  const s = sessionDetail(a, f);
+  const L = s.last;
+  const facts = [["date", `${L.date} (${L.ago})`], ["sport", L.sport], ["minutes", String(L.min)], ["load", String(L.load)],
+    ["effort", L.effort != null ? `${L.effort}/10 (Watch)` : "not rated"], ["session-RPE", L.srpe != null ? String(L.srpe) : "\u2014"],
+    ["calories", L.kcal != null ? `${L.kcal} kcal` : "\u2014"],
+    ["vs your " + L.sport.toLowerCase(), L.vsSport ? `${L.vsSport.pct} % of your average load (${L.vsSport.mean}, ${L.vsSport.count} sessions)` : "first one"]];
+  $("session-body").replaceChildren(
+    sectionTitle("Last session"),
+    el("dl", { className: "facts" }, ...facts.map(([k, v]) => el("div", {}, el("dt", { textContent: k }), el("dd", { textContent: v })))),
+    table(["zone", "minutes"], L.zones.map((m, k) => [el("span", { className: `z${k + 1}`, textContent: `Z${k + 1}` }), String(m)]), [1], true),
+    sectionTitle("Recent sessions"),
+    table(["date", "sport", "min", "load", "kcal", "effort", "Z1", "Z2", "Z3", "Z4", "Z5"],
+      s.recent.map((r) => [r.date, r.sport, String(r.min), String(r.load), r.kcal != null ? String(r.kcal) : "\u2014",
+        r.effort != null ? String(r.effort) : "\u2014", ...r.zones.map(String)]),
+      [2, 3, 4, 5, 6, 7, 8, 9, 10]),
+    methodNode(s.source, s.ref));
+}
+
+function renderZones(f) {
+  if (!state.features || !f.workouts.length) return $("zones-body").replaceChildren(emptyNote());
+  const z = zoneDetail(f);
+  const pct = (m, tot) => (tot ? `${Math.round((m / tot) * 100)} %` : "\u2014");
+  $("zones-body").replaceChildren(
+    el("p", { className: "lede", textContent: `${z.minutes} minutes of workout heart rate in the last 60 days. Zones are % of your highest recorded heart rate: Z1 50\u201360 %, up to Z5 90\u2013100 %.` }),
+    el("p", {}, cellsSpan(z.stack)),
+    table(["zone", "", "minutes", "share"], z.total.map((m, k) => [el("span", { className: `z${k + 1}`, textContent: `Z${k + 1}` }), z.names[k], String(m), pct(m, z.minutes)]), [2, 3], true),
+    sectionTitle("Week by week"),
+    table(["week", "mix", "minutes"], z.weeks.map((w) => [w.name, cellsSpan(w.stack), String(w.minutes)]), [2]),
+    sectionTitle("By sport"),
+    table(["sport", "mix", "sessions", "minutes"], z.sports.map((x) => [x.sport, cellsSpan(x.stack), String(x.sessions), String(x.minutes)]), [2, 3]),
+    methodNode(z.source, z.ref));
 }
 
 let state = { features: null, imp: { progress: null, error: null, done: null }, account: null };   // account: RAM only
@@ -63,38 +144,50 @@ let db = null;
 
 function render() {
   const f = state.features || EMPTY;
-  const { call, week, last, zones } = todayModel(analyze(f), f);
-  const method = (fig) => el("p", { className: "method" },
-    el("a", { href: `#${fig.ref}`, textContent: `method: ${fig.source.citation} \u00b7 ${fig.source.status}` }));
-  $("hero").replaceChildren(el("div", {},
-    el("p", { className: "eyebrow", textContent: "today's call" }),
-    el("h2", { className: `verdict ${call.cls}`, textContent: call.headline }),
-    el("p", { className: "reason", textContent: call.reason }),
-    el("p", { className: "basis", textContent: call.basis }),
-    method(call)));
-  const panels = state.features ? [panelNode(week), ...(last ? [panelNode(last)] : []), panelNode(zones)]
-    : [el("article", { className: "panel" }, el("h3", { textContent: "Get started" }),
-        el("p", { className: "explain", textContent: "Nothing imported yet. Export your Health data on your iPhone and pick the file here; everything is computed on this phone." }),
-        el("a", { className: "button", href: "#import", textContent: "import your export" }))];
-  $("panels").replaceChildren(...panels);
+  const an = analyze(f);
+  const { call, week, last, zones } = todayModel(an, f);
+  if (state.features) {
+    $("hero").replaceChildren(
+      ...bannerNode([call.headline.toUpperCase()], call.headline),
+      el("p", { className: "reason", textContent: call.reason }),
+      el("p", { className: "basis", textContent: `${dateLabel(0)}, ${call.basis}.` }),
+      methodNode(call.source, call.ref));
+    $("panels").replaceChildren(panelNode(week, { href: "#week" }), ...(last ? [panelNode(last, { href: "#session" })] : []),
+      panelNode(zones, { href: "#zones" }));
+  } else {
+    const login = el("button", { type: "button", className: "primary", textContent: "log in" });
+    login.addEventListener("click", () => openSheet(true));
+    $("hero").replaceChildren(
+      ...bannerNode(["HUSKY", "HEALTH"], "HuskyHealth"),
+      el("p", { className: "reason", textContent: "Log in on the HuskyHealth iPhone app and your last 60 days of Apple Watch workouts arrive here, encrypted so only you can read them." }),
+      el("div", { className: "cta" }, login, el("label", { className: "button", htmlFor: "import-file", textContent: "import an Apple Health export" }),
+        el("a", { href: "/api", textContent: "how the API works" })));
+    $("panels").replaceChildren();
+  }
+  renderWeek(an, f);
+  renderSession(an, f);
+  renderZones(f);
   $("stored").textContent = storedLine(state.features);
 }
 
 // One page at a time. Method links (#ref-*) open the methods page at that card.
 function route() {
   const h = location.hash.slice(1) || "today";
-  const page = h.startsWith("ref-") ? "references" : ["today", "import", "account", "references"].includes(h) ? h : "today";
+  const page = h.startsWith("ref-") ? "references" : ["today", "week", "session", "zones", "import", "account", "references"].includes(h) ? h : "today";
+  const tab = ["week", "session", "zones", "references"].includes(page) ? "today" : page;   // details live under ./today
+  if (page === "account" && !state.account) openSheet(true);
   for (const s of document.querySelectorAll("section.page")) s.classList.toggle("active", s.id === page);
   for (const a of document.querySelectorAll("nav.tabs a")) {
-    if (a.getAttribute("href") === `#${page}`) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    if (a.getAttribute("href") === `#${tab}`) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
   }
   const target = h.startsWith("ref-") && document.getElementById(h);
-  if (target) target.scrollIntoView(); else scrollTo(0, 0);
+  requestAnimationFrame(() => (target ? target.scrollIntoView() : scrollTo(0, 0)));   // after the browser's own anchor jump
 }
 
 function renderImport() {
   const { progress, error } = state.imp;
   const pre = $("progress");
+  $("strip").classList.toggle("hidden", !progress && !error);
   pre.classList.toggle("hidden", !progress);
   if (progress) { pre.setAttribute("aria-label", progress.label); paint(pre, progress.rows); }
   $("import-error").classList.toggle("hidden", !error);
@@ -122,24 +215,33 @@ function startImport(file) {
 
 // ---- account: past reports + workout summaries, encrypted here; the Pi keeps ciphertext only ----
 const acctSay = (t) => { $("acct-status").textContent = t || ""; };
+const loginSay = (t) => { $("login-status").textContent = t || ""; };
+function openSheet(open) {
+  $("login").classList.toggle("hidden", !open);
+  $("who-btn").setAttribute("aria-expanded", String(open));
+  if (open) $("acct-user").focus();
+}
 const fmtAt = (iso) => iso.slice(0, 16).replace("T", " ");
 
 function renderAccount() {
   const a = state.account;
   $("acct-out").classList.toggle("hidden", Boolean(a));
   $("acct-in").classList.toggle("hidden", !a);
+  $("who-btn").classList.toggle("hidden", Boolean(a));
+  $("who-link").classList.toggle("hidden", !a);
+  $("who-link").textContent = a ? a.username : "";
+  $("acct-name").textContent = a ? a.username : "Account";
   if (!a) return;
-  $("acct-name").textContent = a.username;
   const { reports, workouts } = a.vault;
   $("acct-reports").replaceChildren(...(reports.length ? reports.map((r) => el("li", {
     textContent: `${fmtAt(r.at)} \u00b7 ${r.call} \u00b7 fitness ${r.fitness} \u00b7 fatigue ${r.fatigue} \u00b7 form ${r.form} \u00b7 ${r.workouts} workouts, ${r.minutes} min \u00b7 from ${r.source}` }))
-    : [el("li", { className: "muted", textContent: "No reports yet. Import your export or save today's report." })]));
+    : [el("li", { className: "muted", textContent: "No reports yet." })]));
   const sports = [...new Set(workouts.map((w) => w.sport))];
   $("acct-wsum").textContent = workouts.length
-    ? `${workouts.length} workouts, ${workouts[workouts.length - 1].date} to ${workouts[0].date}: ${sports.map((s) => `${workouts.filter((w) => w.sport === s).length} ${s}`).join(", ")}. Zones are minutes in Z1/Z2/Z3/Z4/Z5.`
+    ? `${workouts.length} workouts, ${workouts[workouts.length - 1].date} to ${workouts[0].date}: ${sports.map((s) => `${workouts.filter((w) => w.sport === s).length} ${s}`).join(", ")}. Zones: minutes in Z1/Z2/Z3/Z4/Z5.`
     : "No workouts saved yet.";
   $("acct-workouts").textContent = workouts.map((w) =>
-    `${w.date}  ${w.sport.padEnd(9)}${String(Math.round(w.min)).padStart(4)} min  load ${String(Math.round(w.trimp)).padStart(4)}  zones ${w.zone_min.map(Math.round).join("/")}${w.effort != null ? `  effort ${w.effort}` : ""}`).join("\n");
+    `${w.date}  ${w.sport.padEnd(9)}${String(Math.round(w.min)).padStart(4)} min  load ${String(Math.round(w.trimp)).padStart(4)}  ${w.kcal != null ? `${String(Math.round(w.kcal)).padStart(4)} kcal` : "        "}  zones ${w.zone_min.map(Math.round).join("/")}${w.effort != null ? `  effort ${w.effort}` : ""}`).join("\n");
 }
 
 async function autoSave(source) {
@@ -154,6 +256,7 @@ async function autoSave(source) {
   if (r.ok) { a.vault = vault; acctSay(`Saved: report ${fmtAt(report.at)}, ${vault.workouts.length} workouts in your history.`); }
   else acctSay(r.status);
   renderAccount();
+  return r;
 }
 
 // Records your devices sent since last time: open them here, fold them into today, remember the cursor in the vault.
@@ -181,7 +284,8 @@ async function pullInbox(quiet = false) {
     render();
     a.vault = { ...a.vault, inbox: r.last };
     acctSay(`${r.records.length} new record${r.records.length === 1 ? "" : "s"} from your devices, ${added} new workout${added === 1 ? "" : "s"}.`);
-    if (added) await autoSave("sync"); else await saveVault({ account: a, vault: a.vault });
+    const saved = added ? await autoSave("sync") : await saveVault({ account: a, vault: a.vault });
+    if (saved && saved.ok) await deleteRecords({ account: a, upto: r.last });   // safely in the vault: the Pi forgets them
   } finally {
     pulling = false;
   }
@@ -207,12 +311,16 @@ async function renderTokens() {
 function wireAccount() {
   const go = async (create) => {
     const username = $("acct-user").value; const password = $("acct-pass").value;
-    if (create && password.length < 10) return acctSay("Use at least 10 characters. A passphrase of a few words is best.");
-    if (create && !confirm("There is no password reset: the Pi cannot read your history, so a forgotten password loses it. Create the account?")) return;
-    acctSay(create ? "Making your key and creating the account\u2026" : "Making your key and logging in\u2026");
+    if (create && password.length < 10) return loginSay("Use at least 10 characters. A passphrase of a few words is best.");
+    if (create && !confirm("There is no password reset: nobody can read your history, so a forgotten password loses it. Create the account?")) return;
+    loginSay(create ? "Making your key and creating the account\u2026" : "Making your key and logging in\u2026");
+    for (const b of ["acct-login", "acct-create"]) $(b).disabled = true;
     const r = await signIn({ username, password, create });
+    for (const b of ["acct-login", "acct-create"]) $(b).disabled = false;
     $("acct-pass").value = "";
-    if (!r.ok) return acctSay(r.status);
+    if (!r.ok) return loginSay(r.status);
+    loginSay("");
+    openSheet(false);
     state.account = { username: username.trim().toLowerCase(), session: r.session, keys: r.keys, vault: r.vault };
     // A browser with no data of its own (a new device, or the other site address): rebuild today from the account.
     if (!state.features && r.vault.workouts.length) {
@@ -241,18 +349,20 @@ function wireAccount() {
   const hideToken = () => { $("api-token-text").textContent = ""; $("api-token").classList.add("hidden"); };
   addEventListener("hashchange", hideToken);                        // shown once: gone when you leave the page
   document.addEventListener("visibilitychange", () => { if (document.hidden) hideToken(); });
-  $("acct-login").addEventListener("click", () => go(false));
+  $("login").addEventListener("submit", (e) => { e.preventDefault(); go(false); });
   $("acct-create").addEventListener("click", () => go(true));
-  $("acct-pass").addEventListener("keydown", (e) => { if (e.key === "Enter") go(false); });
-  $("acct-save").addEventListener("click", () => (state.features ? autoSave("manual") : acctSay("Nothing to report yet: import your export first.")));
-  $("acct-logout").addEventListener("click", () => { state.account = null; hideToken(); acctSay("Logged out. The key is gone from this page."); renderAccount(); });
+  $("who-btn").addEventListener("click", () => openSheet($("login").classList.contains("hidden")));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") openSheet(false); });
+  document.addEventListener("click", (e) => { if (!e.target.closest(".who") && !e.target.closest(".cta")) openSheet(false); });
+  $("acct-save").addEventListener("click", () => (state.features ? autoSave("manual") : acctSay("Nothing to report yet.")));
+  $("acct-logout").addEventListener("click", () => { state.account = null; hideToken(); renderAccount(); location.hash = "#today"; });
   $("acct-delete").addEventListener("click", async () => {
     if (!confirm("Delete your account? The Pi deletes your encrypted history. This cannot be undone.")) return;
     const r = await deleteAccount({ account: state.account });
     if (!r.ok) return acctSay(r.status);
     state.account = null;
-    acctSay("Account deleted. The Pi no longer has your history.");
     renderAccount();
+    location.hash = "#today";
   });
 }
 
@@ -266,12 +376,13 @@ async function start() {
   renderAccount();
   $("import-file").addEventListener("change", (e) => { const f = e.target.files[0]; if (f) startImport(f); e.target.value = ""; });
   $("forget").addEventListener("click", async () => {
-    if (!confirm("Forget everything stored on this phone? This cannot be undone.")) return;
+    if (!confirm("Clear the local copy of your workouts and log out? Your account and records are not affected.")) return;
     await db.forgetAll();
     state.account = null;                                       // log out too; the account itself stays until deleted
     renderAccount();
     state.features = null;
     render();
+    location.hash = "#today";
   });
 }
 

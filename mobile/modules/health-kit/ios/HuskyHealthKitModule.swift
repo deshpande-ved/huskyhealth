@@ -42,6 +42,10 @@ public class HuskyHealthKitModule: Module {
       await HealthCore.syncNow()
     }
 
+    AsyncFunction("backfill") { (days: Int) async -> [String: Any] in
+      await HealthCore.backfill(days: days)
+    }
+
     AsyncFunction("seedDemoWorkout") { (sport: String, minutes: Int, endedMinutesAgo: Int) async throws -> Bool in
       try await HealthCore.seedDemoWorkout(sport: sport, minutes: minutes, endedMinutesAgo: endedMinutesAgo)
     }

@@ -58,7 +58,7 @@ export function splitSessions(hr, sentAt = Infinity) {
   return out;
 }
 
-// Drop (times in seconds before sending) -> the scanner's shape, in absolute ms on this phone only.
+// Drop (times in seconds before sending) -> the scanner's shape, in absolute ms, on the device only.
 // Each drop workout is a window of heart rate; the sessions inside it become the workouts.
 export function dropToScan(drop, sentAt) {
   const at = (s) => sentAt - s * 1000;
@@ -76,9 +76,13 @@ export function dropToScan(drop, sentAt) {
   };
   const workouts = drop.workouts.flatMap((w) => {
     const lo = at(w.start_s), hi = at(w.end_s);
-    return splitSessions(wHr(w).filter(([t]) => t >= lo && t <= hi), sentAt).map((s) => ({
+    const sessions = splitSessions(wHr(w).filter(([t]) => t >= lo && t <= hi), sentAt);
+    const total = sessions.reduce((n, s) => n + (s.end - s.start), 0);
+    return sessions.map((s) => ({
       type: SPORT_TYPE[sportFor(s.start, w.sport)] || SPORT_TYPE.other, start: s.start, end: s.end,
-      min: Math.round((s.end - s.start) / 6000) / 10, kcal: null, ...(SRC[w.src] || SRC.other),
+      min: Math.round((s.end - s.start) / 6000) / 10,
+      kcal: w.kcal == null || !total ? null : Math.round((w.kcal * (s.end - s.start)) / total),   // the window's calories, by duration
+      ...(SRC[w.src] || SRC.other),
     }));
   });
   return { samples: { hr, rhr: pts(drop.rhr), hrv: pts(drop.hrv), vo2: [], effort: pts(drop.effort), effortEst: [] }, workouts };
@@ -89,8 +93,9 @@ export function validDrop(d) {
     && d.workouts.every((w) => typeof w.start_s === "number" && typeof w.end_s === "number" && w.start_s >= w.end_s);
 }
 
-// Same session regardless of its label (a resend may carry a mark the first send didn't).
-const sameWorkout = (a, b) => a.day === b.day && a.min === b.min && a.trimp === b.trimp;
+// Same session regardless of its label (a resend may carry a mark the first send didn't). Within 3 minutes on the
+// same day counts as the same: an imported workout and its backfilled copy measure duration slightly differently.
+export const sameWorkout = (a, b) => a.day === b.day && Math.abs(a.min - b.min) <= 3;
 const r1 = (x) => Math.round(x * 10) / 10;
 
 // Returns { features, refDay, added }. Merging the same drop twice changes nothing.

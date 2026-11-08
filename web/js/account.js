@@ -77,7 +77,7 @@ export function makeReport(analysis, features, call, { nowMs = Date.now(), sourc
 // Per-workout summaries with real dates (inside the vault only): sport, minutes, load, zone minutes, effort.
 export function workoutSummaries(features, nowMs = Date.now()) {
   return (features.workouts || []).map((w) => ({
-    date: isoDay(nowMs + w.day * DAY), sport: w.sport, min: w.min, trimp: w.trimp,
+    date: isoDay(nowMs + w.day * DAY), sport: w.sport, min: w.min, trimp: w.trimp, kcal: w.kcal ?? null,
     zone_min: w.zone_min, effort: w.effort ?? null, srpe: w.srpe ?? null,
   }));
 }
@@ -88,7 +88,7 @@ export function featuresFromVault(vault, nowMs = Date.now(), windowDays = 60) {
   const today = Date.parse(isoDay(nowMs));
   const r1 = (x) => Math.round(x * 10) / 10;
   const workouts = (vault.workouts || [])
-    .map((w) => ({ day: Math.round((Date.parse(w.date) - today) / DAY), sport: w.sport, min: w.min, kcal: null,
+    .map((w) => ({ day: Math.round((Date.parse(w.date) - today) / DAY), sport: w.sport, min: w.min, kcal: w.kcal ?? null,
       zone_min: [...(w.zone_min || [0, 0, 0, 0, 0])], trimp: w.trimp, effort: w.effort ?? null, srpe: w.srpe ?? null,
       source: "account", hr_sample_ok: true }))
     .filter((w) => Number.isFinite(w.day) && w.day <= 0 && w.day > -windowDays)
@@ -177,9 +177,19 @@ export async function fetchRecords({ account, after = 0, fetchFn = fetch, relay 
   if (r.status !== 200) return { ok: false, status: r.status === 401 ? "Session expired. Log in again." : say(r.status) };
   const records = [];
   for (const x of r.json.records) {
-    try { records.push({ id: x.id, at: x.at, drop: await open(account.privateKey, x) }); } catch { /* unreadable: skip */ }
+    try {
+      const o = await open(account.privateKey, x);
+      // Current records carry the exact receive time inside the ciphertext; the clear `at` is rounded to the hour.
+      records.push(o && o.record ? { id: x.id, at: o.received, drop: o.record } : { id: x.id, at: x.at, drop: o });
+    } catch { /* unreadable: skip */ }
   }
   return { ok: true, records, last: r.json.last };
+}
+
+// Delete-after-sync: once records are folded into the encrypted vault, remove them from the Pi.
+export async function deleteRecords({ account, upto, fetchFn = fetch, relay = RELAY }) {
+  const r = await call(fetchFn, relay, `/v1/me/records?upto=${Number(upto) || 0}`, null, account.session, "DELETE");
+  return { ok: r.status === 204 };
 }
 
 // Device write tokens: shown once; the Pi keeps a hash. Any device holding one can POST /v1/me/records.

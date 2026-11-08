@@ -3,61 +3,72 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#191724">
+  <meta name="theme-color" content="#f3efe3" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#16140f" media="(prefers-color-scheme: dark)">
+  <meta name="description" content="A zero-knowledge REST API for your Apple Watch workouts.">
   <title>HuskyHealth API</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/fonts/space-mono-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/space-mono-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
+  <header class="masthead">
+    <a class="mark-link" href="/#today" aria-label="HuskyHealth, today"><img id="mark" src="/art/husky.svg" alt="" width="72" height="72"></a>
+    <div class="brand">
+      <h1><a href="/#today">HuskyHealth</a></h1>
+      <p class="tagline">Your workouts, as an API only you can read.</p>
+    </div>
+    <nav class="tabs" aria-label="Pages"><a href="/#today">today</a><a href="/api" aria-current="page">api</a></nav>
+    <div class="who"><a class="button" href="/#account">account</a></div>
+  </header>
+
   <main>
-    <header class="top">
-      <img id="mark" src="/art/husky.svg" alt="" width="72" height="72">
-      <div class="brand">
-        <h1>HuskyHealth API</h1>
-        <p>your Health data as a REST API &middot; the server can't read it</p>
-      </div>
-    </header>
-    <nav class="tabs" aria-label="Pages"><a href="/#today">today</a><a href="/#import">import</a><a href="/#account">account</a><a href="/api" aria-current="page">api</a></nav>
+    <section class="page active detail">
+      <h2>Your Apple Watch, over HTTP</h2>
+      <p class="lede">Apple ships no web API for Health. This is one: any device can add your workouts, and you can read them from anywhere. The server stores only ciphertext and cannot read a single record.</p>
 
-    <section class="block">
-      <h2>What it is</h2>
-      <p class="lede">Apple gives HealthKit no web API. HuskyHealth gives you one: your iPhone, your Watch's workouts, or any script can <code>POST</code> health records, and you can <code>GET</code> them back from anywhere. It is zero-knowledge. The server seals every record to your account's public key the moment it arrives and keeps only ciphertext. The private key lives inside your password-encrypted vault, so only you can open your records, in your browser or the CLI.</p>
-      <article class="panel">
-        <h3>Who can read what</h3>
-        <ul class="notes">
-          <li>Device token: can add records. Cannot read anything.</li>
-          <li>The Pi: holds ciphertext, a hash of each token, a scrypt hash of your login key, your public key. Cannot read records, your username or your password.</li>
-          <li>You: log in with your password, which unlocks the private key on your device and opens your records there.</li>
-        </ul>
-      </article>
-    </section>
+      <div class="scroll"><pre class="log">  iPhone app ── POST /v1/me/records ──▶  relay seals it to      ──▶  you log in: your
+  or any script    (device token)          your public key           private key opens it
+                                           stores ciphertext         on your device
+                                           for at most 30 days</pre></div>
 
-    <section class="block">
-      <h2>Endpoints</h2>
-      <pre class="log">POST   /v1/me/records          device token   add a record (201 { id, at })
-GET    /v1/me/records?after=N  session        your records, sealed
-POST   /v1/account/tokens      session        new device token (shown once)
-GET    /v1/account/tokens      session        list tokens (ids only)
-DELETE /v1/account/tokens/{id} session        revoke a token
-GET    /v1/openapi.json        none           full OpenAPI 3.1 spec</pre>
-      <p class="explain">Base URL: <code class="wrap">https://veds-pi5.polecat-nominal.ts.net:10000</code>. Records accept workouts (sport, start and end in seconds before sending, heart rate), resting HR, HRV and Watch effort. Names, places, GPS and device names are rejected.</p>
-    </section>
+      <h3>Who can read what</h3>
+      <div class="scroll"><table class="data">
+        <thead><tr><th>holder</th><th>can</th><th>cannot</th></tr></thead>
+        <tbody>
+          <tr><td>device token</td><td>add records</td><td>read or delete anything</td></tr>
+          <tr><td>the relay</td><td>hold ciphertext until you collect it (30 days at most), hashes of tokens and of your login key, your public key</td><td>read records, your username or your password</td></tr>
+          <tr><td>you, logged in</td><td>open, fold into your encrypted vault, delete</td><td><span class="muted">&mdash;</span></td></tr>
+        </tbody>
+      </table></div>
 
-    <section class="block">
-      <h2>Try it</h2>
-      <p class="lede">1. Account page &rarr; <em>New device token</em>. 2. Send a record:</p>
-      <pre class="log">curl -X POST https://veds-pi5.polecat-nominal.ts.net:10000/v1/me/records \
+      <h3>Endpoints</h3>
+      <div class="scroll"><table class="data">
+        <thead><tr><th>method</th><th>path</th><th>auth</th><th>does</th></tr></thead>
+        <tbody>
+          <tr><td>POST</td><td><code>/v1/me/records</code></td><td>device token</td><td>add a record &rarr; <code>201 { id, at }</code></td></tr>
+          <tr><td>GET</td><td><code>/v1/me/records?after=N</code></td><td>session</td><td>your records, sealed; each opens to <code>{ received, record }</code></td></tr>
+          <tr><td>DELETE</td><td><code>/v1/me/records?upto=N</code></td><td>session</td><td>delete records you have collected</td></tr>
+          <tr><td>POST</td><td><code>/v1/account/tokens</code></td><td>session</td><td>new device token, shown once</td></tr>
+          <tr><td>GET</td><td><code>/v1/account/tokens</code></td><td>session</td><td>list tokens (ids only)</td></tr>
+          <tr><td>DELETE</td><td><code>/v1/account/tokens/{id}</code></td><td>session</td><td>revoke a token</td></tr>
+          <tr><td>GET</td><td><code>/v1/openapi.json</code></td><td>none</td><td>the full OpenAPI 3.1 spec</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note">Base URL <code class="wrap">https://veds-pi5.polecat-nominal.ts.net:10000</code>. A record holds workouts (sport, start and end as seconds before sending, heart rate), resting heart rate, HRV and Watch effort. Names, places, GPS and device names are rejected.</p>
+
+      <h3>Try it</h3>
+      <p class="lede">Make a device token on your <a href="/#account">account</a>, then send a run:</p>
+      <div class="scroll"><pre class="log">curl -X POST https://veds-pi5.polecat-nominal.ts.net:10000/v1/me/records \
   -H "Authorization: Bearer $HH_TOKEN" -H "Content-Type: application/json" \
   -d '{"v":1,"workouts":[{"sport":"running","start_s":3600,"end_s":600,
        "hr":[{"t_s":3500,"v":142},{"t_s":3490,"v":145}]}],
-       "effort":[{"t_s":600,"v":6}]}'</pre>
-      <p class="lede">3. Read your records back, decrypted on your machine:</p>
-      <pre class="log">node scripts/huskyhealth.mjs records --user &lt;you&gt;</pre>
-      <p class="explain">Or open the account page: logged in, it picks up new records within 30 seconds and adds them to today.</p>
+       "effort":[{"t_s":600,"v":6}]}'</pre></div>
+      <p class="lede">Read it back, decrypted on your machine:</p>
+      <div class="scroll"><pre class="log">node scripts/huskyhealth.mjs records --user &lt;you&gt;</pre></div>
     </section>
   </main>
-  <footer>
-    <p class="muted">Training insight, not medical advice</p>
-  </footer>
+  <footer><p>Training insight, not medical advice</p></footer>
 </body>
 </html>

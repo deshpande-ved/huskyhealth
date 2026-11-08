@@ -53,7 +53,14 @@ test("every method link points at a card on the methods page", () => {
   for (const id of Object.keys(SOURCES)) assert.ok(html.includes(`id="${REF[id]}"`), id);
 });
 
-test("removed screens stay removed", () => {
-  for (const id of ["settings", "effort", "caveats", "plain-view", "sync-toggle"]) assert.ok(!html.includes(`id="${id}"`), id);
-  assert.match(html, /<nav class="tabs" aria-label="Pages"><a href="#today">today<\/a><a href="#import">import<\/a><a href="#account">account<\/a><a href="\/api">api<\/a><\/nav>/);
+test("removed screens stay removed; log in lives top right; no device-specific copy", () => {
+  for (const id of ["settings", "effort", "caveats", "plain-view", "sync-toggle", "import"]) assert.ok(!html.includes(`id="${id}"`), id);
+  assert.match(html, /<nav class="tabs" aria-label="Pages"><a href="#today">today<\/a><a href="\/api">api<\/a><\/nav>/);
+  assert.ok(html.indexOf('id="who-btn"') > html.indexOf('<nav class="tabs"') && html.includes('<form id="login" class="sheet hidden"'));
+  const app = readFileSync(new URL("../web/js/app.js", import.meta.url), "utf8");
+  const view = readFileSync(new URL("../web/js/view.js", import.meta.url), "utf8");
+  for (const [name, src] of [["index.html", html], ["app.js", app], ["view.js", view]]) {
+    assert.ok(!/this phone|on your phone/i.test(src), `${name} mentions a phone`);
+    assert.ok(!/>\s*(open|details)\s*(&rarr;|\u2192)?\s*</i.test(src), `${name} labels a row "open/details"`);
+  }
 });

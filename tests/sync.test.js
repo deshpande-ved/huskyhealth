@@ -158,3 +158,36 @@ test("list format (hr_t ISO times + hr_v) from a loop-free Shortcut finds the sa
   assert.ok(Math.abs(features.workouts[0].min - 45) < 0.2);
   assert.ok(!/\d{4}-\d{2}-\d{2}/.test(JSON.stringify(features)), "no dates stored on the phone");
 });
+
+test("an imported workout and its backfilled copy are the same workout", async () => {
+  const { sameWorkout } = await import("../web/js/sync-merge.js");
+  assert.ok(sameWorkout({ day: -3, min: 45, trimp: 169 }, { day: -3, min: 46.5, trimp: 171 }));
+  assert.ok(!sameWorkout({ day: -3, min: 45 }, { day: -3, min: 60 }));
+  assert.ok(!sameWorkout({ day: -3, min: 45 }, { day: -2, min: 45 }));
+});
+
+test("fetchRecords unwraps the exact receive time sealed inside; deleteRecords sends DELETE upto", async () => {
+  const { deleteRecords } = await import("../web/js/account.js");
+  const { pub, pkcs8 } = await makeAccountKeys();
+  const account = { session: "s1", privateKey: await importPriv(pkcs8) };
+  const wrapped = { received: 1794103242, record: DROP };
+  const fetchFn = stubFetch(() => json({ records: [{ id: 9, at: 1794099600, ...seal(pub, wrapped) }], last: 9 }));
+  const r = await fetchRecords({ account, fetchFn, relay: "https://r" });
+  assert.deepEqual(r.records.map((x) => [x.id, x.at]), [[9, 1794103242]]);
+  assert.deepEqual(r.records[0].drop, DROP);
+  const del = stubFetch(() => ({ ok: true, status: 204, json: async () => null }));
+  assert.ok((await deleteRecords({ account, upto: 9, fetchFn: del, relay: "https://r" })).ok);
+  assert.equal(del.calls[0].url, "https://r/v1/me/records?upto=9");
+  assert.equal(del.calls[0].method, "DELETE");
+});
+
+test("calories survive the API merge and show in today's summaries", async () => {
+  const { todayModel } = await import("../web/js/view.js");
+  const { analyze } = await import("../web/js/engine.js");
+  const { features } = mergeDrop(null, DROP, { nowMs: NOW, ageS: 0, refDay: null });
+  assert.equal(features.workouts.length, 1);
+  assert.equal(features.workouts[0].kcal, 500);
+  const m = todayModel(analyze(features), features);
+  assert.match(m.week.summary, /500 kcal/);
+  assert.match(m.last.summary, /500 kcal/);
+});

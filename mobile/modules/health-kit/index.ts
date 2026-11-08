@@ -35,6 +35,7 @@ interface HuskyHealthKitNative {
   unpair(): Promise<void>
   isPaired(): boolean
   syncNow(): Promise<SyncResult>
+  backfill(days: number): Promise<{ status: number; workouts: number; total: number; daily?: number }>
   seedDemoWorkout(sport: string, minutes: number, endedMinutesAgo: number): Promise<boolean>
   historyAppend(line: string): void
   historyList(): string[]

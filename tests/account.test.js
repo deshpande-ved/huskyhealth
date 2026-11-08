@@ -58,12 +58,12 @@ test("seal/unseal round trip; wrong password or wrong account cannot open it", a
 test("sign up, save, log in elsewhere: history comes back; the relay never saw username, password or plaintext", async () => {
   const relay = fakeRelay();
   const opts = { fetchFn: relay.fetchFn, relay: "https://r", rounds: R };
-  const up = await signIn({ username: "ved", password: "correct horse", create: true, ...opts });
+  const up = await signIn({ username: "ved-test-user", password: "correct horse", create: true, ...opts });
   assert.ok(up.ok);
   const vault = addToVault(up.vault, { at: "2026-11-07T20:00:00Z", call: MARK }, [{ date: "2026-11-07", sport: "squash", min: 45, trimp: 169 }]);
   assert.ok((await saveVault({ account: up, vault, ...opts })).ok);
 
-  const again = await signIn({ username: "VED", password: "correct horse", ...opts });
+  const again = await signIn({ username: "VED-Test-User", password: "correct horse", ...opts });
   assert.ok(again.ok);
   assert.equal(again.vault.reports[0].call, MARK);
   assert.equal(again.vault.workouts[0].sport, "squash");
@@ -72,10 +72,11 @@ test("sign up, save, log in elsewhere: history comes back; the relay never saw u
   assert.ok(again.privateKey && again.vault.rsa, "private key only inside the vault");
   const wire = relay.seen.map((s) => s.body).join("\n");
   assert.ok(!wire.includes(again.vault.rsa), "private key never sent in clear");
-  for (const secret of ["ved", "correct horse", MARK, "squash"]) assert.ok(!wire.includes(secret), `relay saw ${secret}`);
+  // dashes and spaces never occur in base64, so these cannot match ciphertext by chance
+  for (const secret of ["ved-test-user", "correct horse", MARK]) assert.ok(!wire.includes(secret), `relay saw ${secret}`);
 
-  assert.equal((await signIn({ username: "ved", password: "wrong", ...opts })).status, "Wrong username or password.");
-  assert.match((await signIn({ username: "ved", password: "x", create: true, ...opts })).status, /taken/);
+  assert.equal((await signIn({ username: "ved-test-user", password: "wrong", ...opts })).status, "Wrong username or password.");
+  assert.match((await signIn({ username: "ved-test-user", password: "x", create: true, ...opts })).status, /taken/);
 });
 
 test("delete removes the account", async () => {
@@ -106,7 +107,8 @@ test("report and summaries carry no heart-rate streams", () => {
   const r = makeReport(analysis, features, { headline: "Go easy", reason: "HRV below band" }, { nowMs: now });
   assert.deepEqual([r.call, r.fitness, r.fatigue, r.form, r.workouts, r.load], ["Go easy", 40, 56, -15, 1, 169]);
   const [w] = workoutSummaries(features, now);
-  assert.deepEqual(Object.keys(w).sort(), ["date", "effort", "min", "sport", "srpe", "trimp", "zone_min"]);
+  assert.deepEqual(Object.keys(w).sort(), ["date", "effort", "kcal", "min", "sport", "srpe", "trimp", "zone_min"]);
+  assert.equal(w.kcal, 500);
   assert.equal(w.date, "2026-11-05");
 });
 

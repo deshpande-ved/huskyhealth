@@ -4,24 +4,28 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const css = readFileSync(new URL("../web/css/style.css", import.meta.url), "utf8");
-const root = css.slice(css.indexOf(":root"), css.indexOf("}", css.indexOf(":root")));
+const roots = [...css.matchAll(/:root\s*\{[^}]*\}/g)].map((m) => m[0]);
+const root = roots[0];
 
-test("ten colours defined once in :root, no hex elsewhere", () => {
-  const want = { base: "#191724", surface: "#1f1d2e", text: "#e0def4", muted: "#6e6a86", foam: "#9ccfd8",
-                 pine: "#31748f", gold: "#f6c177", rose: "#ebbcba", love: "#eb6f92", iris: "#c4a7e7" };
-  for (const [k, v] of Object.entries(want)) assert.ok(root.includes(`--${k}: ${v};`), k);
-  assert.equal((css.replace(root, "").match(/#[0-9a-f]{3,8}\b/gi) || []).length, 0);
+test("palette tokens defined in :root (light) and remapped for dark; no hex anywhere else", () => {
+  for (const k of ["paper", "band", "ink", "ink-2", "ink-3", "rule", "red", "z1", "z2", "z3", "z4", "z5"]) {
+    assert.match(root, new RegExp(`--${k}: #[0-9a-f]{6};`), k);
+    assert.match(roots[1], new RegExp(`--${k}: #[0-9a-f]{6};`), `dark ${k}`);
+  }
+  let rest = css; for (const r of roots) rest = rest.replace(r, "");
+  assert.equal((rest.match(/#[0-9a-f]{3,8}\b/gi) || []).length, 0);
 });
 
 test("colour-role classes use variables", () => {
-  const map = { z0: "muted", z1: "foam", z2: "pine", z3: "gold", z4: "rose", z5: "love", alert: "love", ai: "iris", muted: "muted" };
+  const map = { z0: "ink-3", z1: "z1", z2: "z2", z3: "z3", z4: "z4", z5: "z5", alert: "z5", ai: "ink-2", muted: "ink-3" };
   for (const [cls, v] of Object.entries(map)) {
     const re = new RegExp(`\\.${cls}\\b[^{]*\\{[^}]*var\\(--${v}\\)`);
     assert.ok(re.test(css), cls);
   }
 });
 
-test("system monospace only; no fonts, imports or light theme", () => {
-  assert.ok(css.includes('font-family: ui-monospace, "SF Mono", Menlo, monospace;'));
-  assert.ok(!/@font-face|@import|url\(|prefers-color-scheme:\s*light/.test(css));
+test("one self-hosted face (Space Mono) from /fonts; no imports", () => {
+  const urls = [...css.matchAll(/url\(([^)]*)\)/g)].map((m) => m[1].replace(/["']/g, ""));
+  assert.deepEqual(urls, ["/fonts/space-mono-latin-400-normal.woff2", "/fonts/space-mono-latin-700-normal.woff2"]);
+  assert.ok(!/@import/.test(css));
 });

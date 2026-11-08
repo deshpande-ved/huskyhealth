@@ -12,8 +12,8 @@ test("manifest matches the plan", () => {
     start_url: "/",
     scope: "/",
     display: "standalone",
-    background_color: "#191724",
-    theme_color: "#191724",
+    background_color: "#f3efe3",
+    theme_color: "#f3efe3",
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
@@ -62,7 +62,7 @@ test("favicon set is linked and valid", () => {
 // Header logo: a vector SVG with a fixed square viewBox, shown as an <img> with locked aspect ratio.
 test("header logo is the fixed-viewBox ASCII husky SVG", () => {
   const html = readFileSync(new URL("../web/index.html", import.meta.url), "utf8");
-  assert.ok(html.includes('<img id="mark" src="/art/husky.svg" alt="" width="72" height="72">'));
+  assert.ok(html.includes(`<a class="mark-link" href="#today" aria-label="HuskyHealth, today"><img id="mark" src="/art/husky.svg" alt="" width="72" height="72"></a>`));
   const svg = read("art/husky.svg").toString("utf8");
   assert.match(svg, /^<svg [^>]*viewBox="0 0 512 512"/);
   assert.ok(!/<script|<rect/.test(svg));   // transparent background, no script
