@@ -1,4 +1,5 @@
-# relay/app.py: the HuskyHealth relay. Stateless, RAM only, /v1/ only, and it never logs or echoes input.
+# relay/app.py: the HuskyHealth relay. RAM only except account vaults (ciphertext only, see accounts.py);
+# /v1/ only, and it never logs or echoes input.
 import logging
 import threading
 import time
@@ -57,6 +58,7 @@ class Window:
 
 TOKEN_LIMIT = Window(30, 60)
 BOX_LIMIT = Window(30, 60)
+ACCOUNT_LIMIT = Window(20, 60)              # create/open: each runs scrypt, so keep it low
 
 
 @app.get("/v1/healthz")
@@ -77,3 +79,7 @@ def token():
 from dropbox import bp as dropbox_bp            # noqa: E402  (registered after the shared helpers exist)
 
 app.register_blueprint(dropbox_bp)
+
+from accounts import bp as accounts_bp          # noqa: E402
+
+app.register_blueprint(accounts_bp)

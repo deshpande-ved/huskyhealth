@@ -6,6 +6,7 @@ import { screenModel, zoneBars, infoLines, storedLine, effortList, onImportMessa
 import { CONSENT, pair, unpair, isOn } from "./sync-settings.js";
 import { collect } from "./sync-collect.js";
 import { dayNumber } from "./sync-merge.js";
+import { signIn, saveVault, deleteAccount, addToVault, makeReport, workoutSummaries } from "./account.js";
 
 const HEX_COMMIT = /^[0-9a-f]{7,40}$/;
 const WORKER = "/js/parse-apple.worker.js";
@@ -59,7 +60,7 @@ function panelNode(fig, extraClass = "") {
   return el("article", { className: `panel ${extraClass}`.trim() }, ...kids);
 }
 
-let state = { features: null, imp: { progress: null, error: null, done: null } };
+let state = { features: null, imp: { progress: null, error: null, done: null }, account: null };   // account: RAM only
 let db = null;
 
 function render() {
@@ -128,6 +129,7 @@ function startImport(file) {
       if (rec) await db.saveRecord("sync", { ...rec, ref_day: dayNumber(Date.now()) });
       state.features = await db.loadFeatures();
       render();
+      autoSave("import");
       location.hash = "#today";
     }
   };
@@ -175,8 +177,73 @@ function wireSync() {
 
 async function syncOnOpen() {
   const r = await collect({ db });
-  if (r.features) { state.features = r.features; render(); }
+  if (r.features) { state.features = r.features; render(); autoSave("sync"); }
   if (r.status) $("sync-status").textContent = r.status;
+}
+
+// ---- account: past reports + workout summaries, encrypted here; the Pi keeps ciphertext only ----
+const acctSay = (t) => { $("acct-status").textContent = t || ""; };
+const fmtAt = (iso) => iso.slice(0, 16).replace("T", " ");
+
+function renderAccount() {
+  const a = state.account;
+  $("acct-out").classList.toggle("hidden", Boolean(a));
+  $("acct-in").classList.toggle("hidden", !a);
+  if (!a) return;
+  $("acct-name").textContent = a.username;
+  const { reports, workouts } = a.vault;
+  $("acct-reports").replaceChildren(...(reports.length ? reports.map((r) => el("li", {
+    textContent: `${fmtAt(r.at)} \u00b7 ${r.call} \u00b7 fitness ${r.fitness} \u00b7 fatigue ${r.fatigue} \u00b7 form ${r.form} \u00b7 ${r.workouts} workouts, ${r.minutes} min \u00b7 from ${r.source}` }))
+    : [el("li", { className: "muted", textContent: "No reports yet. Import your export or save today's report." })]));
+  const sports = [...new Set(workouts.map((w) => w.sport))];
+  $("acct-wsum").textContent = workouts.length
+    ? `${workouts.length} workouts, ${workouts[workouts.length - 1].date} to ${workouts[0].date}: ${sports.map((s) => `${workouts.filter((w) => w.sport === s).length} ${s}`).join(", ")}. Zones are minutes in Z1/Z2/Z3/Z4/Z5.`
+    : "No workouts saved yet.";
+  $("acct-workouts").textContent = workouts.map((w) =>
+    `${w.date}  ${w.sport.padEnd(9)}${String(Math.round(w.min)).padStart(4)} min  load ${String(Math.round(w.trimp)).padStart(4)}  zones ${w.zone_min.map(Math.round).join("/")}${w.effort != null ? `  effort ${w.effort}` : ""}`).join("\n");
+}
+
+async function autoSave(source) {
+  const a = state.account;
+  if (!a || !state.features) return;
+  const f = state.features;
+  const an = analyze(f);
+  const report = makeReport(an, f, screenModel(an, f)[0], { source });
+  const vault = addToVault(a.vault, report, workoutSummaries(f));
+  acctSay("Encrypting and saving\u2026");
+  const r = await saveVault({ account: a, vault });
+  if (r.ok) { a.vault = vault; acctSay(`Saved: report ${fmtAt(report.at)}, ${vault.workouts.length} workouts in your history.`); }
+  else acctSay(r.status);
+  renderAccount();
+}
+
+function wireAccount() {
+  const go = async (create) => {
+    const username = $("acct-user").value; const password = $("acct-pass").value;
+    if (create && password.length < 10) return acctSay("Use at least 10 characters. A passphrase of a few words is best.");
+    if (create && !confirm("There is no password reset: the Pi cannot read your history, so a forgotten password loses it. Create the account?")) return;
+    acctSay(create ? "Making your key and creating the account\u2026" : "Making your key and logging in\u2026");
+    const r = await signIn({ username, password, create });
+    $("acct-pass").value = "";
+    if (!r.ok) return acctSay(r.status);
+    state.account = { username: username.trim().toLowerCase(), session: r.session, keys: r.keys, vault: r.vault };
+    acctSay(create ? "Account created. Reports save here after each import or sync." : `Logged in. ${r.vault.reports.length} reports, ${r.vault.workouts.length} workouts.`);
+    renderAccount();
+    if (create || !r.vault.reports.length) autoSave("import");
+  };
+  $("acct-login").addEventListener("click", () => go(false));
+  $("acct-create").addEventListener("click", () => go(true));
+  $("acct-pass").addEventListener("keydown", (e) => { if (e.key === "Enter") go(false); });
+  $("acct-save").addEventListener("click", () => (state.features ? autoSave("manual") : acctSay("Nothing to report yet: import your export first.")));
+  $("acct-logout").addEventListener("click", () => { state.account = null; acctSay("Logged out. The key is gone from this page."); renderAccount(); });
+  $("acct-delete").addEventListener("click", async () => {
+    if (!confirm("Delete your account? The Pi deletes your encrypted history. This cannot be undone.")) return;
+    const r = await deleteAccount({ account: state.account });
+    if (!r.ok) return acctSay(r.status);
+    state.account = null;
+    acctSay("Account deleted. The Pi no longer has your history.");
+    renderAccount();
+  });
 }
 
 async function start() {
@@ -185,6 +252,8 @@ async function start() {
   render();
   wireSync();
   renderSync();
+  wireAccount();
+  renderAccount();
   syncOnOpen();
   $("import-file").addEventListener("change", (e) => { const f = e.target.files[0]; if (f) startImport(f); e.target.value = ""; });
   $("plain-view").addEventListener("click", (e) => {
@@ -195,6 +264,8 @@ async function start() {
     if (!confirm("Forget everything stored on this phone? This cannot be undone.")) return;
     await unpair({ db });                                       // same turn-off flow first, so the Pi forgets the box
     await db.forgetAll();
+    state.account = null;                                       // log out too; the account itself stays until deleted
+    renderAccount();
     hidePairingCode();
     renderSync();
     state.features = null;

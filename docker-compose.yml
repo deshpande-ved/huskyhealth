@@ -18,6 +18,8 @@ services:
       HOME: /tmp
     read_only: true
     tmpfs: [/tmp]
+    volumes:
+      - vaults:/data/vaults        # account vaults: ciphertext + scrypt hash only (relay/accounts.py)
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     mem_limit: 768m
@@ -31,6 +33,9 @@ services:
     mem_limit: 256m
     networks: [internal, outbound]
     restart: unless-stopped
+
+volumes:
+  vaults: {}
 
 networks:
   front: {}

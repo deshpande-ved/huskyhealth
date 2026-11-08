@@ -145,6 +145,15 @@ button.danger { border-color: var(--love); color: var(--love); }
 #effort-list li { margin: 0 0 16px; display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; max-width: 30rem; }
 #effort-list span { grid-column: 1 / -1; margin-bottom: 2px; }
 
+.field { display: grid; gap: 4px; margin: 0 0 12px; max-width: 24rem; }
+.field label { font-size: 0.8rem; color: var(--muted); letter-spacing: 0.08em; }
+.field label::before { content: "$ "; color: var(--pine); }
+input[type="text"], input[type="password"] {
+  font: inherit; color: var(--text); background: var(--base); border: 1px solid var(--line); padding: 8px 10px; width: 100%;
+}
+input[type="text"]:focus, input[type="password"]:focus { outline: none; border-color: var(--foam); }
+pre.log { margin: 0; font-size: 0.82rem; line-height: 1.5; overflow-x: auto; max-height: 28rem; }
+
 .hidden { display: none; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
