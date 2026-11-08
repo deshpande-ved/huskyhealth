@@ -61,6 +61,12 @@ workouts to Apple Health (Whoop, Oura, Polar) comes along partially; no native W
 - **Tests:** 124 web (node --test), 73 relay (pytest).
 
 ## Decisions taken in session (not yet DEC files)
+- One source of truth (#53, 2026-11-08): the encrypted account vault. The app writes its Apple Health workouts into
+  it (vault key in the phone's Keychain, AES-GCM+gzip byte-compatible with the browser); app and website both draw
+  today with featuresFromVault (web/js/vault.js). Workouts keep a start time inside the vault so each session is
+  kept once (sameSession). Cause it fixed: the site used its own local copy with double-counted export workouts.
+  Verified: app and staging show the same numbers. Never reintroduce a second data path for today.
+- App looks like the website piece for piece (banded paper, Space Mono, mark, listen, ask, method, rows, same copy).
 - Native iOS companion replaces the Shortcut path (Shortcuts cannot read workouts on iOS 26/27).
 - Zero-knowledge accounts + personal API replace convenience mode and drop boxes; rule is now "nothing readable
   stored on the Pi"; records are a short-lived encrypted queue (delete after sync, 30-day expiry).
