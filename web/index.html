@@ -27,7 +27,7 @@
       <h1><a href="#today">HuskyHealth</a></h1>
       <p class="tagline">Your workouts, as an API only you can read.</p>
     </div>
-    <nav class="tabs" aria-label="Pages"><a href="#today">today</a><a href="/api">api</a></nav>
+    <nav class="tabs" aria-label="Pages"><a href="#today">today</a><a href="/api">api</a><a href="#references">methods</a></nav>
     <div class="who">
       <button id="who-btn" type="button" aria-expanded="false" aria-controls="login">log in</button>
       <a id="who-link" class="hidden" href="#account"></a>
@@ -122,43 +122,43 @@
         <h3>Zone minutes</h3>
         <p>Measures: time spent in each heart-rate zone during a workout.</p>
         <p>Formula: minutes at 50–60 / 60–70 / 70–80 / 80–90 / 90–100 % of max HR.</p>
-        <p>Source: Edwards 1993 · <span class="status">published</span></p>
+        <p>Source: <a href="https://openlibrary.org/books/OL1747474M" target="_blank" rel="noopener">Edwards 1993</a> · <span class="status">published</span></p>
       </article>
       <article id="ref-trimp" class="card">
         <h3>Session load (heart rate)</h3>
         <p>Measures: how hard a session was, from heart rate.</p>
         <p>Formula: TRIMP = zone minutes × weights 1…5, summed.</p>
-        <p>Source: Edwards 1993 · <span class="status">published</span></p>
+        <p>Source: <a href="https://openlibrary.org/books/OL1747474M" target="_blank" rel="noopener">Edwards 1993</a> · <span class="status">published</span></p>
       </article>
       <article id="ref-srpe" class="card">
         <h3>Session load (effort)</h3>
         <p>Measures: how hard a session felt; independent of wrist heart rate, which is noisy in racket sports.</p>
         <p>Formula: session-RPE = effort (1–10) × minutes.</p>
-        <p>Source: Foster et al. 2001 · <span class="status">published</span></p>
+        <p>Source: <a href="https://pubmed.ncbi.nlm.nih.gov/11708692/" target="_blank" rel="noopener">Foster et al. 2001</a> · <span class="status">published</span></p>
       </article>
       <article id="ref-fitness-fatigue" class="card">
         <h3>Fitness, fatigue, form</h3>
         <p>Measures: long-term fitness and short-term fatigue from daily load.</p>
         <p>Formula: 42-day and 7-day impulse-response averages of daily TRIMP; form = fitness − fatigue.</p>
-        <p>Source: Banister et al. 1975 · <span class="status">published</span></p>
+        <p>Source: Banister et al. 1975, published in full as <a href="https://doi.org/10.1109/TSMC.1976.5409179" target="_blank" rel="noopener">Calvert, Banister et al. 1976</a> · <span class="status">published</span></p>
       </article>
       <article id="ref-monotony" class="card">
         <h3>Monotony</h3>
         <p>Measures: how repetitive the last week's training was.</p>
         <p>Formula: mean ÷ SD of the last 7 daily loads; flagged above 2.</p>
-        <p>Source: Foster 1998 · <span class="status">published</span></p>
+        <p>Source: <a href="https://doi.org/10.1097/00005768-199807000-00023" target="_blank" rel="noopener">Foster 1998</a> · <span class="status">published</span></p>
       </article>
       <article id="ref-readiness" class="card">
         <h3>Readiness call</h3>
         <p>Measures: whether hard training is fine today.</p>
         <p>Formula: 7-day rolling mean of daily ln(HRV) vs baseline mean ± 0.5 SD; inside: hard is fine, outside either way: easy.</p>
-        <p>Source: Plews et al. 2013–14 · <span class="status">adapted</span> (the Watch gives SDNN at random times; the studies used morning rMSSD)</p>
+        <p>Source: Plews et al. <a href="https://doi.org/10.1007/s40279-013-0071-8" target="_blank" rel="noopener">2013</a> and <a href="https://doi.org/10.1123/ijspp.2013-0455" target="_blank" rel="noopener">2014</a> · <span class="status">adapted</span> (the Watch gives SDNN at random times; the studies used morning rMSSD)</p>
       </article>
       <article id="ref-data-check" class="card">
         <h3>Data check</h3>
         <p>Measures: whether there is enough recent HRV for a call.</p>
         <p>Formula: at least 3 days with HRV in the last 7, else "not enough data".</p>
-        <p>Source: Plews et al. 2014 · <span class="status">published</span></p>
+        <p>Source: <a href="https://doi.org/10.1123/ijspp.2013-0455" target="_blank" rel="noopener">Plews et al. 2014</a> · <span class="status">published</span></p>
       </article>
       <article id="ref-baseline" class="card">
         <h3>Baseline length</h3>
@@ -176,13 +176,13 @@
         <h3>Load call (when HRV is thin)</h3>
         <p>Measures: whether this week is already heavier than your usual week, used for today's call until there is enough HRV.</p>
         <p>Formula: last 7 days' load ÷ (last 28 days ÷ 4); above 1.3: easy, otherwise hard is fine.</p>
-        <p>Source: Gabbett 2016, Br J Sports Med (acute:chronic ratio) · <span class="status">disputed</span> (a rule of thumb, not a prediction)</p>
+        <p>Source: <a href="https://doi.org/10.1136/bjsports-2015-095788" target="_blank" rel="noopener">Gabbett 2016, Br J Sports Med</a> (acute:chronic ratio) · <span class="status">disputed</span> (a rule of thumb, not a prediction)</p>
       </article>
       <article id="ref-load-spike" class="card">
         <h3>Load spike</h3>
         <p>Measures: this week's load against the last four weeks. Info only.</p>
         <p>Formula: last 7 days ÷ (last 28 days ÷ 4); shown above 1.5.</p>
-        <p>Source: Gabbett 2016, Br J Sports Med · <span class="status">disputed</span> (info only)</p>
+        <p>Source: <a href="https://doi.org/10.1136/bjsports-2015-095788" target="_blank" rel="noopener">Gabbett 2016, Br J Sports Med</a> · <span class="status">disputed</span> (info only)</p>
       </article>
       <article id="ref-vo2-trend" class="card">
         <h3>VO2 max trend</h3>

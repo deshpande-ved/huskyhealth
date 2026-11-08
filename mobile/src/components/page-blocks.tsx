@@ -3,6 +3,7 @@
 import { useRef, type ComponentRef, type ReactNode } from 'react'
 import { ScrollView, Text, View, type LayoutChangeEvent } from 'react-native'
 import { router, type Href } from 'expo-router'
+import { openBrowserAsync } from 'expo-web-browser'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { PaperScroll } from './paper'
@@ -19,7 +20,8 @@ export type PageBlock =
 const SIZE = 14
 const CH = SIZE * 0.6125
 
-/** Where a website link goes in the app: the account screen, the API page, a method card, or today. */
+/** Where a website link goes in the app: the account screen, the API page, a method card, or today. Links to a
+ *  paper (doi.org, PubMed) open the paper itself in an in-app reader sheet. */
 export function appRoute(href: string): Href {
   const h = href.replace(/^\//, '')
   if (h === '#account' || h === 'account') return '/sync'
@@ -33,7 +35,7 @@ export function Runs({ runs, size = SIZE, color }: { runs: Run[]; size?: number;
   return (
     <>
       {runs.map((r, i) => (
-        <Text key={i} onPress={r.href ? () => router.push(appRoute(r.href!)) : undefined}
+        <Text key={i} onPress={r.href ? () => (/^https?:/.test(r.href!) ? openBrowserAsync(r.href!) : router.push(appRoute(r.href!))) : undefined}
           style={{
             fontFamily: r.b ? 'SpaceMono-Bold' : 'SpaceMono', fontSize: r.code ? size * 0.92 : size,
             color: r.code || r.status ? C.love : r.muted ? C.muted : color ?? C.text,
