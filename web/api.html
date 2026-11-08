@@ -33,6 +33,14 @@
                                            stores ciphertext         on your device
                                            for at most 30 days</pre></div>
 
+      <h3>Use it yourself, in four steps</h3>
+      <ol class="steps">
+        <li><b>Make an account</b> on <a href="/#account">HuskyHealth</a>. Your browser turns your password into two keys: one unlocks your vault and never leaves your device, the other logs you in. It also makes a keypair; the server keeps only the public half.</li>
+        <li><b>Connect your watch.</b> Log in on the iPhone app: it sends your last 60 days and every new workout, from an Apple Watch or a Garmin synced to Apple Health. Or make a device token on your account and send records from any script.</li>
+        <li><b>Records are sealed on arrival.</b> The server checks each record, encrypts it to your public key and keeps only ciphertext, for at most 30 days or until you collect it. Nobody at the server can read it.</li>
+        <li><b>Read them back</b> with your password: on the website, with <code>node scripts/huskyhealth.mjs records --user &lt;you&gt;</code>, or by speaking to it (&ldquo;how was my week?&rdquo;) on the today page. Each answer shows the request behind it.</li>
+      </ol>
+
       <h3>Which watches</h3>
       <div class="scroll"><table class="data">
         <thead><tr><th>watch</th><th>how it arrives</th><th>what you get</th></tr></thead>
