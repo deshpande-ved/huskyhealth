@@ -80,3 +80,9 @@ test("other requests are cache-first with network fallback", async () => {
   assert.equal(await miss.responded, "network");
   assert.deepEqual(calls.fetched, ["https://x/css/style.css"]);
 });
+
+test("new versions take over at once and the page reloads once", () => {
+  assert.ok(src.includes("self.skipWaiting") && src.includes("self.clients?.claim()"));
+  const app = readFileSync(new URL("../web/js/app.js", import.meta.url), "utf8");
+  assert.ok(app.includes('addEventListener("controllerchange"') && app.includes("hadController && !reloaded"));
+});

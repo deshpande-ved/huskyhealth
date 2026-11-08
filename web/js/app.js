@@ -272,6 +272,11 @@ if (typeof document !== "undefined") {
   addEventListener("online", showVersion);   // offline at launch -> refresh the About line when back online
   start();
   if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {   // a new version just took over
+      if (hadController && !reloaded) { reloaded = true; location.reload(); }
+    });
+    navigator.serviceWorker.register("/sw.js").then((r) => r.update()).catch(() => {});
   }
 }
