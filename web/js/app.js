@@ -107,7 +107,7 @@ function askNode(ctx, speakRow) {
   const ask = el("button", { type: "submit", className: "enter", textContent: "\u21b5" });
   ask.setAttribute("aria-label", "ask");
   const mic = el("button", { type: "button", className: "cmd mic", textContent: "speak" });
-  mic.classList.toggle("hidden", !state.account || !navigator.mediaDevices || typeof MediaRecorder === "undefined");
+  mic.classList.toggle("hidden", !navigator.mediaDevices || typeof MediaRecorder === "undefined");
   const heard = el("p", { className: "out hidden" });
   const curl = el("pre", { className: "log curl hidden" });
   const copy = el("button", { type: "button", className: "cmd hidden", textContent: "copy" });
@@ -130,6 +130,8 @@ function askNode(ctx, speakRow) {
   input.id = "ask-q";
   form.addEventListener("submit", (e) => { e.preventDefault(); const q = input.value.trim(); if (q) answer(q); });
   mic.addEventListener("click", async () => {
+    // speaking needs a session (Gradium speech-to-text through the relay): log in first, then it works
+    if (!state.account) { openSheet(true); loginSay("Log in to ask out loud."); return; }
     if (recording) { recording.stop(); return; }
     if (!micConsent && !confirm("Your spoken question (at most 5 seconds) goes to Gradium through the relay to become text. Nothing is stored. Continue?")) return;
     micConsent = true;
@@ -211,7 +213,6 @@ function render() {
   if (state.features) {
     const listen = el("button", { type: "button", className: "cmd listen", textContent: "listen" });
     listen.addEventListener("click", () => playBrief(briefText({ call, week, last, sleep: todayModel(an, f).sleep }), listen));
-    listen.classList.toggle("hidden", !state.account);
     const speakRow = el("div", { className: "speak" }, listen, el("p", { id: "caption", className: "caption hidden" }));
     $("hero").replaceChildren(
       ...bannerNode([call.headline.toUpperCase()], call.headline),
@@ -300,11 +301,6 @@ function renderAccount() {
   $("who-link").classList.toggle("hidden", !a);
   $("who-link").textContent = a ? a.username : "";
   $("acct-name").textContent = a ? a.username : "Account";
-  const listen = document.querySelector("#hero .listen");
-  if (listen) listen.classList.toggle("hidden", !a);
-  // the microphone needs a session too (Gradium speech-to-text through the relay): show it as soon as you log in
-  const mic = document.querySelector("#hero .mic");
-  if (mic) mic.classList.toggle("hidden", !a || !navigator.mediaDevices || typeof MediaRecorder === "undefined");
   if (!a) return;
   const { reports, workouts } = a.vault;
   $("acct-reports").replaceChildren(...(reports.length ? reports.map((r) => el("li", {
