@@ -27,7 +27,7 @@
       <h1><a href="#today">HuskyHealth</a></h1>
       <p class="tagline">Zero knowledge, personal API.</p>
     </div>
-    <nav class="tabs" aria-label="Pages"><a href="#today">today</a><a href="/api">api</a><a href="#references">methods</a></nav>
+    <nav class="tabs" aria-label="Pages"><a href="#today">today</a><a href="/api">api</a><a href="#references">methods</a><a href="#privacy">privacy</a></nav>
     <div class="who">
       <button id="who-btn" type="button" aria-expanded="false" aria-controls="login">log in</button>
       <a id="who-link" class="hidden" href="#account"></a>
@@ -110,6 +110,37 @@
         <p class="actions"><button id="acct-save" type="button">save today's report</button> <button id="forget" type="button">Forget everything here</button> <button id="acct-logout" type="button">log out</button> <button id="acct-delete" type="button" class="danger">delete account</button></p>
       </div>
       <div id="acct-out"><p class="lede">Log in from the top right.</p></div>
+    </section>
+
+    <section id="privacy" aria-label="Privacy" class="page detail">
+      <p class="back"><a href="#today">&larr; today</a></p>
+      <h2>Privacy</h2>
+      <p class="lede">HuskyHealth is built so that only you can read your health data. Not us, not the server, not anyone who breaks into it.</p>
+
+      <h3>Who can read what</h3>
+      <table>
+        <thead><tr><th>What</th><th>Where it lives</th><th>Who can read it</th></tr></thead>
+        <tbody>
+          <tr><td>Your password</td><td>your device only</td><td>you</td></tr>
+          <tr><td>Your username</td><td>your device; the server sees a SHA-256 hash</td><td>you</td></tr>
+          <tr><td>Workouts, sleep, heart rate</td><td>sealed on your device; the server holds ciphertext</td><td>you</td></tr>
+          <tr><td>The key that opens them</td><td>made from your password, on your device</td><td>you</td></tr>
+          <tr><td>Your location, routes, ECGs</td><td>never read</td><td>nobody</td></tr>
+        </tbody>
+      </table>
+
+      <h3>What the server keeps</h3>
+      <p>One file per account: a scrypt hash of your login key, your history as AES-256-GCM ciphertext, and a public key so your devices can add workouts. Without your password, that file is noise. Sessions live in memory for an hour. There are no access logs.</p>
+
+      <h3>Nothing to leak</h3>
+      <p>Most health APIs decrypt your data on their servers to work with it. HuskyHealth does the maths on your own devices instead, so the server never needs to read anything. If the server were stolen, the thief would get ciphertext, not your health.</p>
+
+      <h3>Voice</h3>
+      <p><code>./listen</code> sends one short passage of today's call to Gradium to be spoken. <code>./speak</code> sends at most five seconds of your question to be written down. Neither is stored, and every request that leaves the server goes through a proxy you can watch.</p>
+
+      <h3>Never</h3>
+      <p>No ads, no analytics, no trackers. Your data is never sold or shared, and HuskyHealth never asks for your Garmin or Apple password.</p>
+      <p class="note">The trade-off: there is no password reset. Nobody can read your history, so nobody can recover it.</p>
     </section>
 
     <section id="references" aria-label="Methods" class="page detail">
