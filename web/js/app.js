@@ -3,7 +3,7 @@ import { analyze } from "./engine.js";
 import { paint } from "./ascii.js";
 import { createDb } from "./db.js";
 import { todayModel, storedLine, onImportMessage } from "./view.js";
-import { signIn, saveVault, deleteAccount, addToVault, makeReport, workoutSummaries, fetchRecords, newToken, listTokens, revokeToken } from "./account.js";
+import { signIn, saveVault, deleteAccount, addToVault, makeReport, workoutSummaries, fetchRecords, newToken, listTokens, revokeToken, featuresFromVault } from "./account.js";
 import { dayNumber, mergeDrop, validDrop } from "./sync-merge.js";
 
 const HEX_COMMIT = /^[0-9a-f]{7,40}$/;
@@ -214,7 +214,15 @@ function wireAccount() {
     $("acct-pass").value = "";
     if (!r.ok) return acctSay(r.status);
     state.account = { username: username.trim().toLowerCase(), session: r.session, keys: r.keys, vault: r.vault };
-    acctSay(create ? "Account created. Reports save here after each import or sync." : `Logged in. ${r.vault.reports.length} reports, ${r.vault.workouts.length} workouts.`);
+    // A browser with no data of its own (a new device, or the other site address): rebuild today from the account.
+    if (!state.features && r.vault.workouts.length) {
+      await db.saveFeatures(featuresFromVault(r.vault));
+      await db.saveRecord("ref", { day: dayNumber(Date.now()) });
+      state.features = await db.loadFeatures();
+      render();
+    }
+    acctSay(create ? "Account created. Reports save here after each import or sync."
+      : `Logged in. ${r.vault.reports.length} reports, ${r.vault.workouts.length} workouts${state.features && state.features.source === "account" ? "; today rebuilt from your account" : ""}.`);
     renderAccount();
     renderTokens();
     if (create || !r.vault.reports.length) await autoSave("import");
