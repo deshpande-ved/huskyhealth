@@ -5,8 +5,8 @@ import { readFileSync, existsSync } from "node:fs";
 import vm from "node:vm";
 
 const src = readFileSync(new URL("../web/sw.js", import.meta.url), "utf8");
-assert.ok(!src.includes(`"/index.html"`), "SHELL must not list /index.html (Pages redirects it)");
-const webPath = (p) => new URL(`../web${p === "/" ? "/index.html" : p}`, import.meta.url);
+assert.ok(!src.includes(`"/index.html"`) && !src.includes(`"/api.html"`), "SHELL must not list *.html pages (Pages 308-redirects them)");
+const webPath = (p) => new URL(`../web${p === "/" ? "/index.html" : p === "/api" ? "/api.html" : p}`, import.meta.url);   // Pages serves /x for x.html
 
 // E01/E02 entries. "/index.html" is not cached: Pages 308-redirects it to "/". Later stories add theirs here.
 const EXPECTED = ["/", "/css/style.css", "/js/app.js", "/js/engine.js", "/js/features.js",
