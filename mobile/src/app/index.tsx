@@ -83,29 +83,32 @@ function Banner({ words, width }: { words: string[]; width: number }) {
 }
 
 function Masthead({ user }: { user: string | null }) {
+  const tab = (label: string, to: '/api' | '/methods' | '/privacy') => (
+    <Text onPress={() => router.push(to)} style={{ ...link(), fontSize: 14, textDecorationLine: 'none' }} numberOfLines={1}>
+      <Text style={{ opacity: 0.6 }}>./</Text>{label}
+    </Text>
+  )
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingTop: 24, paddingBottom: 16, borderBottomWidth: 1, borderColor: C.text }}>
-      <Pressable onPress={() => router.replace('/')} accessibilityLabel="HuskyHealth, today"><Mark size={92} /></Pressable>
-      <View style={{ flex: 1, gap: 8 }}>
-        <View>
+    <View style={{ paddingTop: 24, paddingBottom: 16, borderBottomWidth: 1, borderColor: C.text, gap: 14 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+        <Pressable onPress={() => router.replace('/')} accessibilityLabel="HuskyHealth, today"><Mark size={76} /></Pressable>
+        <View style={{ flex: 1 }}>
           <Text style={{ ...bold, fontSize: 24, lineHeight: 27 }}>HuskyHealth</Text>
           <Text style={{ ...mono, color: C.text2, fontSize: 14, marginTop: 2 }}>Zero knowledge, personal API.</Text>
         </View>
-        <View style={{ flexDirection: 'row', gap: 24 }}>
-          <Text style={{ ...mono, fontSize: 14, color: C.text, textDecorationLine: 'underline', textDecorationColor: C.love /* ./today: the page you are on */ }}>
-            <Text style={{ color: C.muted }}>./</Text>today
-          </Text>
-          <Text onPress={() => router.push('/api')} style={{ ...link(), fontSize: 14, textDecorationLine: 'none' }}>
-            <Text style={{ opacity: 0.6 }}>./</Text>api
-          </Text>
-          <Text onPress={() => router.push('/methods')} style={{ ...link(), fontSize: 14, textDecorationLine: 'none' }}>
-            <Text style={{ opacity: 0.6 }}>./</Text>methods
-          </Text>
-        </View>
+        <Text onPress={() => router.push('/sync')} style={{ ...link(), fontSize: 14, alignSelf: 'flex-start', textDecorationLine: user ? 'underline' : 'none' }}>
+          {user ?? 'log in'}
+        </Text>
       </View>
-      <Text onPress={() => router.push('/sync')} style={{ ...link(), fontSize: 14, alignSelf: 'flex-start', textDecorationLine: user ? 'underline' : 'none' }}>
-        {user ?? 'log in'}
-      </Text>
+      {/* the tabs get their own full-width row, all on one line, as on the website at phone width */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <Text numberOfLines={1} style={{ ...mono, fontSize: 14, color: C.text, textDecorationLine: 'underline', textDecorationColor: C.love /* ./today: the page you are on */ }}>
+          <Text style={{ color: C.muted }}>./</Text>today
+        </Text>
+        {tab('api', '/api')}
+        {tab('methods', '/methods')}
+        {tab('privacy', '/privacy')}
+      </View>
     </View>
   )
 }
