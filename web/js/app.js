@@ -1,11 +1,11 @@
 // web/js/app.js: app entry and the only DOM wiring. No inline JS anywhere (CSP script-src 'self').
 import { analyze } from "./engine.js";
 import { paint, banner } from "./ascii.js";
-import { createDb } from "./db.js";
+import { createDb, sanitize } from "./db.js";
 import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel, briefText, answerQuestion, hm, WELCOME, ABOUT, DETAIL_PAGES, detailBlocks, todayRows, ROW_PAGE } from "./view.js";
 import { recordQuestion } from "./voice.js";
 import { signIn, saveVault, fetchVault, deleteAccount, addToVault, makeReport, workoutSummaries, daySummaries, fetchRecords, deleteRecords, newToken, listTokens, revokeToken, featuresFromVault, speakBrief, listenQuestion, RELAY } from "./account.js";
-import { dayNumber, dropToVault, validDrop } from "./sync-merge.js";
+import { dropToVault, validDrop } from "./sync-merge.js";
 
 const HEX_COMMIT = /^[0-9a-f]{7,40}$/;
 const WORKER = "/js/parse-apple.worker.js";
@@ -273,9 +273,7 @@ function startImport(file) {
       await autoSave("import", { workouts: workoutSummaries(data.features), days: daySummaries(data.features) });
       location.hash = "#today";
     } else if (data.done) {
-      await db.saveFeatures(data.features);
-      await db.saveRecord("ref", { day: dayNumber(Date.now()) });   // offsets now count from today
-      state.features = await db.loadFeatures();
+      state.features = sanitize(data.features);                  // in memory only: gone on reload
       render();
       location.hash = "#today";
     }
@@ -318,9 +316,7 @@ function renderAccount() {
 // The account's vault is the one source of today, here and in the iPhone app: both draw it with featuresFromVault.
 async function showVault(vault) {
   state.account.vault = vault;
-  state.features = featuresFromVault(vault);
-  await db.saveFeatures(state.features);
-  await db.saveRecord("ref", { day: dayNumber(Date.now()) });
+  state.features = featuresFromVault(vault);   // decrypted data lives in memory only, never in browser storage
   render();
 }
 
@@ -431,20 +427,25 @@ function wireAccount() {
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") openSheet(false); });
   document.addEventListener("click", (e) => { if (!e.target.closest(".who, .cta, .mic")) openSheet(false); });
   $("acct-save").addEventListener("click", () => (state.features ? autoSave("manual") : acctSay("Nothing to report yet.")));
-  $("acct-logout").addEventListener("click", () => { state.account = null; hideToken(); renderAccount(); location.hash = "#today"; });
+  $("acct-logout").addEventListener("click", () => { state.account = null; state.features = null; hideToken(); renderAccount(); render(); location.hash = "#today"; });
   $("acct-delete").addEventListener("click", async () => {
     if (!confirm("Delete your account? The Pi deletes your encrypted history. This cannot be undone.")) return;
     const r = await deleteAccount({ account: state.account });
     if (!r.ok) return acctSay(r.status);
     state.account = null;
+    state.features = null;
     renderAccount();
+    render();
     location.hash = "#today";
   });
 }
 
 async function start() {
   db = createDb();
-  try { state.features = await db.loadFeatures(); } catch { state.features = null; }
+  // Nothing decrypted is kept in the browser: logged out shows nothing. Older versions saved a plain copy of
+  // today's numbers in IndexedDB; delete it.
+  state.features = null;
+  try { await db.forgetAll(); } catch { /* nothing to delete */ }
   render();
   route();
   addEventListener("hashchange", route);

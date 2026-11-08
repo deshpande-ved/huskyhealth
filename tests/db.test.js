@@ -68,3 +68,9 @@ test("Forget button on the account page; IndexedDB only in db.js; no web storage
     if (name !== "db.js") assert.ok(!/indexedDB/.test(src), name);
   }
 });
+
+test("the website never keeps decrypted health data in browser storage; logged out shows nothing", () => {
+  const src = readFileSync(new URL("../web/js/app.js", import.meta.url), "utf8");
+  assert.ok(!/saveFeatures|loadFeatures|saveRecord/.test(src), "app.js must not write features to IndexedDB");
+  assert.match(src, /state\.features = null;\s*\n\s*try \{ await db\.forgetAll\(\); \}/);
+});
