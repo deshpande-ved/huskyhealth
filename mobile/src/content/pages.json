@@ -663,6 +663,19 @@
   {
    "t": "pre",
    "text": "node scripts/huskyhealth.mjs history --user <you> --sport squash --last 1"
+  },
+  {
+   "t": "p",
+   "cls": "lede",
+   "runs": [
+    {
+     "text": "Or with curl, to see exactly what the Pi holds. A session token lets curl fetch your history; it arrives as ciphertext, and only your password opens it, on your machine:"
+    }
+   ]
+  },
+  {
+   "t": "pre",
+   "text": "export HH_SESSION=$(node scripts/huskyhealth.mjs session --user <you>)\ncurl https://veds-pi5.polecat-nominal.ts.net:10000/v1/account/vault \\\n  -H \"Authorization: Bearer $HH_SESSION\" -o vault.json\nnode scripts/huskyhealth.mjs open vault.json --user <you> --sport squash --last 1"
   }
  ],
  "methods": [

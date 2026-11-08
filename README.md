@@ -134,6 +134,14 @@ your machine (the Pi only ever returns ciphertext):
 node scripts/huskyhealth.mjs history --user <you> --sport squash --last 1
 ```
 
+Or with curl, to see exactly what the Pi holds (ciphertext), then open it locally:
+
+```bash
+export HH_SESSION=$(node scripts/huskyhealth.mjs session --user <you>)
+curl https://veds-pi5.polecat-nominal.ts.net:10000/v1/account/vault -H "Authorization: Bearer $HH_SESSION" -o vault.json
+node scripts/huskyhealth.mjs open vault.json --user <you> --sport squash --last 1
+```
+
 Full reference: `/api` and `/v1/openapi.json`.
 
 ## Repository
