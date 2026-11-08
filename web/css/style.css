@@ -51,6 +51,10 @@ nav.tabs { display: flex; gap: 18px; font-size: 0.85rem; padding: 6px 0 22px; bo
 nav.tabs a { color: var(--muted); text-decoration: none; text-transform: lowercase; }
 nav.tabs a::before { content: "./"; color: var(--pine); }
 nav.tabs a:hover { color: var(--foam); }
+nav.tabs a[aria-current="page"] { color: var(--text); }
+section.page:not(.active) { display: none; }
+section.block.page { margin-top: 0; }
+.basis { margin: 8px 0 0; color: var(--muted); font-size: 0.85rem; }
 
 /* ---------- hero: today's call ---------- */
 .hero { display: grid; gap: 22px; margin-bottom: 30px; }

@@ -6,13 +6,12 @@ import { HealthKit } from '../../modules/health-kit'
 import { loadFeatures } from '../lib/health'
 import { C, mono } from '../lib/theme'
 // @ts-expect-error plain ES module shared with the website: the same ASCII figures as huskyhealth.pages.dev
-import { screenModel, zoneBars } from '../../../web/js/view.js'
+import { todayModel } from '../../../web/js/view.js'
 
 type Cell = { ch: string; cls: string }
-type Fig = { id: string; title?: string; explain?: string; label: string; rows: Cell[][]; stats?: { k: string; v: string; cls?: string }[]; headline?: string; reason?: string; cls?: string }
+type Fig = { id: string; title?: string; explain?: string; label: string; rows: Cell[][]; stats?: { k: string; v: string; cls?: string }[]; headline?: string; reason?: string; basis?: string; cls?: string }
 
 const CLS: Record<string, string> = { z0: C.muted, muted: C.muted, z1: C.foam, z2: C.pine, z3: C.gold, z4: C.rose, z5: C.love, alert: C.love }
-const SPORT_LABEL: Record<string, string> = { squash: 'Squash', running: 'Run', walking: 'Walk', cycling: 'Ride', strength: 'Strength', hiit: 'HIIT', other: 'Workout' }
 
 function Figure({ fig }: { fig: Fig }) {
   return (
@@ -42,21 +41,22 @@ function Figure({ fig }: { fig: Fig }) {
 
 export default function Today() {
   const [status, setStatus] = useState('Reading Health on this phone…')
+  const [call, setCall] = useState<Fig | null>(null)
   const [figs, setFigs] = useState<Fig[]>([])
-  const [recent, setRecent] = useState<{ day: number; sport: string; min: number; trimp: number }[]>([])
 
   const read = useCallback(async () => {
     try {
       if (!HealthKit) return setStatus('HealthKit is only available on iPhone.')
       await HealthKit.requestAuthorization()
       const { features, analysis } = await loadFeatures()
-      const model: Fig[] = screenModel(analysis, features)
-      setFigs([...model, zoneBars(features)])
-      setRecent([...features.workouts].reverse().slice(0, 6))
+      // Same model as the website (web/js/view.js): call, this week, last session, zones.
+      const m = todayModel(analysis, features)
+      setCall(m.call)
+      setFigs([m.week, m.last, m.zones].filter(Boolean) as Fig[])
       setStatus(`${features.workouts.length} workouts in the last 60 days · computed on this phone`)
       const ff = analysis.fitnessFatigue
       HealthKit.historyAppend(JSON.stringify({
-        at: new Date().toLocaleString(), call: model[0].headline, workouts: features.workouts.length,
+        at: new Date().toLocaleString(), call: m.call.headline, workouts: features.workouts.length,
         fitness: Math.round(ff.fitness), fatigue: Math.round(ff.fatigue), form: Math.round(ff.form),
       }))
     } catch (e) {
@@ -79,8 +79,7 @@ export default function Today() {
     }
   }
 
-  const hero = figs[0]
-  const age = (d: number) => (d === 0 ? 'today' : d === -1 ? 'yesterday' : `${-d} days ago`)
+  const hero = call
 
   return (
     <ScrollView style={{ backgroundColor: C.base }} contentContainerStyle={{ padding: 18, paddingTop: 70, paddingBottom: 60, gap: 16 }}>
@@ -90,21 +89,11 @@ export default function Today() {
       <Text style={{ ...mono, color: C.muted, letterSpacing: 2, fontSize: 12, marginTop: 10 }}>{'> TODAY’S CALL'}</Text>
       <Text style={{ ...mono, fontSize: 44, fontWeight: '700', color: CLS[hero?.cls ?? 'muted'] ?? C.muted }}>{hero?.headline ?? '…'}</Text>
       {hero?.reason ? <Text style={{ ...mono, fontSize: 15 }}>{hero.reason}</Text> : null}
+      {hero?.basis ? <Text style={{ ...mono, color: C.muted, fontSize: 12 }}>{hero.basis}</Text> : null}
       <Text style={{ ...mono, color: C.muted, fontSize: 12 }}>{status}</Text>
 
-      {recent.length ? (
-        <View style={{ gap: 6 }}>
-          <Text style={{ ...mono, color: C.iris, fontSize: 12, letterSpacing: 1.5 }}>[ RECENT WORKOUTS ]</Text>
-          {recent.map((w, i) => (
-            <Text key={i} style={mono}>
-              <Text style={{ color: C.gold }}>{(SPORT_LABEL[w.sport] ?? w.sport).padEnd(9)}</Text>
-              {`${Math.round(w.min)} min · load ${Math.round(w.trimp)} · ${age(w.day)}`}
-            </Text>
-          ))}
-        </View>
-      ) : null}
 
-      {figs.slice(1).map((f) => <Figure key={f.id} fig={f} />)}
+      {figs.map((f) => <Figure key={f.id} fig={f} />)}
 
       <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
         <Pressable onPress={read} style={{ borderWidth: 1, borderColor: C.foam, padding: 12 }}><Text style={{ ...mono, color: C.foam }}>Refresh</Text></Pressable>

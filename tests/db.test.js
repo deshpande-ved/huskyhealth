@@ -57,9 +57,9 @@ test("save, load, stored line, forget", async () => {
   assert.equal(await db.loadFeatures(), null);
 });
 
-test("Forget button in #settings; IndexedDB only in db.js; no web storage", () => {
+test("Forget button on the account page; IndexedDB only in db.js; no web storage", () => {
   const html = readFileSync(new URL("../web/index.html", import.meta.url), "utf8");
-  const settings = html.slice(html.indexOf('<section id="settings"'), html.indexOf("</section>", html.indexOf('<section id="settings"')));
+  const settings = html.slice(html.indexOf('<section id="account"'), html.indexOf("</section>", html.indexOf('<section id="account"')));
   assert.ok(settings.includes('id="forget"') && settings.includes("Forget everything"));
   const dir = new URL("../web/js/", import.meta.url);
   for (const name of readdirSync(dir)) {

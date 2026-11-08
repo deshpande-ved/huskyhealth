@@ -1,56 +1,59 @@
-// E04S04: main screen figures from fixture features.
+// Today page: one shared model (call, this week, last session, zones) for the website, the iOS app and the API.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { analyze, SOURCES } from "../web/js/engine.js";
-import { screenModel, figureText, REF, WIDTH } from "../web/js/view.js";
+import { analyze, todayCall, SOURCES } from "../web/js/engine.js";
+import { todayModel, figureText, REF, WIDTH } from "../web/js/view.js";
 import { EMPTY } from "../web/js/app.js";
 
 const f = JSON.parse(readFileSync(new URL("./fixtures/features-60d.json", import.meta.url), "utf8"));
 const html = readFileSync(new URL("../web/index.html", import.meta.url), "utf8");
-const a = analyze(f);
-const figs = screenModel(a, f, 4);
+const m = todayModel(analyze(f), f);
+const thin = { call: "not_enough_data", source: SOURCES.readiness };
+const load = (last7, before) => [...Array(32).fill(0), ...Array(21).fill(before), ...Array(7).fill(last7)];
 
-test("four figures; banner shows the engine's call", () => {
-  assert.deepEqual(figs.map((x) => x.id), ["banner", "gauge", "calendar", "plot"]);
-  assert.ok(["hard", "easy"].includes(a.readiness.call));
-  assert.ok(figs[0].label.includes(a.readiness.call.toUpperCase()));
-  assert.equal(figs[0].headline, a.readiness.call === "hard" ? "Train hard" : "Go easy");
+test("never 'no call': empty data still gets a call with a reason", () => {
+  const e = todayModel(analyze(EMPTY), EMPTY);
+  assert.ok(["Train hard", "Go easy"].includes(e.call.headline));
+  assert.match(e.call.reason, /No training in the last 4 weeks/);
+  assert.equal(e.last, null);
+  assert.ok(!JSON.stringify(e).includes("No call yet"));
 });
 
-test("labels carry the engine's numbers", () => {
-  const ff = a.fitnessFatigue;
-  assert.ok(figs[3].label.startsWith(`Fitness ${Math.round(ff.fitness)}, fatigue ${Math.round(ff.fatigue)}, form `));
-  assert.ok(figs[1].label.includes(`${a.readiness.n7} of the last 7 days`));
-  const total = Math.round(f.days.reduce((s, d) => s + d.trimp, 0));
-  assert.ok(figs[2].label.includes(`total load ${total}`));
+test("load fallback: heavy week -> easy, light week -> hard, labelled disputed", () => {
+  const heavy = todayCall(thin, load(60, 20));
+  assert.equal(heavy.call, "easy"); assert.equal(heavy.basis, "load"); assert.equal(heavy.source.status, "disputed");
+  assert.equal(todayCall(thin, load(10, 40)).call, "hard");
+  const v = todayModel({ ...analyze(f), today: heavy }, f).call;
+  assert.equal(v.headline, "Go easy");
+  assert.match(v.basis, /training load/);
+  assert.equal(v.ref, "ref-load-call");
 });
 
-test("source row, refs exist, every SOURCE maps to a card", () => {
-  for (const fig of figs) {
-    for (const k of ["method", "citation", "status", "version"]) assert.ok(fig.source[k], `${fig.id}.source.${k}`);
-    assert.ok(html.includes(`id="${fig.ref}"`), fig.ref);
+test("HRV call is used when there is enough HRV", () => {
+  const t = todayCall({ call: "hard", z: 0.1, source: SOURCES.readiness }, load(10, 10));
+  assert.equal(t.basis, "hrv");
+  assert.equal(todayModel({ ...analyze(f), today: t }, f).call.headline, "Train hard");
+});
+
+test("blocks: this week vs usual, last session, zones; every line fits 44 columns", () => {
+  assert.deepEqual([m.week.id, m.last.id, m.zones.id], ["week", "last", "zones"]);
+  assert.match(m.week.label, /^This week: load \d+ from \d+ sessions?; your usual week is \d+$/);
+  assert.match(m.last.label, /^Last session: \w+, .+, \d+ min, load \d+/);
+  for (const b of [m.week, m.last, m.zones]) {
+    assert.equal(b.plain, b.label);
+    assert.ok(figureText(b).every((l) => l.length <= WIDTH), b.id);
   }
-  for (const fig of figs.slice(1)) assert.ok(fig.title && fig.explain && fig.stats.length, fig.id);
+});
+
+test("every method link points at a card on the methods page", () => {
+  for (const b of [m.call, m.week, m.last, m.zones]) assert.ok(html.includes(`id="${b.ref}"`), b.ref);
+  assert.equal(m.week.source.id, "trimp");
+  assert.equal(m.last.source.id, "zone-minutes");
   for (const id of Object.keys(SOURCES)) assert.ok(html.includes(`id="${REF[id]}"`), id);
 });
 
-test("every line <= 44 columns; empty features -> NO DATA with counts", () => {
-  for (const fig of figs) assert.ok(figureText(fig).every((l) => l.length <= WIDTH), fig.id);
-  const e = screenModel(analyze(EMPTY), EMPTY);
-  assert.equal(e[0].headline, "No call yet");
-  assert.match(e[0].reason, /0 of the last 7 days \(need 3\)/);
-  assert.match(e[0].label, /Not enough data: 0 HRV days in the last 7 \(need 3\), 0 baseline days \(need 14\)/);
-  for (const fig of e) assert.ok(figureText(fig).every((l) => l.length <= WIDTH), fig.id);
-});
-
-test("calendar: weekday header, one mark per day, legend", () => {
-  const cal = figs[2];
-  const lines = figureText(cal);
-  assert.match(lines[0], /^\s+M\s+T\s+W\s+T\s+F\s+S\s+S$/);
-  const marks = lines.slice(1).join("").replace(/^(now|-\d+w)/gm, "").replace(/now|-\d+w/g, "").replace(/\s/g, "");
-  assert.equal(marks.length, 60);
-  assert.ok(/^[.:=#@]+$/.test(marks));
-  assert.deepEqual(cal.legend.map((l) => l[2]), ["rest", "light", "moderate", "hard", "max"]);
-  assert.ok(lines.at(-1).startsWith("now"));
+test("removed screens stay removed", () => {
+  for (const id of ["settings", "effort", "caveats", "plain-view", "sync-toggle"]) assert.ok(!html.includes(`id="${id}"`), id);
+  assert.match(html, /<nav class="tabs" aria-label="Pages"><a href="#today">today<\/a><a href="#import">import<\/a><a href="#account">account<\/a><\/nav>/);
 });

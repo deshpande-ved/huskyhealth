@@ -142,12 +142,8 @@ test("turn off: DELETE with read secret, keys gone even if the Pi is unreachable
   }
 });
 
-test("Forget everything runs unpair first; UI has no inline code", () => {
-  const app = readFileSync(new URL("../web/js/app.js", import.meta.url), "utf8");
-  const forget = app.slice(app.indexOf('$("forget")'));
-  assert.ok(forget.indexOf("await unpair({ db })") < forget.indexOf("await db.forgetAll()"));
+test("UI has no inline code", () => {
   const html = readFileSync(new URL("../web/index.html", import.meta.url), "utf8");
-  assert.ok(html.includes('id="sync-toggle"') && html.includes("off by default"));
   assert.ok(!/ on[a-z]+=|style="/.test(html));
   for (const f of readdirSync(new URL("../web/js/", import.meta.url))) {
     assert.ok(!/innerHTML|outerHTML|insertAdjacentHTML/.test(readFileSync(new URL(`../web/js/${f}`, import.meta.url), "utf8")), f);

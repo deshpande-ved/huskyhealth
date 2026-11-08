@@ -13,6 +13,7 @@ export const SOURCES = {
   "readiness":       { method: "7-day rolling mean of daily ln(HRV) vs baseline mean +/- 0.5 SD; inside: hard is fine, outside: easy", citation: "Plews et al. 2013-14", status: "adapted", version: VERSION.readiness },
   "data-check":      { method: "At least 3 days with HRV in the last 7", citation: "Plews et al. 2014", status: "published", version: VERSION.readiness },
   "baseline":        { method: "At least 14 days with HRV before the last 7", citation: "HuskyHealth", status: "ours", version: VERSION.readiness },
+  "load-call":       { method: "When HRV is too thin for a call: last 7 days' load / your usual week (last 28 days / 4); above 1.3: easy, else hard is fine", citation: "Gabbett 2016, Br J Sports Med (acute:chronic)", status: "disputed", version: VERSION.readiness },
   "load-spike":      { method: "Last 7 days / (last 28 days / 4); info only above 1.5", citation: "Gabbett 2016, Br J Sports Med", status: "disputed", version: VERSION.load },
   "vo2-trend":       { method: "Least-squares slope of VO2 max x 28 days", citation: "Apple VO2 max estimate", status: "descriptive", version: VERSION.load },
   "sport-view":      { method: "Latest session vs your own history in the same sport (mean, SD, z); no multipliers", citation: "HuskyHealth", status: "ours", version: VERSION.load },
@@ -155,6 +156,15 @@ export function readiness(dailyLnHrv) {   // oldest -> today; null where no read
   };
 }
 
+// Today's call: the HRV band when there is enough HRV, else this week's load against your usual week.
+export function todayCall(ready, dailyLoad) {
+  const acute = sum(dailyLoad.slice(-7));
+  const usual = sum(dailyLoad.slice(-28)) / 4;
+  if (ready.call !== "not_enough_data") return { call: ready.call, basis: "hrv", z: ready.z, acute, usual, source: ready.source };
+  const ratio = usual ? acute / usual : null;
+  return { call: ratio == null || ratio > 1.3 ? "easy" : "hard", basis: "load", ratio, acute, usual, source: source("load-call") };
+}
+
 // Data gates (plan 7.4 layer 4).
 export const hrDensityGate = (workouts) =>
   workouts.filter((w) => w.hr_sample_ok === false).map((w) => ({ day: w.day, sport: w.sport, status: "low_confidence" }));
@@ -188,6 +198,7 @@ export function analyze(features) {
   const sports = [...new Set(workouts.map((w) => w.sport))];
   return {
     readiness: ready,
+    today: todayCall(ready, load),
     fitnessFatigue: fitnessFatigue(load),
     monotony: monotony(load.slice(-7)),
     loadSpike: loadSpike(load),
