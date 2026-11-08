@@ -17,8 +17,8 @@
       "Workout": { "type": "object", "required": ["sport", "start_s", "end_s"], "additionalProperties": false,
         "properties": {
           "sport": { "enum": ["squash", "running", "walking", "cycling", "strength", "hiit", "other"] },
-          "start_s": { "type": "integer", "minimum": 0, "maximum": 259200, "description": "seconds before sending" },
-          "end_s": { "type": "integer", "minimum": 0, "maximum": 259200 },
+          "start_s": { "type": "integer", "minimum": 0, "maximum": 5270400, "description": "seconds before sending (up to 61 days)" },
+          "end_s": { "type": "integer", "minimum": 0, "maximum": 5270400 },
           "kcal": { "type": ["number", "null"] },
           "src": { "enum": ["watch", "garmin", "other"] },
           "hr": { "type": "array", "items": { "$ref": "#/components/schemas/Sample" }, "maxItems": 4000 },

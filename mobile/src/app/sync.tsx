@@ -29,11 +29,15 @@ export default function Account() {
     const r = await HealthKit.login(RELAY, latest.current.username, latest.current.password)
     latest.current.password = ''
     setPassword('')
-    if (r.ok) setUser(HealthKit.user())
+    if (!r.ok) { setBusy(false); return setStatus(SAY[r.status] ?? `The relay answered ${r.status}.`) }
+    setUser(HealthKit.user())
+    // A new account gets its history without an export: the last 60 days, one encrypted record per workout.
+    setStatus('Logged in. Sending your last 60 days of workouts to your API…')
+    const b = await HealthKit.backfill(60)
     setBusy(false)
-    setStatus(!r.ok ? (SAY[r.status] ?? `The relay answered ${r.status}.`)
-      : r.background ? `Logged in as ${latest.current.username.trim().toLowerCase()}. iOS will wake HuskyHealth when a workout is saved.`
-      : `Logged in as ${latest.current.username.trim().toLowerCase()}. Background sync is off here (turn on Background App Refresh); use Sync now.`)
+    const bg = r.background ? 'New workouts will sync automatically.' : 'Background sync is off here (turn on Background App Refresh); use Sync now.'
+    setStatus(b.status === 409 ? 'Logged in. Log in on the website once so your account gets its key, then tap Sync now.'
+      : `Logged in as ${latest.current.username.trim().toLowerCase()}. Sent ${b.workouts} of ${b.total} workouts from the last 60 days. ${bg}`)
   }
   const syncNow = async () => {
     if (!HealthKit) return

@@ -89,8 +89,9 @@ export function validDrop(d) {
     && d.workouts.every((w) => typeof w.start_s === "number" && typeof w.end_s === "number" && w.start_s >= w.end_s);
 }
 
-// Same session regardless of its label (a resend may carry a mark the first send didn't).
-const sameWorkout = (a, b) => a.day === b.day && a.min === b.min && a.trimp === b.trimp;
+// Same session regardless of its label (a resend may carry a mark the first send didn't). Within 3 minutes on the
+// same day counts as the same: an imported workout and its backfilled copy measure duration slightly differently.
+export const sameWorkout = (a, b) => a.day === b.day && Math.abs(a.min - b.min) <= 3;
 const r1 = (x) => Math.round(x * 10) / 10;
 
 // Returns { features, refDay, added }. Merging the same drop twice changes nothing.

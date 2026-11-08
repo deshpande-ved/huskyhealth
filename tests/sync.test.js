@@ -158,3 +158,10 @@ test("list format (hr_t ISO times + hr_v) from a loop-free Shortcut finds the sa
   assert.ok(Math.abs(features.workouts[0].min - 45) < 0.2);
   assert.ok(!/\d{4}-\d{2}-\d{2}/.test(JSON.stringify(features)), "no dates stored on the phone");
 });
+
+test("an imported workout and its backfilled copy are the same workout", async () => {
+  const { sameWorkout } = await import("../web/js/sync-merge.js");
+  assert.ok(sameWorkout({ day: -3, min: 45, trimp: 169 }, { day: -3, min: 46.5, trimp: 171 }));
+  assert.ok(!sameWorkout({ day: -3, min: 45 }, { day: -3, min: 60 }));
+  assert.ok(!sameWorkout({ day: -3, min: 45 }, { day: -2, min: 45 }));
+});

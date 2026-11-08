@@ -18,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, Validation
 
 MAX_RECORD = 128 * 1024                 # ~3 h of workout-rate heart rate as JSON
 MAX_INBOX = 400                         # records kept per account; the oldest are dropped first
-DAY3 = 3 * 86400
+WINDOW = 61 * 86400                     # records may reach back 61 days (the app backfills 60 on first login)
 
 bp = Blueprint("records", __name__)
 
@@ -29,7 +29,7 @@ class _Strict(BaseModel):
 
 
 class Sample(_Strict):
-    t_s: int = Field(ge=0, le=DAY3)
+    t_s: int = Field(ge=0, le=WINDOW)
     v: float = Field(ge=0, le=1000)
 
 
@@ -48,8 +48,8 @@ Bpm = Annotated[float, Field(ge=20, le=300)]                 # a real heart rate
 
 class SyncWorkout(_Strict):
     sport: SyncSport
-    start_s: int = Field(ge=0, le=DAY3)
-    end_s: int = Field(ge=0, le=DAY3)
+    start_s: int = Field(ge=0, le=WINDOW)
+    end_s: int = Field(ge=0, le=WINDOW)
     kcal: float | None = Field(default=None, ge=0, le=10000)
     src: Literal["watch", "garmin", "other"] = "watch"
     hr: list[Sample] = Field(default_factory=list, max_length=4000)
@@ -67,8 +67,8 @@ class SyncWorkout(_Strict):
 class SyncDrop(_Strict):
     v: Literal[1]
     workouts: list[SyncWorkout] = Field(default_factory=list, max_length=20)
-    rhr: list[Sample] = Field(default_factory=list, max_length=50)
-    hrv: list[Sample] = Field(default_factory=list, max_length=200)
+    rhr: list[Sample] = Field(default_factory=list, max_length=120)
+    hrv: list[Sample] = Field(default_factory=list, max_length=400)
     effort: list[Sample] = Field(default_factory=list, max_length=50)
     marks: list[Mark] = Field(default_factory=list, max_length=20)
 
