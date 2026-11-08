@@ -3,114 +3,107 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#191724">
+  <meta name="theme-color" content="#f3efe3" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#16140f" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="HuskyHealth">
+  <meta name="description" content="Your workouts, as an API only you can read.">
   <title>HuskyHealth</title>
   <link rel="icon" href="/favicon.ico" sizes="48x48">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/icons/favicon-96x96.png" type="image/png" sizes="96x96">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-  <link rel="preload" href="/fonts/instrument-serif-latin-400-italic.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/fonts/instrument-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/space-mono-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/space-mono-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/css/style.css">
   <script type="module" src="/js/app.js"></script>
 </head>
 <body>
-  <main>
-    <header class="top">
-      <a class="mark-link" href="#today" aria-label="HuskyHealth, today"><img id="mark" src="/art/husky.svg" alt="" width="72" height="72"></a>
-      <div class="brand">
-        <h1><a href="#today">HuskyHealth</a></h1>
-        <p>your HealthKit, as a private web API</p>
-      </div>
-    </header>
-    <nav class="tabs" aria-label="Pages"><a href="#today">today</a><a href="#import">import</a><a href="#account">account</a><a href="/api">api</a></nav>
+  <header class="masthead">
+    <a class="mark-link" href="#today" aria-label="HuskyHealth, today"><img id="mark" src="/art/husky.svg" alt="" width="72" height="72"></a>
+    <div class="brand">
+      <h1><a href="#today">HuskyHealth</a></h1>
+      <p class="tagline">Your workouts, as an API only you can read.</p>
+    </div>
+    <nav class="tabs" aria-label="Pages"><a href="#today">today</a><a href="/api">api</a></nav>
+    <div class="who">
+      <button id="who-btn" type="button" aria-expanded="false" aria-controls="login">log in</button>
+      <a id="who-link" class="hidden" href="#account"></a>
+      <form id="login" class="sheet hidden" aria-label="Log in or create an account" novalidate>
+        <div class="field"><label for="acct-user">username</label><input id="acct-user" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>
+        <div class="field"><label for="acct-pass">password</label><input id="acct-pass" type="password" autocomplete="current-password" required></div>
+        <p class="actions"><button id="acct-login" type="submit" class="primary">log in</button> <button id="acct-create" type="button">create account</button></p>
+        <p id="login-status" class="status" role="status"></p>
+      </form>
+    </div>
+  </header>
 
+  <div id="strip" class="strip hidden" role="status">
+    <pre id="progress" class="fig" role="img" aria-label=""></pre>
+    <p id="import-error" class="alert hidden"></p>
+  </div>
+  <input id="import-file" class="visually-hidden" type="file" accept=".zip,.xml" aria-label="Apple Health export (export.zip)">
+
+  <main>
     <section id="today" aria-label="Today" class="page">
       <div class="hero" id="hero"></div>
-      <div class="panels" id="panels"></div>
+      <div class="rows" id="panels"></div>
     </section>
 
-    <section id="week" aria-label="This week in detail" class="block page detail">
+    <section id="week" aria-label="This week in detail" class="page detail">
       <p class="back"><a href="#today">&larr; today</a></p>
       <h2>This week</h2>
       <div id="week-body"></div>
     </section>
 
-    <section id="session" aria-label="Sessions in detail" class="block page detail">
+    <section id="session" aria-label="Sessions in detail" class="page detail">
       <p class="back"><a href="#today">&larr; today</a></p>
       <h2>Sessions</h2>
       <div id="session-body"></div>
     </section>
 
-    <section id="zones" aria-label="Heart-rate zones in detail" class="block page detail">
+    <section id="zones" aria-label="Heart-rate zones in detail" class="page detail">
       <p class="back"><a href="#today">&larr; today</a></p>
       <h2>Heart-rate zones</h2>
       <div id="zones-body"></div>
     </section>
 
-
-    <section id="import" aria-label="Import" class="block page">
-      <h2>Import</h2>
-      <p class="lede">On your iPhone: Health app &rarr; your profile picture &rarr; <em>Export All Health Data</em>, then pick <code>export.zip</code> here. It is read on this phone and works in airplane mode.</p>
-      <label class="button" for="import-file">Choose export.zip</label>
-      <input id="import-file" class="visually-hidden" type="file" accept=".zip,.xml">
-      <pre id="progress" class="fig hidden" role="img" aria-label=""></pre>
-      <p id="import-error" class="alert hidden"></p>
-    </section>
-
-    <section id="account" aria-label="Account" class="block page">
-      <h2>Account</h2>
-      <p class="lede">One account for the website, the iPhone app and your API. Everything is encrypted on your device with a key made from your password; the Pi stores only ciphertext and cannot read it. There is no password reset: forget it and the history is gone.</p>
-      <div id="acct-out" class="panel">
-        <h3>Log in or create an account</h3>
-        <p class="explain">Raw heart rate is never saved: only each report (the call, fitness, fatigue, form) and per-workout summaries (date, sport, minutes, load, zone minutes).</p>
-        <div class="field"><label for="acct-user">username</label><input id="acct-user" type="text" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
-        <div class="field"><label for="acct-pass">password</label><input id="acct-pass" type="password" autocomplete="current-password"></div>
-        <p><button id="acct-login" type="button">Log in</button> <button id="acct-create" type="button">Create account</button></p>
-      </div>
+    <section id="account" aria-label="Account" class="page detail">
+      <h2 id="acct-name">Account</h2>
+      <p id="acct-status" class="status" role="status"></p>
       <div id="acct-in" class="hidden">
-        <article class="panel">
-          <h3>Signed in</h3>
-          <p>Account: <b id="acct-name" class="z1"></b> <span class="muted">(encrypted on this device; the Pi holds ciphertext only)</span></p>
-          <p><button id="acct-save" type="button">Save today's report</button> <button id="acct-logout" type="button">Log out</button> <button id="acct-delete" type="button" class="danger">Delete account</button></p>
-        </article>
-        <article class="panel" id="api">
-          <h3>Your API</h3>
-          <p class="explain">Apple has no web API for your Health data, so here is yours. The HuskyHealth iPhone app (or any script) sends workouts to <code>POST /v1/me/records</code> with a device token. The Pi encrypts each one to your account's key the moment it arrives and keeps only ciphertext. Only you can read them, here, after logging in. <a href="/api">API docs</a></p>
-          <p><button id="api-new" type="button">New device token</button> <button id="api-pull" type="button">Check for new records</button></p>
-          <div id="api-token" class="hidden">
-            <p class="explain">Shown once. Use it as <code>Authorization: Bearer &lt;token&gt;</code>. It can only add records, never read them. Keep it private.</p>
-            <p><code id="api-token-text" class="wrap"></code></p>
-            <p><button id="api-copy" type="button">Copy token</button></p>
-          </div>
-          <ul id="api-tokens" class="notes"></ul>
-        </article>
-        <article class="panel">
-          <h3>Past reports</h3>
-          <ul id="acct-reports" class="notes"></ul>
-        </article>
-        <article class="panel">
-          <h3>Workout history</h3>
-          <p id="acct-wsum" class="explain"></p>
-          <pre id="acct-workouts" class="log"></pre>
-        </article>
+        <h3>Your API</h3>
+        <p class="lede">Devices add records with a token; only you can read them. <a href="/api">How it works</a></p>
+        <p class="actions"><button id="api-new" type="button">new device token</button> <button id="api-pull" type="button">check for new records</button></p>
+        <div id="api-token" class="hidden">
+          <p class="note">Shown once. It can add records, never read them.</p>
+          <p><code id="api-token-text" class="wrap"></code></p>
+          <p><button id="api-copy" type="button">copy token</button></p>
+        </div>
+        <ul id="api-tokens" class="list"></ul>
+
+        <h3>History</h3>
+        <ul id="acct-reports" class="list"></ul>
+        <p id="acct-wsum" class="note"></p>
+        <pre id="acct-workouts" class="log"></pre>
+
+        <h3>Older workouts</h3>
+        <p class="lede">The iPhone app sends your last 60 days. For anything older, import an Apple Health export.</p>
+        <p class="actions"><label class="button" for="import-file">import an Apple Health export</label></p>
+
+        <h3>Data</h3>
+        <p id="stored" class="note">No local data</p>
+        <p class="actions"><button id="acct-save" type="button">save today's report</button> <button id="forget" type="button">Forget everything here</button> <button id="acct-logout" type="button">log out</button> <button id="acct-delete" type="button" class="danger">delete account</button></p>
       </div>
-      <p id="acct-status" class="explain" role="status"></p>
-      <article class="panel">
-        <h3>This phone</h3>
-        <p id="stored" class="explain">Nothing stored on this phone</p>
-        <p><button id="forget" type="button" class="danger">Forget everything on this phone</button></p>
-      </article>
+      <div id="acct-out"><p class="lede">Log in from the top right.</p></div>
     </section>
 
-
-    <section id="references" aria-label="Methods" class="block page">
+    <section id="references" aria-label="Methods" class="page detail">
+      <p class="back"><a href="#today">&larr; today</a></p>
       <h2>Methods</h2>
-      <p class="lede"><a href="#today">&larr; back to today</a>. Every number on the today page links here. Status says where each method comes from: published, adapted, ours, disputed or descriptive.</p>
+      <p class="lede">Every number links here. Status says where each method comes from: published, adapted, ours, disputed or descriptive.</p>
       <div class="cards">
 
       <article id="ref-zone-minutes" class="card">
@@ -187,10 +180,11 @@
       </article>
 
       </div>
+      <p class="note">Training insight, not medical advice.</p>
     </section>
   </main>
   <footer>
-    <p class="muted">Training insight, not medical advice &middot; <span id="version">version unknown</span></p>
+    <p><span id="version">version unknown</span></p>
   </footer>
 </body>
 </html>

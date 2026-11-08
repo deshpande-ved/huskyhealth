@@ -47,11 +47,11 @@ test("save, load, stored line, forget", async () => {
   const idb = fakeIdb();
   const db = createDb(idb);
   assert.equal(await db.loadFeatures(), null);
-  assert.equal(storedLine(null), "Nothing stored on this phone");
+  assert.equal(storedLine(null), "No local copy");
   await db.saveFeatures(f);
   const back = await db.loadFeatures();
   assert.deepEqual(back, sanitize(f));
-  assert.equal(storedLine(back), "Stored on this phone: 60 days of summaries");
+  assert.equal(storedLine(back), "Local copy: 60 days of summaries");
   await db.forgetAll();
   assert.equal(idb.deleted, 1);
   assert.equal(await db.loadFeatures(), null);

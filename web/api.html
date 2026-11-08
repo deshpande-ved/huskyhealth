@@ -3,88 +3,72 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#191724">
+  <meta name="theme-color" content="#f3efe3" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#16140f" media="(prefers-color-scheme: dark)">
+  <meta name="description" content="A zero-knowledge REST API for your Apple Watch workouts.">
   <title>HuskyHealth API</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="preload" href="/fonts/instrument-serif-latin-400-italic.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/fonts/instrument-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/space-mono-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/space-mono-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
+  <header class="masthead">
+    <a class="mark-link" href="/#today" aria-label="HuskyHealth, today"><img id="mark" src="/art/husky.svg" alt="" width="72" height="72"></a>
+    <div class="brand">
+      <h1><a href="/#today">HuskyHealth</a></h1>
+      <p class="tagline">Your workouts, as an API only you can read.</p>
+    </div>
+    <nav class="tabs" aria-label="Pages"><a href="/#today">today</a><a href="/api" aria-current="page">api</a></nav>
+    <div class="who"><a class="button" href="/#account">account</a></div>
+  </header>
+
   <main>
-    <header class="top">
-      <a class="mark-link" href="/#today" aria-label="HuskyHealth, today"><img id="mark" src="/art/husky.svg" alt="" width="72" height="72"></a>
-      <div class="brand">
-        <h1><a href="/#today">HuskyHealth</a></h1>
-        <p>your HealthKit, as a private web API</p>
-      </div>
-    </header>
-    <nav class="tabs" aria-label="Pages"><a href="/#today">today</a><a href="/#import">import</a><a href="/#account">account</a><a href="/api" aria-current="page">api</a></nav>
+    <section class="page active detail">
+      <h2>Your Apple Watch, over HTTP</h2>
+      <p class="lede">Apple ships no web API for Health. This is one: any device can add your workouts, and you can read them from anywhere. The server stores only ciphertext and cannot read a single record.</p>
 
-    <section class="block page active">
-      <h2 class="verdict z1">Your Health data, over HTTP</h2>
-      <p class="lede">Apple gives HealthKit no web API. This is yours: any device can <code>POST</code> your workouts, and you can <code>GET</code> them back from anywhere. The server stores only ciphertext and cannot read a single record.</p>
+      <div class="scroll"><pre class="log">  iPhone app ── POST /v1/me/records ──▶  relay seals it to      ──▶  you log in: your
+  or any script    (device token)          your public key           private key opens it
+                                           stores ciphertext         on your device
+                                           for at most 30 days</pre></div>
 
-      <div class="panels">
-        <article class="panel">
-          <h3><span class="sec">01</span>Send</h3>
-          <p class="explain">The iPhone app posts each new Watch workout by itself. Scripts post with a device token, which can add records and never read them.</p>
-          <pre class="log">POST /v1/me/records
-Authorization: Bearer hhw_…</pre>
-        </article>
-        <article class="panel">
-          <h3><span class="sec">02</span>Sealed on arrival</h3>
-          <p class="explain">The relay checks the record (no names, places, GPS or device names), encrypts it to your account's public key, and keeps only this:</p>
-          <pre class="log">{ "id": 7, "at": 1794103242,
-  "key": "Qm9…", "nonce": "x2…",
-  "ct": "8fJ…" }</pre>
-        </article>
-        <article class="panel">
-          <h3><span class="sec">03</span>Read with your key</h3>
-          <p class="explain">Your private key lives inside your password-encrypted vault. Log in on the website or the CLI and your records open on your device, nowhere else.</p>
-          <pre class="log">GET /v1/me/records?after=6
-→ decrypted on your device</pre>
-        </article>
-      </div>
-
-      <h3 class="subhead">Who can read what</h3>
+      <h3>Who can read what</h3>
       <div class="scroll"><table class="data">
         <thead><tr><th>holder</th><th>can</th><th>cannot</th></tr></thead>
         <tbody>
-          <tr><td>device token</td><td>add records</td><td>read anything</td></tr>
-          <tr><td>the Pi</td><td>store ciphertext, token hashes, a scrypt hash of your login key, your public key</td><td>read records, your username or your password</td></tr>
-          <tr><td>you, logged in</td><td>open every record on your device</td><td><span class="muted">&mdash;</span></td></tr>
+          <tr><td>device token</td><td>add records</td><td>read or delete anything</td></tr>
+          <tr><td>the relay</td><td>hold ciphertext until you collect it (30 days at most), hashes of tokens and of your login key, your public key</td><td>read records, your username or your password</td></tr>
+          <tr><td>you, logged in</td><td>open, fold into your encrypted vault, delete</td><td><span class="muted">&mdash;</span></td></tr>
         </tbody>
       </table></div>
 
-      <h3 class="subhead">Endpoints</h3>
+      <h3>Endpoints</h3>
       <div class="scroll"><table class="data">
         <thead><tr><th>method</th><th>path</th><th>auth</th><th>does</th></tr></thead>
         <tbody>
-          <tr><td class="z3">POST</td><td><code>/v1/me/records</code></td><td>device token</td><td>add a record &rarr; <code>201 { id, at }</code></td></tr>
-          <tr><td class="z1">GET</td><td><code>/v1/me/records?after=N</code></td><td>session</td><td>your records, sealed</td></tr>
-          <tr><td class="z3">POST</td><td><code>/v1/account/tokens</code></td><td>session</td><td>new device token, shown once</td></tr>
-          <tr><td class="z1">GET</td><td><code>/v1/account/tokens</code></td><td>session</td><td>list tokens (ids only)</td></tr>
-          <tr><td class="z5">DELETE</td><td><code>/v1/account/tokens/{id}</code></td><td>session</td><td>revoke a token</td></tr>
-          <tr><td class="z1">GET</td><td><code>/v1/openapi.json</code></td><td>none</td><td>full OpenAPI 3.1 spec</td></tr>
+          <tr><td>POST</td><td><code>/v1/me/records</code></td><td>device token</td><td>add a record &rarr; <code>201 { id, at }</code></td></tr>
+          <tr><td>GET</td><td><code>/v1/me/records?after=N</code></td><td>session</td><td>your records, sealed; each opens to <code>{ received, record }</code></td></tr>
+          <tr><td>DELETE</td><td><code>/v1/me/records?upto=N</code></td><td>session</td><td>delete records you have collected</td></tr>
+          <tr><td>POST</td><td><code>/v1/account/tokens</code></td><td>session</td><td>new device token, shown once</td></tr>
+          <tr><td>GET</td><td><code>/v1/account/tokens</code></td><td>session</td><td>list tokens (ids only)</td></tr>
+          <tr><td>DELETE</td><td><code>/v1/account/tokens/{id}</code></td><td>session</td><td>revoke a token</td></tr>
+          <tr><td>GET</td><td><code>/v1/openapi.json</code></td><td>none</td><td>the full OpenAPI 3.1 spec</td></tr>
         </tbody>
       </table></div>
-      <p class="explain">Base URL <code class="wrap">https://veds-pi5.polecat-nominal.ts.net:10000</code>. A record holds workouts (sport, start and end as seconds before sending, heart rate), resting heart rate, HRV and Watch effort.</p>
+      <p class="note">Base URL <code class="wrap">https://veds-pi5.polecat-nominal.ts.net:10000</code>. A record holds workouts (sport, start and end as seconds before sending, heart rate), resting heart rate, HRV and Watch effort. Names, places, GPS and device names are rejected.</p>
 
-      <h3 class="subhead">Try it</h3>
-      <p class="lede">Make a token on <a href="/#account">./account</a>, then send a run:</p>
-      <pre class="log code">curl -X POST https://veds-pi5.polecat-nominal.ts.net:10000/v1/me/records \
+      <h3>Try it</h3>
+      <p class="lede">Make a device token on your <a href="/#account">account</a>, then send a run:</p>
+      <div class="scroll"><pre class="log">curl -X POST https://veds-pi5.polecat-nominal.ts.net:10000/v1/me/records \
   -H "Authorization: Bearer $HH_TOKEN" -H "Content-Type: application/json" \
   -d '{"v":1,"workouts":[{"sport":"running","start_s":3600,"end_s":600,
        "hr":[{"t_s":3500,"v":142},{"t_s":3490,"v":145}]}],
-       "effort":[{"t_s":600,"v":6}]}'</pre>
+       "effort":[{"t_s":600,"v":6}]}'</pre></div>
       <p class="lede">Read it back, decrypted on your machine:</p>
-      <pre class="log code">node scripts/huskyhealth.mjs records --user &lt;you&gt;</pre>
-      <p class="explain">Or keep <a href="/#account">./account</a> open while logged in: new records arrive within 30 seconds and fold into today.</p>
+      <div class="scroll"><pre class="log">node scripts/huskyhealth.mjs records --user &lt;you&gt;</pre></div>
     </section>
   </main>
-  <footer>
-    <p class="muted">Training insight, not medical advice</p>
-  </footer>
+  <footer><p>Training insight, not medical advice</p></footer>
 </body>
 </html>

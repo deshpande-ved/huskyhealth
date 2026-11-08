@@ -77,7 +77,7 @@ export function makeReport(analysis, features, call, { nowMs = Date.now(), sourc
 // Per-workout summaries with real dates (inside the vault only): sport, minutes, load, zone minutes, effort.
 export function workoutSummaries(features, nowMs = Date.now()) {
   return (features.workouts || []).map((w) => ({
-    date: isoDay(nowMs + w.day * DAY), sport: w.sport, min: w.min, trimp: w.trimp,
+    date: isoDay(nowMs + w.day * DAY), sport: w.sport, min: w.min, trimp: w.trimp, kcal: w.kcal ?? null,
     zone_min: w.zone_min, effort: w.effort ?? null, srpe: w.srpe ?? null,
   }));
 }
@@ -88,7 +88,7 @@ export function featuresFromVault(vault, nowMs = Date.now(), windowDays = 60) {
   const today = Date.parse(isoDay(nowMs));
   const r1 = (x) => Math.round(x * 10) / 10;
   const workouts = (vault.workouts || [])
-    .map((w) => ({ day: Math.round((Date.parse(w.date) - today) / DAY), sport: w.sport, min: w.min, kcal: null,
+    .map((w) => ({ day: Math.round((Date.parse(w.date) - today) / DAY), sport: w.sport, min: w.min, kcal: w.kcal ?? null,
       zone_min: [...(w.zone_min || [0, 0, 0, 0, 0])], trimp: w.trimp, effort: w.effort ?? null, srpe: w.srpe ?? null,
       source: "account", hr_sample_ok: true }))
     .filter((w) => Number.isFinite(w.day) && w.day <= 0 && w.day > -windowDays)

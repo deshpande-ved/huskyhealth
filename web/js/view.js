@@ -53,9 +53,11 @@ function weekBlock(features, t) {
   const top = Math.max(t.acute, t.usual, 1);
   const line = (name, v, cls) => cells(`${name.padEnd(10)} ${bar((v / top) * 100)} ${String(round(v)).padStart(5)}`, cls);
   const label = `This week: load ${round(t.acute)} from ${plural(last7.length, "session")}; your usual week is ${round(t.usual)}`;
+  const kcal = last7.reduce((n, w) => n + (w.kcal || 0), 0);
+  const burned = kcal ? `, ${round(kcal)} kcal` : "";
   const summary = t.usual
-    ? `Load ${round(t.acute)} from ${plural(last7.length, "session")}, against a usual week of ${round(t.usual)}.`
-    : `Load ${round(t.acute)} from ${plural(last7.length, "session")}. No usual week yet.`;
+    ? `Load ${round(t.acute)} from ${plural(last7.length, "session")}${burned}, against a usual week of ${round(t.usual)}.`
+    : `Load ${round(t.acute)} from ${plural(last7.length, "session")}${burned}. No usual week yet.`;
   return { id: "week", ref: REF.trimp, source: source("trimp"), title: "This week", summary,
     explain: "Load = minutes weighted by heart-rate zone. Usual = your average week over the last 4.",
     stats: [{ k: "sessions", v: String(last7.length) }, { k: "minutes", v: String(round(last7.reduce((s, w) => s + w.min, 0))) }],
@@ -70,7 +72,7 @@ function lastBlock(features) {
   const stats = [{ k: "minutes", v: String(round(w.min)) }, { k: "load", v: String(round(w.trimp)) }];
   if (w.effort != null) stats.push({ k: "effort", v: `${round(w.effort)}/10` });
   const label = `Last session: ${sportName(w.sport)}, ${ago(w.day)}, ${round(w.min)} min, load ${round(w.trimp)}${w.effort != null ? `, effort ${round(w.effort)} of 10` : ""}`;
-  const summary = `${sportName(w.sport)}, ${ago(w.day)}: ${round(w.min)} minutes, load ${round(w.trimp)}${w.effort != null ? `, effort ${round(w.effort)}/10` : ""}.`;
+  const summary = `${sportName(w.sport)}, ${ago(w.day)}: ${round(w.min)} minutes, load ${round(w.trimp)}${w.kcal != null ? `, ${round(w.kcal)} kcal` : ""}${w.effort != null ? `, effort ${round(w.effort)}/10` : ""}.`;
   return { id: "last", ref: REF["zone-minutes"], source: source("zone-minutes"), title: "Last session", summary,
     explain: "Minutes in each heart-rate zone. Effort is your rating on the Watch.", stats, label, plain: label, rows: zones };
 }
@@ -102,7 +104,7 @@ export function zoneBars(features) {
 }
 
 export const storedLine = (features) =>
-  features ? `Stored on this phone: ${features.days.length} days of summaries` : "Nothing stored on this phone";
+  features ? `Local copy: ${features.days.length} days of summaries` : "No local copy";
 
 export function progressLine(lines, bytes, total) {
   const text = `Reading export: ${Math.round((lines || 0) / 1000)}k lines`;
@@ -141,11 +143,11 @@ export function weekDetail(analysis, features, nowMs = Date.now()) {
   const days = Array.from({ length: 7 }, (_, i) => {
     const day = i - 6;
     const ws = features.workouts.filter((w) => w.day === day);
-    return { day, date: dateLabel(day, nowMs), load: round(sum(ws.map((w) => w.trimp))),
-      sessions: ws.map((w) => ({ sport: sportName(w.sport), min: round(w.min), load: round(w.trimp), effort: w.effort })) };
+    return { day, date: dateLabel(day, nowMs), load: round(sum(ws.map((w) => w.trimp))), kcal: round(sum(ws.map((w) => w.kcal || 0))),
+      sessions: ws.map((w) => ({ sport: sportName(w.sport), min: round(w.min), load: round(w.trimp), effort: w.effort, kcal: w.kcal })) };
   });
   const weeks = weekBlocks(features).map((b) => ({ name: weekName(b.k), load: round(b.load), sessions: b.ws.length,
-    minutes: round(sum(b.ws.map((w) => w.min))) }));
+    minutes: round(sum(b.ws.map((w) => w.min))), kcal: round(sum(b.ws.map((w) => w.kcal || 0))) }));
   const top = Math.max(1, ...weeks.map((w) => w.load), t.usual);
   return { days, weeks: weeks.map((w) => ({ ...w, bar: bar((w.load / top) * 100) })), usual: round(t.usual), acute: round(t.acute),
     ratio: t.usual ? round((t.acute / t.usual) * 100) : null, source: source("trimp"), ref: REF.trimp };
