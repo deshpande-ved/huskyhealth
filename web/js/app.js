@@ -104,12 +104,12 @@ let micConsent = false;
 function askNode(ctx) {
   const input = el("input", { type: "text", placeholder: "how was my week?", autocomplete: "off" });
   input.setAttribute("aria-label", "Ask your API");
-  const ask = el("button", { type: "submit", className: "primary", textContent: "ask" });
-  const mic = el("button", { type: "button", className: "mic", textContent: "speak" });
+  const ask = el("button", { type: "submit", className: "cmd", textContent: "ask" });
+  const mic = el("button", { type: "button", className: "cmd mic", textContent: "speak" });
   mic.classList.toggle("hidden", !state.account || !navigator.mediaDevices || typeof MediaRecorder === "undefined");
-  const heard = el("p", { className: "note hidden" });
+  const heard = el("p", { className: "out hidden" });
   const curl = el("pre", { className: "log curl hidden" });
-  const copy = el("button", { type: "button", className: "hidden", textContent: "copy curl" });
+  const copy = el("button", { type: "button", className: "cmd hidden", textContent: "copy" });
   copy.addEventListener("click", () => navigator.clipboard && navigator.clipboard.writeText(curl.textContent));
   const answer = (q) => {
     const r = answerQuestion(q, ctx());
@@ -119,7 +119,8 @@ function askNode(ctx) {
     if (playing) playing.stop();
     playBrief(r.answer, ask);
   };
-  const form = el("form", { className: "ask" }, el("label", { className: "visually-hidden", htmlFor: "ask-q", textContent: "Ask your API" }), input, ask, mic);
+  const form = el("form", { className: "ask prompt" }, el("label", { className: "visually-hidden", htmlFor: "ask-q", textContent: "Ask your API" }),
+    el("span", { className: "sigil", textContent: "$" }), input, ask, mic);
   input.id = "ask-q";
   form.addEventListener("submit", (e) => { e.preventDefault(); const q = input.value.trim(); if (q) answer(q); });
   mic.addEventListener("click", async () => {
@@ -202,7 +203,7 @@ function render() {
   const an = analyze(f);
   const { call, week, last } = todayModel(an, f);
   if (state.features) {
-    const listen = el("button", { type: "button", className: "listen", textContent: "listen" });
+    const listen = el("button", { type: "button", className: "cmd listen", textContent: "listen" });
     listen.addEventListener("click", () => playBrief(briefText({ call, week, last, sleep: todayModel(an, f).sleep }), listen));
     listen.classList.toggle("hidden", !state.account);
     $("hero").replaceChildren(

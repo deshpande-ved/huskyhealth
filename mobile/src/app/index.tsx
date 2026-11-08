@@ -25,6 +25,19 @@ type Word = { text: string; start_s?: number; stop_s?: number }
 const zone = (cls: string) => (({ z0: C.muted, muted: C.muted, z1: C.foam, z2: C.pine, z3: C.gold, z4: C.rose, z5: C.love, alert: C.love }) as Record<string, string>)[cls] ?? C.text
 
 const button = { borderWidth: 1, borderColor: C.text, paddingVertical: 10, paddingHorizontal: 14 } as const
+// A command, like the website's ./listen: no box, a dimmed ./ prefix, red while pressed.
+function Cmd({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={10}>
+      {({ pressed }) => (
+        <Text style={{ ...mono, fontSize: 16, paddingVertical: 4, color: pressed ? C.love : C.text, textDecorationLine: pressed ? 'underline' : 'none', textDecorationColor: C.love }}>
+          <Text style={{ color: C.muted }}>./</Text>{label}
+        </Text>
+      )}
+    </Pressable>
+  )
+}
+
 function Button({ label, onPress, primary = false }: { label: string; onPress: () => void; primary?: boolean }) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" style={{ ...button, borderColor: C.text, backgroundColor: primary ? C.text : 'transparent' }}>
@@ -106,6 +119,7 @@ export default function Today() {
   const [question, setQuestion] = useState('')
   const [asked, setAsked] = useState<{ heard: string; curl: string } | null>(null)
   const [listening, setListening] = useState(false)
+  const [focused, setFocused] = useState(false)
   const timer = useRef<ReturnType<typeof setInterval> | null>(null)
   const micOk = useRef(false)
 
@@ -202,8 +216,8 @@ export default function Today() {
       <Banner words={[m.call.headline]} width={bannerWidth} />
       <Text style={{ ...mono, fontSize: 20, lineHeight: 29 }}>{m.call.reason}</Text>
       <Text style={{ ...mono, color: C.text2, fontSize: 14, marginTop: 12 }}>{`${dateLabel(0)}, ${m.call.basis}.`}</Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start', marginTop: 24 }}>
-        <Button label={speaking ? 'stop' : 'listen'} onPress={() => speak(briefText({ call: m.call, week: m.week, last: m.last, sleep: m.sleep }))} />
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, alignItems: 'baseline', marginTop: 24 }}>
+        <Cmd label={speaking ? 'stop' : 'listen'} onPress={() => speak(briefText({ call: m.call, week: m.week, last: m.last, sleep: m.sleep }))} />
         {caption ? (
           <Text style={{ ...mono, flex: 1, minWidth: 200, fontSize: 14, color: C.text2 }}>
             {caption.words.map((w, i) => (
@@ -212,17 +226,20 @@ export default function Today() {
           </Text>
         ) : null}
       </View>
-      <View style={{ flexDirection: 'row', gap: 8, marginTop: 24 }}>
+      {/* the prompt line (web: .prompt): a red $, the question on a dashed rule, then ./ask ./speak */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12, borderBottomWidth: 1, borderStyle: 'dashed', borderColor: focused ? C.love : C.rule }}>
+        <Text style={{ ...bold, color: C.love, fontSize: 16 }}>$</Text>
         <TextInput value={question} onChangeText={setQuestion} placeholder="how was my week?" placeholderTextColor={C.muted}
-          accessibilityLabel="Ask your API" autoCapitalize="none" returnKeyType="send"
+          accessibilityLabel="Ask your API" autoCapitalize="none" returnKeyType="send" selectionColor={C.love}
+          onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
           onSubmitEditing={() => question.trim() && answer(question.trim())}
-          style={{ ...mono, flex: 1, minWidth: 0, fontSize: 15, borderWidth: 1, borderColor: C.text, paddingHorizontal: 12, paddingVertical: 10 }} />
-        <Button label="ask" primary onPress={() => question.trim() && answer(question.trim())} />
-        <Button label={listening ? '…' : 'speak'} onPress={askByVoice} />
+          style={{ ...mono, flex: 1, minWidth: 0, fontSize: 16, paddingVertical: 10 }} />
+        <Cmd label="ask" onPress={() => question.trim() && answer(question.trim())} />
+        <Cmd label={listening ? '…' : 'speak'} onPress={askByVoice} />
       </View>
-      {asked ? <Text style={{ ...mono, color: C.text2, fontSize: 14, marginTop: 12 }}>{asked.heard}</Text> : null}
+      {asked ? <Text style={{ ...mono, color: C.text2, fontSize: 14, marginTop: 12 }}><Text style={{ color: C.muted }}>{'> '}</Text>{asked.heard}</Text> : null}
       {asked?.curl ? (
-        <Text selectable style={{ fontFamily: 'SpaceMono', fontSize: 12.8, lineHeight: 19, color: C.text, borderWidth: 1, borderColor: C.rule, padding: 12, marginTop: 8 }}>{asked.curl}</Text>
+        <Text selectable style={{ fontFamily: 'SpaceMono', fontSize: 12.8, lineHeight: 19, color: C.text, borderLeftWidth: 2, borderColor: C.love, paddingVertical: 12, paddingLeft: 16, marginTop: 8 }}>{asked.curl}</Text>
       ) : null}
       <Text onPress={() => openRef(m.call.ref)} style={{ ...mono, color: C.muted, fontSize: 12.8, marginTop: 8, textDecorationLine: 'underline', textDecorationColor: C.love }}>
         {`method · ${m.call.source.citation} · ${m.call.source.status}`}
