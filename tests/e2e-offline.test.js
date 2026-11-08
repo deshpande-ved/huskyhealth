@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-test("fixture export renders four figures with zero network calls", async () => {
+test("fixture export renders the today page with zero network calls", async () => {
   let calls = 0;
   const trap = () => { calls++; throw new Error("network used"); };
   const saved = { fetch: globalThis.fetch, XMLHttpRequest: globalThis.XMLHttpRequest, WebSocket: globalThis.WebSocket,
@@ -16,12 +16,12 @@ test("fixture export renders four figures with zero network calls", async () => 
   try {
     const { importFile } = await import("../web/js/parse-apple.worker.js");
     const { analyze } = await import("../web/js/engine.js");
-    const { screenModel } = await import("../web/js/view.js");
+    const { todayModel } = await import("../web/js/view.js");
     const u8 = readFileSync(new URL("./fixtures/synthetic-export.xml", import.meta.url));
     const { features } = await importFile({ name: "export.xml", size: u8.length, stream: () => new Blob([u8]).stream() },
                                           { now: Date.parse("2026-11-07T18:00:00-05:00") });
-    const figs = screenModel(analyze(features), features);
-    assert.equal(figs.length, 4);
+    const m = todayModel(analyze(features), features);
+    assert.ok(m.call.headline && m.week && m.zones);
     assert.equal(calls, 0);
   } finally {
     for (const k of ["fetch", "XMLHttpRequest", "WebSocket", "EventSource"]) globalThis[k] = saved[k];

@@ -22,23 +22,18 @@
       <img id="mark" src="/art/husky.svg" alt="" width="72" height="72">
       <div class="brand">
         <h1>HuskyHealth</h1>
-        <p>training insight from your watch &middot; computed on this phone &middot; nothing leaves it</p>
+        <p>training insight from your watch &middot; computed on your phone &middot; encrypted before anything leaves it</p>
       </div>
     </header>
-    <nav class="tabs" aria-label="Sections"><a href="#today">today</a><a href="#import">import</a><a href="#account">account</a><a href="#settings">settings</a><a href="#references">references</a></nav>
+    <nav class="tabs" aria-label="Pages"><a href="#today">today</a><a href="#import">import</a><a href="#account">account</a></nav>
 
-    <section id="today" aria-label="Today">
+    <section id="today" aria-label="Today" class="page">
       <div class="hero" id="hero"></div>
       <div class="panels" id="panels"></div>
     </section>
 
-    <section id="effort" aria-label="Rate your effort" class="block hidden">
-      <h2>Rate your effort</h2>
-      <p class="lede">How hard did it feel? 1 = very easy, 10 = all-out. It turns minutes into effort load, which works even when wrist heart rate is noisy. Only the number is stored.</p>
-      <ul id="effort-list"></ul>
-    </section>
 
-    <section id="import" aria-label="Import" class="block">
+    <section id="import" aria-label="Import" class="block page">
       <h2>Import</h2>
       <p class="lede">On your iPhone: Health app &rarr; your profile picture &rarr; <em>Export All Health Data</em>, then pick <code>export.zip</code> here. It is read on this phone and works in airplane mode.</p>
       <label class="button" for="import-file">Choose export.zip</label>
@@ -47,7 +42,7 @@
       <p id="import-error" class="alert hidden"></p>
     </section>
 
-    <section id="account" aria-label="Account" class="block">
+    <section id="account" aria-label="Account" class="block page">
       <h2>Account</h2>
       <p class="lede">Optional. An account keeps your past reports and workout summaries so you can look back from any device. Your browser encrypts them with a key made from your password before anything is sent. The Pi stores only that ciphertext, under a hash of your username. It cannot read it, and neither can we. Forget the password and the history is gone for good.</p>
       <div id="acct-out" class="panel">
@@ -74,34 +69,17 @@
         </article>
       </div>
       <p id="acct-status" class="explain" role="status"></p>
-    </section>
-
-    <section id="settings" aria-label="Settings" class="block">
-      <h2>Settings</h2>
-      <p id="stored" class="lede">Nothing stored on this phone</p>
-      <article class="panel" id="sync">
-        <h3>Convenience mode</h3>
-        <p class="explain">Optional automatic sync: an iPhone Shortcut sends new workouts, and this app picks them up when you open it. No more exporting.</p>
-        <p>Status: <b id="sync-state" class="muted">OFF</b> <span class="muted">(off by default)</span></p>
-        <p><button id="sync-toggle" type="button">Turn on convenience mode</button></p>
-        <div id="sync-consent" class="hidden">
-          <ul id="sync-consent-list" class="notes"></ul>
-          <p><button id="sync-confirm" type="button">I understand, turn it on</button> <button id="sync-cancel" type="button">Cancel</button></p>
-        </div>
-        <div id="sync-pair" class="hidden">
-          <p class="explain">Paste this pairing code into the <b>HuskyHealth Sync</b> Shortcut once. It is shown only now; keep it private.</p>
-          <p><code id="sync-code"></code></p>
-          <p><button id="sync-copy" type="button">Copy pairing code</button></p>
-        </div>
-        <p id="sync-status" class="explain"></p>
+      <article class="panel">
+        <h3>This phone</h3>
+        <p id="stored" class="explain">Nothing stored on this phone</p>
+        <p><button id="forget" type="button" class="danger">Forget everything on this phone</button></p>
       </article>
-      <p><button id="plain-view" type="button" aria-pressed="false">Plain view</button></p>
-      <p><button id="forget" type="button" class="danger">Forget everything</button></p>
     </section>
 
-    <section id="references" aria-label="References" class="block">
-      <h2>References</h2>
-      <p class="lede">Every number on the main screen links here. Status says where each method comes from: published, adapted, ours, disputed or descriptive.</p>
+
+    <section id="references" aria-label="Methods" class="block page">
+      <h2>Methods</h2>
+      <p class="lede"><a href="#today">&larr; back to today</a>. Every number on the today page links here. Status says where each method comes from: published, adapted, ours, disputed or descriptive.</p>
       <div class="cards">
 
       <article id="ref-zone-minutes" class="card">
@@ -152,6 +130,12 @@
         <p>Formula: at least 14 days with HRV before the last 7.</p>
         <p>Source: HuskyHealth · <span class="status">ours</span></p>
       </article>
+      <article id="ref-load-call" class="card">
+        <h3>Load call (when HRV is thin)</h3>
+        <p>Measures: whether this week is already heavier than your usual week, used for today's call until there is enough HRV.</p>
+        <p>Formula: last 7 days' load ÷ (last 28 days ÷ 4); above 1.3: easy, otherwise hard is fine.</p>
+        <p>Source: Gabbett 2016, Br J Sports Med (acute:chronic ratio) · <span class="status">disputed</span> (a rule of thumb, not a prediction)</p>
+      </article>
       <article id="ref-load-spike" class="card">
         <h3>Load spike</h3>
         <p>Measures: this week's load against the last four weeks. Info only.</p>
@@ -172,18 +156,10 @@
       </article>
 
       </div>
-      <h3>Caveats</h3>
-      <ul id="caveats" class="notes">
-        <li>The Watch records HRV as SDNN at random times; the studies used morning rMSSD.</li>
-        <li>Max HR is the highest you have recorded, not a tested maximum; it may be underestimated.</li>
-        <li>Garmin-only users have no HRV, so no readiness call.</li>
-        <li>With convenience mode on, synced workouts are found from heart rate alone (ours): readings no more than 75 s apart for at least 10 minutes. Their sport is your main sport, and you rate their effort in the app.</li>
-        <li>This is training insight, not medical advice.</li>
-      </ul>
     </section>
   </main>
   <footer>
-    <p class="muted">About: <span id="version">version unknown</span></p>
+    <p class="muted">Training insight, not medical advice &middot; <span id="version">version unknown</span></p>
   </footer>
 </body>
 </html>
