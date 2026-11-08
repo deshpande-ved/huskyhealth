@@ -6,7 +6,7 @@ import { router, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { PaperScroll } from './paper'
-import { C, bold, mono } from '../lib/theme'
+import { C, bold, mono, link } from '../lib/theme'
 
 export type Run = { text: string; b?: boolean; code?: boolean; href?: string; muted?: boolean; status?: boolean }
 export type PageBlock =
@@ -37,7 +37,7 @@ export function Runs({ runs, size = SIZE, color }: { runs: Run[]; size?: number;
           style={{
             fontFamily: r.b ? 'SpaceMono-Bold' : 'SpaceMono', fontSize: r.code ? size * 0.92 : size,
             color: r.code || r.status ? C.love : r.muted ? C.muted : color ?? C.text,
-            ...(r.href ? { textDecorationLine: 'underline', textDecorationColor: C.love } : null),
+            ...(r.href ? { color: C.love, textDecorationLine: 'underline', textDecorationColor: C.love } : null),
           }}>{r.text}</Text>
       ))}
     </>
@@ -117,7 +117,7 @@ export function SitePage({ blocks, focus, footer }: { blocks: PageBlock[]; focus
   return (
     <PaperScroll ref={scroll} contentContainerStyle={{ paddingLeft: 16 + inset.left, paddingRight: 16 + inset.right, paddingTop: inset.top + 24, paddingBottom: 60 + inset.bottom }}>
       <Text onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} accessibilityRole="link"
-        style={{ ...mono, fontSize: 14, alignSelf: 'flex-start', textDecorationLine: 'underline', textDecorationColor: C.love }}>{'← today'}</Text>
+        style={{ ...link(), fontSize: 14, alignSelf: 'flex-start' }}>{'← today'}</Text>
       {blocks.map((b, i) => <Block key={i} b={b} focus={focus} onLayout={onLayout} />)}
       {footer}
     </PaperScroll>
