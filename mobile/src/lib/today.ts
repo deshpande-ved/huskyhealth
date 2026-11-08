@@ -3,7 +3,7 @@
 // then draws today with featuresFromVault, exactly as web/js/app.js does. Same data, same code, same numbers.
 import { HealthKit } from '../../modules/health-kit'
 import { loadFeatures } from './health'
-import { addToVault, daySummaries, emptyVault, featuresFromVault, makeReport, workoutSummaries } from '../../../web/js/vault.js'
+import { addToVault, daySummaries, emptyVault, featuresFromVault, makeReport, pruneDeleted, workoutSummaries } from '../../../web/js/vault.js'
 import { analyze } from '../../../web/js/engine.js'
 import { todayModel } from '../../../web/js/view.js'
 
@@ -17,7 +17,9 @@ export async function loadToday(now = Date.now()): Promise<Today> {
   const [hk, got] = await Promise.all([loadFeatures(now), HealthKit.getVault()])
   if (got.status !== 200) throw new Error(got.status === 401 ? 'Log in again.' : `Could not open your history (${got.status}).`)
   const before = got.vault ? { ...emptyVault(), ...JSON.parse(got.vault) } : emptyVault()
-  let vault = addToVault(before, null, workoutSummaries(hk.features, now), daySummaries(hk.features, now))
+  // the app's own workouts, tagged so a later sync can tell which ones Apple Health has since deleted
+  const mine = workoutSummaries(hk.features, now).map((w: object) => ({ ...w, by: 'app' }))
+  let vault = pruneDeleted(addToVault(before, null, mine, daySummaries(hk.features, now)), mine)
   if (hk.features.max_hr) vault = { ...vault, max_hr: Math.max(hk.features.max_hr, before.max_hr || 0) }
   const features = featuresFromVault(vault, now)
   const analysis = analyze(features)
