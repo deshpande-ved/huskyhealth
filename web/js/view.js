@@ -116,3 +116,68 @@ export function onImportMessage(state, msg) {
   }
   return state;
 }
+
+// ---- detail views: real numbers behind each block (pure; dates from day offsets, local time) ----
+const DAY_MS = 86_400_000;
+export const dateLabel = (day, nowMs = Date.now()) =>
+  new Date(nowMs + day * DAY_MS).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+const sum = (a) => a.reduce((s, v) => s + v, 0);
+const weekBlocks = (features, n = 8) => Array.from({ length: n }, (_, k) => {
+  const hi = -7 * k, lo = hi - 6;                                   // k = 0: the last 7 days
+  return { k, ws: features.workouts.filter((w) => w.day <= hi && w.day >= lo),
+           load: sum(features.days.filter((d) => d.day <= hi && d.day >= lo).map((d) => d.trimp || 0)) };
+}).filter((b) => -7 * b.k - 6 > -features.window_days - 6);
+const weekName = (k) => (k === 0 ? "this week" : k === 1 ? "last week" : `${k} weeks ago`);
+
+// This week: each of the last 7 days, then 8 weekly totals against your usual week.
+export function weekDetail(analysis, features, nowMs = Date.now()) {
+  const t = analysis.today;
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const day = i - 6;
+    const ws = features.workouts.filter((w) => w.day === day);
+    return { day, date: dateLabel(day, nowMs), load: round(sum(ws.map((w) => w.trimp))),
+      sessions: ws.map((w) => ({ sport: sportName(w.sport), min: round(w.min), load: round(w.trimp), effort: w.effort })) };
+  });
+  const weeks = weekBlocks(features).map((b) => ({ name: weekName(b.k), load: round(b.load), sessions: b.ws.length,
+    minutes: round(sum(b.ws.map((w) => w.min))) }));
+  const top = Math.max(1, ...weeks.map((w) => w.load), t.usual);
+  return { days, weeks: weeks.map((w) => ({ ...w, bar: bar((w.load / top) * 100) })), usual: round(t.usual), acute: round(t.acute),
+    ratio: t.usual ? round((t.acute / t.usual) * 100) : null, source: source("trimp"), ref: REF.trimp };
+}
+
+// Sessions: the last one in full against your history in that sport, then the recent list.
+export function sessionDetail(analysis, features, nowMs = Date.now()) {
+  const ws = [...features.workouts].sort((a, b) => a.day - b.day);
+  const last = ws.at(-1) || null;
+  const sv = last ? analysis.sportView[last.sport] : null;
+  const row = (w) => ({ date: dateLabel(w.day, nowMs), ago: ago(w.day), sport: sportName(w.sport), min: round(w.min), load: round(w.trimp),
+    effort: w.effort, kcal: w.kcal, srpe: w.srpe, zones: w.zone_min.map((m) => round(m)) });
+  return {
+    last: last && { ...row(last), vsSport: sv && sv.mean != null ? { mean: round(sv.mean), count: sv.count, pct: sv.mean ? round((last.trimp / sv.mean) * 100) : null } : null },
+    recent: ws.slice(-12).reverse().map(row),
+    source: source("zone-minutes"), ref: REF["zone-minutes"],
+  };
+}
+
+// Zones: 60-day share, week by week, and by sport. Each stacked bar is 24 cells coloured by zone.
+const STACK = 24;
+function stack(z) {
+  const tot = sum(z);
+  if (!tot) return [{ ch: "·".repeat(STACK), cls: "muted" }];
+  const cellsN = z.map((m) => Math.round((m / tot) * STACK));
+  const fix = STACK - sum(cellsN);
+  cellsN[cellsN.indexOf(Math.max(...cellsN))] += fix;
+  return cellsN.flatMap((n, k) => (n > 0 ? [{ ch: "█".repeat(n), cls: `z${k + 1}` }] : []));
+}
+export function zoneDetail(features) {
+  const add = (acc, w) => acc.map((m, k) => m + (w.zone_min[k] || 0));
+  const total = features.workouts.reduce(add, [0, 0, 0, 0, 0]);
+  const weeks = weekBlocks(features).map((b) => { const z = b.ws.reduce(add, [0, 0, 0, 0, 0]); return { name: weekName(b.k), minutes: round(sum(z)), zones: z.map((m) => round(m)), stack: stack(z) }; });
+  const sports = [...new Set(features.workouts.map((w) => w.sport))].map((s) => {
+    const sw = features.workouts.filter((w) => w.sport === s);
+    const z = sw.reduce(add, [0, 0, 0, 0, 0]);
+    return { sport: sportName(s), sessions: sw.length, minutes: round(sum(z)), zones: z.map((m) => round(m)), stack: stack(z) };
+  });
+  return { total: total.map((m) => round(m)), minutes: round(sum(total)), stack: stack(total), weeks, sports, names: ZONE_NAMES,
+    source: source("zone-minutes"), ref: REF["zone-minutes"] };
+}

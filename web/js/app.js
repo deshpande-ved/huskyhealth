@@ -2,7 +2,7 @@
 import { analyze } from "./engine.js";
 import { paint } from "./ascii.js";
 import { createDb } from "./db.js";
-import { todayModel, storedLine, onImportMessage } from "./view.js";
+import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel } from "./view.js";
 import { signIn, saveVault, deleteAccount, addToVault, makeReport, workoutSummaries, fetchRecords, newToken, listTokens, revokeToken, featuresFromVault } from "./account.js";
 import { dayNumber, mergeDrop, validDrop } from "./sync-merge.js";
 
@@ -41,21 +41,87 @@ function figureNode(fig) {
   pre.setAttribute("role", "img");
   pre.setAttribute("aria-label", fig.label);
   paint(pre, fig.rows);
-  return el("a", { className: "fig-link", href: `#${fig.ref}` }, pre);
+  return pre;
 }
 
-// A terminal-window panel: title in the border, one-line explanation, figure, legend, key numbers, method link.
-function panelNode(fig, extraClass = "") {
-  const kids = [el("h3", { textContent: fig.title })];
+const methodNode = (src, ref) => el("p", { className: "method" },
+  el("a", { href: `#${ref}`, textContent: `method \u00b7 ${src.citation} \u00b7 ${src.status}` }));
+
+// A readout: section number and title on a hairline, the figure, key numbers. With `href` the whole card opens a detail page.
+function panelNode(fig, { href = null, n = null } = {}) {
+  const kids = [el("h3", {}, ...(n ? [el("span", { className: "sec", textContent: n })] : []), fig.title)];
   if (fig.explain) kids.push(el("p", { className: "explain", textContent: fig.explain }));
   if (fig.rows && fig.rows.length) kids.push(figureNode(fig), el("p", { className: "plain-text", textContent: fig.plain }));
-  if (fig.legend) kids.push(el("ul", { className: "legend" }, ...fig.legend.map(([ch, cls, text]) =>
-    el("li", {}, el("b", { className: cls, textContent: ch }), text))));
   if (fig.stats && fig.stats.length) kids.push(el("dl", { className: "stats" }, ...fig.stats.map((s) =>
     el("div", {}, el("dd", { className: s.cls || "", textContent: s.v }), el("dt", { textContent: s.k })))));
-  if (fig.source) kids.push(el("p", { className: "method" },
-    el("a", { href: `#${fig.ref}`, textContent: `method: ${fig.source.citation} \u00b7 ${fig.source.status}` })));
-  return el("article", { className: `panel ${extraClass}`.trim() }, ...kids);
+  if (href) {
+    kids.push(el("p", { className: "open", textContent: "open \u2192" }));
+    const a = el("a", { className: "panel readout", href }, ...kids);
+    a.setAttribute("aria-label", `${fig.title}: ${fig.label}. Open details.`);
+    return a;
+  }
+  return el("article", { className: "panel" }, ...kids);
+}
+
+// Small table helper: headers, rows of cells (strings or nodes); numeric columns right-aligned.
+function table(headers, rows, numeric = [], narrow = false) {
+  const cell = (tag, v, i) => { const c = el(tag, {}, v ?? "\u2014"); if (numeric.includes(i)) c.className = "num"; return c; };
+  return el("div", { className: "scroll" }, el("table", { className: narrow ? "data narrow" : "data" },
+    el("thead", {}, el("tr", {}, ...headers.map((h, i) => cell("th", h, i)))),
+    el("tbody", {}, ...rows.map((r) => el("tr", {}, ...r.map((v, i) => cell("td", v, i)))))));
+}
+const cellsSpan = (cells) => el("span", { className: "stack" }, ...cells.map((c) => el("span", { className: c.cls, textContent: c.ch })));
+const sectionTitle = (n, text) => el("h3", { className: "subhead" }, el("span", { className: "sec", textContent: n }), text);
+const emptyNote = () => el("p", { className: "explain", textContent: "Nothing here yet. Import your export or log in to your account." });
+
+function renderWeek(a, f) {
+  if (!state.features) return $("week-body").replaceChildren(emptyNote());
+  const w = weekDetail(a, f);
+  $("week-body").replaceChildren(
+    el("p", { className: "lede", textContent: w.ratio == null ? "No training in the last four weeks yet."
+      : `This week's load is ${w.acute}, ${w.ratio} % of your usual week (${w.usual}).` }),
+    sectionTitle("01", "Day by day"),
+    table(["day", "sessions", "load"], w.days.map((d) => [d.date,
+      d.sessions.length ? d.sessions.map((x) => `${x.sport} ${x.min} min${x.effort != null ? ` \u00b7 effort ${x.effort}` : ""}`).join(", ") : "rest",
+      d.load ? String(d.load) : "\u2014"]), [2]),
+    sectionTitle("02", "Week by week"),
+    table(["week", "load", "", "sessions", "minutes"], w.weeks.map((x, i) => [x.name, String(x.load),
+      cellsSpan([{ ch: x.bar, cls: i === 0 ? "z1" : "z2" }]), String(x.sessions), String(x.minutes)]), [1, 3, 4]),
+    methodNode(w.source, w.ref));
+}
+
+function renderSession(a, f) {
+  if (!state.features || !f.workouts.length) return $("session-body").replaceChildren(emptyNote());
+  const s = sessionDetail(a, f);
+  const L = s.last;
+  const facts = [["date", `${L.date} (${L.ago})`], ["sport", L.sport], ["minutes", String(L.min)], ["load", String(L.load)],
+    ["effort", L.effort != null ? `${L.effort}/10 (Watch)` : "not rated"], ["session-RPE", L.srpe != null ? String(L.srpe) : "\u2014"],
+    ["calories", L.kcal != null ? `${L.kcal} kcal` : "\u2014"],
+    ["vs your " + L.sport.toLowerCase(), L.vsSport ? `${L.vsSport.pct} % of your average load (${L.vsSport.mean}, ${L.vsSport.count} sessions)` : "first one"]];
+  $("session-body").replaceChildren(
+    sectionTitle("01", "Last session"),
+    el("dl", { className: "facts" }, ...facts.map(([k, v]) => el("div", {}, el("dt", { textContent: k }), el("dd", { textContent: v })))),
+    table(["zone", "minutes"], L.zones.map((m, k) => [el("span", { className: `z${k + 1}`, textContent: `Z${k + 1}` }), String(m)]), [1], true),
+    sectionTitle("02", "Recent sessions"),
+    table(["date", "sport", "min", "load", "effort", "Z1", "Z2", "Z3", "Z4", "Z5"],
+      s.recent.map((r) => [r.date, r.sport, String(r.min), String(r.load), r.effort != null ? String(r.effort) : "\u2014", ...r.zones.map(String)]),
+      [2, 3, 4, 5, 6, 7, 8, 9]),
+    methodNode(s.source, s.ref));
+}
+
+function renderZones(f) {
+  if (!state.features || !f.workouts.length) return $("zones-body").replaceChildren(emptyNote());
+  const z = zoneDetail(f);
+  const pct = (m, tot) => (tot ? `${Math.round((m / tot) * 100)} %` : "\u2014");
+  $("zones-body").replaceChildren(
+    el("p", { className: "lede", textContent: `${z.minutes} minutes of workout heart rate in the last 60 days. Zones are % of your highest recorded heart rate: Z1 50\u201360 %, up to Z5 90\u2013100 %.` }),
+    el("p", {}, cellsSpan(z.stack)),
+    table(["zone", "", "minutes", "share"], z.total.map((m, k) => [el("span", { className: `z${k + 1}`, textContent: `Z${k + 1}` }), z.names[k], String(m), pct(m, z.minutes)]), [2, 3], true),
+    sectionTitle("01", "Week by week"),
+    table(["week", "mix", "minutes"], z.weeks.map((w) => [w.name, cellsSpan(w.stack), String(w.minutes)]), [2]),
+    sectionTitle("02", "By sport"),
+    table(["sport", "mix", "sessions", "minutes"], z.sports.map((x) => [x.sport, cellsSpan(x.stack), String(x.sessions), String(x.minutes)]), [2, 3]),
+    methodNode(z.source, z.ref));
 }
 
 let state = { features: null, imp: { progress: null, error: null, done: null }, account: null };   // account: RAM only
@@ -63,30 +129,35 @@ let db = null;
 
 function render() {
   const f = state.features || EMPTY;
-  const { call, week, last, zones } = todayModel(analyze(f), f);
-  const method = (fig) => el("p", { className: "method" },
-    el("a", { href: `#${fig.ref}`, textContent: `method: ${fig.source.citation} \u00b7 ${fig.source.status}` }));
-  $("hero").replaceChildren(el("div", {},
-    el("p", { className: "eyebrow", textContent: "today's call" }),
+  const an = analyze(f);
+  const { call, week, last, zones } = todayModel(an, f);
+  $("hero").replaceChildren(el("div", { className: "call" },
+    el("p", { className: "eyebrow" }, el("span", { className: "sec", textContent: "\u00a7" }), `today's call \u00b7 ${dateLabel(0)}`),
     el("h2", { className: `verdict ${call.cls}`, textContent: call.headline }),
     el("p", { className: "reason", textContent: call.reason }),
     el("p", { className: "basis", textContent: call.basis }),
-    method(call)));
-  const panels = state.features ? [panelNode(week), ...(last ? [panelNode(last)] : []), panelNode(zones)]
-    : [el("article", { className: "panel" }, el("h3", { textContent: "Get started" }),
-        el("p", { className: "explain", textContent: "Nothing imported yet. Export your Health data on your iPhone and pick the file here; everything is computed on this phone." }),
-        el("a", { className: "button", href: "#import", textContent: "import your export" }))];
+    methodNode(call.source, call.ref)));
+  const panels = state.features
+    ? [panelNode(week, { href: "#week", n: "01" }), ...(last ? [panelNode(last, { href: "#session", n: "02" })] : []), panelNode(zones, { href: "#zones", n: last ? "03" : "02" })]
+    : [el("article", { className: "panel wide" }, el("h3", { textContent: "Get started" }),
+        el("p", { className: "explain", textContent: "Nothing here yet. Install the iPhone app and log in, or export your Health data and import it. Everything is computed on this device." }),
+        el("p", {}, el("a", { className: "button", href: "#import", textContent: "import your export" }), " ",
+          el("a", { className: "button ghost", href: "#account", textContent: "log in" })))];
   $("panels").replaceChildren(...panels);
+  renderWeek(an, f);
+  renderSession(an, f);
+  renderZones(f);
   $("stored").textContent = storedLine(state.features);
 }
 
 // One page at a time. Method links (#ref-*) open the methods page at that card.
 function route() {
   const h = location.hash.slice(1) || "today";
-  const page = h.startsWith("ref-") ? "references" : ["today", "import", "account", "references"].includes(h) ? h : "today";
+  const page = h.startsWith("ref-") ? "references" : ["today", "week", "session", "zones", "import", "account", "references"].includes(h) ? h : "today";
+  const tab = ["week", "session", "zones"].includes(page) ? "today" : page;   // details live under ./today
   for (const s of document.querySelectorAll("section.page")) s.classList.toggle("active", s.id === page);
   for (const a of document.querySelectorAll("nav.tabs a")) {
-    if (a.getAttribute("href") === `#${page}`) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    if (a.getAttribute("href") === `#${tab}`) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
   }
   const target = h.startsWith("ref-") && document.getElementById(h);
   if (target) target.scrollIntoView(); else scrollTo(0, 0);

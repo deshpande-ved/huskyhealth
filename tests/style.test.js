@@ -21,7 +21,9 @@ test("colour-role classes use variables", () => {
   }
 });
 
-test("system monospace only; no fonts, imports or light theme", () => {
-  assert.ok(css.includes('font-family: ui-monospace, "SF Mono", Menlo, monospace;'));
-  assert.ok(!/@font-face|@import|url\(|prefers-color-scheme:\s*light/.test(css));
+test("fonts are self-hosted from /fonts only (system monospace fallback); no imports or light theme", () => {
+  const urls = [...css.matchAll(/url\(([^)]*)\)/g)].map((m) => m[1].replace(/["']/g, ""));
+  assert.ok(urls.length >= 2 && urls.every((u) => /^\/fonts\/[a-z0-9-]+\.woff2$/.test(u)), urls.join(" "));
+  assert.ok(css.includes('ui-monospace, "SF Mono", Menlo, monospace'));
+  assert.ok(!/@import|prefers-color-scheme:\s*light/.test(css));
 });
