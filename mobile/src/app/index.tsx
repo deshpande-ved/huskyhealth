@@ -98,6 +98,9 @@ function Masthead({ user }: { user: string | null }) {
           <Text onPress={() => router.push('/api')} style={{ ...link(), fontSize: 14, textDecorationLine: 'none' }}>
             <Text style={{ opacity: 0.6 }}>./</Text>api
           </Text>
+          <Text onPress={() => router.push('/methods')} style={{ ...link(), fontSize: 14, textDecorationLine: 'none' }}>
+            <Text style={{ opacity: 0.6 }}>./</Text>methods
+          </Text>
         </View>
       </View>
       <Text onPress={() => router.push('/sync')} style={{ ...link(), fontSize: 14, alignSelf: 'flex-start', textDecorationLine: user ? 'underline' : 'none' }}>

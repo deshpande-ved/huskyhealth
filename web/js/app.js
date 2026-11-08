@@ -241,7 +241,7 @@ function render() {
 function route() {
   const h = location.hash.slice(1) || "today";
   const page = h.startsWith("ref-") ? "references" : ["today", "week", "session", "zones", "sleep", "fitness", "import", "account", "references"].includes(h) ? h : "today";
-  const tab = ["week", "session", "zones", "sleep", "fitness", "references"].includes(page) ? "today" : page;   // details live under ./today
+  const tab = ["week", "session", "zones", "sleep", "fitness"].includes(page) ? "today" : page;   // details live under ./today; methods has its own tab
   if (page === "account" && !state.account) openSheet(true);
   for (const s of document.querySelectorAll("section.page")) s.classList.toggle("active", s.id === page);
   for (const a of document.querySelectorAll("nav.tabs a")) {

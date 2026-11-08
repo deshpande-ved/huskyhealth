@@ -31,3 +31,13 @@ test("wording rules", () => {
   assert.ok(!/injury risk|diagnos|treat(s|ment)?\b|anonymous|anonymi[sz]/i.test(html));
   assert.equal((html.match(/medical advice/gi) || []).length, 1);
 });
+
+test("every published, adapted or disputed method links to its original paper or book", () => {
+  const cards = [...html.matchAll(/<article id="(ref-[a-z0-9-]+)" class="card">([\s\S]*?)<\/article>/g)];
+  for (const [, id, body] of cards) {
+    const status = (body.match(/<span class="status">([a-z]+)<\/span>/) || [])[1];
+    if (!["published", "adapted", "disputed"].includes(status)) continue;
+    const source = body.match(/<p>Source:([\s\S]*?)<\/p>/)[1];
+    assert.match(source, /<a href="https:\/\/(doi\.org|pubmed\.ncbi\.nlm\.nih\.gov|openlibrary\.org)\/[^"]+" target="_blank" rel="noopener">/, id);
+  }
+});
