@@ -29,5 +29,15 @@ export function applyScheme(scheme: Scheme) {
   mono.color = C.text
   bold.color = C.text
 }
+// A phone has no hover, so links, commands and buttons always show their hover look, as on the website under
+// @media (hover: none): links and commands red; the method (source) link never red: grey with a dotted underline;
+// boxed buttons filled (ink, or red for the main and destructive ones).
+export const link = () => ({ fontFamily: 'SpaceMono', color: C.love, textDecorationLine: 'underline' as const, textDecorationColor: C.love })
+export const methodLink = () => ({ fontFamily: 'SpaceMono', color: C.muted, textDecorationLine: 'underline' as const, textDecorationStyle: 'dotted' as const, textDecorationColor: C.muted })
+export const filled = (kind: 'plain' | 'primary' | 'danger' = 'plain') => ({
+  box: { borderWidth: 1, borderColor: kind === 'plain' ? C.text : C.love, backgroundColor: kind === 'plain' ? C.text : C.love, paddingVertical: 10, paddingHorizontal: 14 },
+  text: { fontFamily: 'SpaceMono', fontSize: 13, color: C.base },
+})
+
 export const RELAY = 'https://veds-pi5.polecat-nominal.ts.net:10000'
 export const SITE = 'https://huskyhealth.pages.dev'

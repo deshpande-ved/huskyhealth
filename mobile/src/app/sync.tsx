@@ -8,7 +8,7 @@ import { TwoPane } from '../components/two-pane'
 import { useDuoLayout } from '../lib/use-duo-layout'
 
 import { HealthKit } from '../../modules/health-kit'
-import { bold, C, mono, RELAY } from '../lib/theme'
+import { bold, C, mono, RELAY, link, filled } from '../lib/theme'
 
 // Your HuskyHealth account, as on the website's account page. Log in once: the keys are derived here (the password
 // is never sent), new workouts from your watch go to your personal API by themselves, and History lists the reports
@@ -95,13 +95,11 @@ export default function Account() {
   }
   const logout = async () => { await HealthKit?.unpair(); setUser(null); setStatus('Logged out. The device token is deleted.') }
 
-  const btn = { borderWidth: 1, borderColor: C.text, paddingVertical: 10, paddingHorizontal: 14 } as const
-  const btnText = { ...mono, fontSize: 13 } as const
   const h3 = { ...bold, fontSize: 17, marginTop: 8 } as const
 
   const about = (
     <View style={{ gap: 14 }}>
-      <Pressable onPress={() => router.back()}><Text style={{ ...mono, color: C.text2, fontSize: 13 }}>{'← today'}</Text></Pressable>
+      <Pressable onPress={() => router.back()}><Text style={{ ...link(), fontSize: 13 }}>{'← today'}</Text></Pressable>
       <Text accessibilityRole="header" style={{ ...bold, fontSize: 20 }}>{user ? 'Account' : 'Log in'}</Text>
       {user ? <Text style={{ ...mono, fontSize: 15, lineHeight: 22 }}>Logged in as {user}.</Text> : null}
       {status ? <Text style={{ ...mono, color: C.text2, fontSize: 13, lineHeight: 19 }}>{status}</Text> : null}
@@ -130,12 +128,12 @@ export default function Account() {
         </>
       ) : null}
       <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
-        {!user ? <Pressable onPress={login} style={{ ...btn, backgroundColor: C.text }}><Text style={{ ...btnText, color: C.base }}>{busy ? 'logging in…' : 'log in'}</Text></Pressable> : null}
-        {user ? <Pressable onPress={syncNow} style={btn}><Text style={btnText}>sync now</Text></Pressable> : null}
-        {user ? <Pressable onPress={seed} style={{ ...btn, borderColor: C.muted }}><Text style={{ ...btnText, color: C.muted }}>demo workout</Text></Pressable> : null}
-        <Pressable onPress={() => router.push('/api')} style={btn}><Text style={btnText}>how the API works</Text></Pressable>
-        {user ? <Pressable onPress={logout} style={btn}><Text style={btnText}>log out</Text></Pressable> : null}
-        {user ? <Pressable onPress={deleteAccount} style={{ ...btn, borderColor: C.love }}><Text style={{ ...btnText, color: C.love }}>delete account</Text></Pressable> : null}
+        {!user ? <Pressable onPress={login} style={filled('primary').box}><Text style={filled().text}>{busy ? 'logging in…' : 'log in'}</Text></Pressable> : null}
+        {user ? <Pressable onPress={syncNow} style={filled().box}><Text style={filled().text}>sync now</Text></Pressable> : null}
+        {user ? <Pressable onPress={seed} style={filled().box}><Text style={filled().text}>demo workout</Text></Pressable> : null}
+        <Pressable onPress={() => router.push('/api')} style={filled().box}><Text style={filled().text}>how the API works</Text></Pressable>
+        {user ? <Pressable onPress={logout} style={filled().box}><Text style={filled().text}>log out</Text></Pressable> : null}
+        {user ? <Pressable onPress={deleteAccount} style={filled('danger').box}><Text style={filled().text}>delete account</Text></Pressable> : null}
       </View>
       {!user ? (
         <Text style={{ ...mono, color: C.muted, fontSize: 13, lineHeight: 19 }}>

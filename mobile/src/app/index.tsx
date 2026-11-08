@@ -14,7 +14,7 @@ import { useDuoLayout } from '../lib/use-duo-layout'
 import { HealthKit } from '../../modules/health-kit'
 import { loadToday, type Today as TodayData } from '../lib/today'
 import { setToday } from '../lib/today-store'
-import { C, bold, mono, RELAY } from '../lib/theme'
+import { C, bold, mono, RELAY, link, methodLink, filled } from '../lib/theme'
 import { todayModel, dateLabel, briefText, answerQuestion, weekDetail, sessionDetail, zoneDetail, WELCOME, todayRows, ROW_PAGE } from '../../../web/js/view.js'
 import { banner } from '../../../web/js/ascii.js'
 
@@ -25,23 +25,21 @@ type Word = { text: string; start_s?: number; stop_s?: number }
 const zone = (cls: string) => (({ z0: C.muted, muted: C.muted, z1: C.foam, z2: C.pine, z3: C.gold, z4: C.rose, z5: C.love, alert: C.love }) as Record<string, string>)[cls] ?? C.text
 
 const button = { borderWidth: 1, borderColor: C.text, paddingVertical: 10, paddingHorizontal: 14 } as const
-// A command, like the website's ./listen: no box, a dimmed ./ prefix, red while pressed.
+// A command, like the website's ./listen: no box, ./ prefix, in its hover look (red) since a phone has no hover.
 function Cmd({ label, onPress }: { label: string; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={10}>
-      {({ pressed }) => (
-        <Text style={{ ...mono, fontSize: 16, paddingVertical: 4, color: pressed ? C.love : C.text, textDecorationLine: pressed ? 'underline' : 'none', textDecorationColor: C.love }}>
-          <Text style={{ color: C.muted }}>./</Text>{label}
-        </Text>
-      )}
+      <Text style={{ ...link(), fontSize: 16, paddingVertical: 4 }}>
+        <Text style={{ opacity: 0.6 }}>./</Text>{label}
+      </Text>
     </Pressable>
   )
 }
 
 function Button({ label, onPress, primary = false }: { label: string; onPress: () => void; primary?: boolean }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" style={{ ...button, borderColor: C.text, backgroundColor: primary ? C.text : 'transparent' }}>
-      <Text style={{ ...mono, fontSize: 14, color: primary ? C.base : C.text }}>{label}</Text>
+    <Pressable onPress={onPress} accessibilityRole="button" style={filled(primary ? 'primary' : 'plain').box}>
+      <Text style={{ ...filled().text, fontSize: 14 }}>{label}</Text>
     </Pressable>
   )
 }
@@ -50,9 +48,9 @@ function Button({ label, onPress, primary = false }: { label: string; onPress: (
 function Row({ fig }: { fig: Fig }) {
   return (
     <Pressable onPress={() => router.push(`/detail/${(ROW_PAGE as Record<string, string>)[fig.id] ?? fig.id}`)} accessibilityRole="link" accessibilityLabel={`${fig.title}. ${fig.summary || fig.label}`}
-      style={({ pressed }) => ({ borderBottomWidth: 1, borderColor: C.rule, borderStyle: 'dashed', paddingVertical: 24, paddingHorizontal: 8, gap: 8, backgroundColor: pressed ? C.surface : 'transparent' })}>
+      style={{ borderBottomWidth: 1, borderColor: C.rule, borderStyle: 'dashed', paddingVertical: 24, paddingHorizontal: 8, gap: 8, backgroundColor: C.surface }}>
       <View>
-        <Text style={{ ...bold, fontSize: 20 }}>{fig.title}</Text>
+        <Text style={{ ...bold, fontSize: 20, color: C.love, textDecorationLine: 'underline', textDecorationColor: C.love }}>{fig.title}</Text>
         <Text style={{ ...mono, color: C.text2, fontSize: 14, lineHeight: 21, marginTop: 4 }}>{fig.summary || fig.label}</Text>
       </View>
       {fig.rows?.length ? (
@@ -94,15 +92,15 @@ function Masthead({ user }: { user: string | null }) {
           <Text style={{ ...mono, color: C.text2, fontSize: 14, marginTop: 2 }}>Your workouts, as an API only you can read.</Text>
         </View>
         <View style={{ flexDirection: 'row', gap: 24 }}>
-          <Text style={{ ...mono, fontSize: 14, color: C.text, textDecorationLine: 'underline', textDecorationColor: C.love }}>
+          <Text style={{ ...mono, fontSize: 14, color: C.text, textDecorationLine: 'underline', textDecorationColor: C.love /* ./today: the page you are on */ }}>
             <Text style={{ color: C.muted }}>./</Text>today
           </Text>
-          <Text onPress={() => router.push('/api')} style={{ ...mono, fontSize: 14, color: C.text2 }}>
-            <Text style={{ color: C.muted }}>./</Text>api
+          <Text onPress={() => router.push('/api')} style={{ ...link(), fontSize: 14, textDecorationLine: 'none' }}>
+            <Text style={{ opacity: 0.6 }}>./</Text>api
           </Text>
         </View>
       </View>
-      <Text onPress={() => router.push('/sync')} style={{ ...mono, fontSize: 14, alignSelf: 'flex-start', textDecorationLine: user ? 'underline' : 'none', textDecorationColor: C.love }}>
+      <Text onPress={() => router.push('/sync')} style={{ ...link(), fontSize: 14, alignSelf: 'flex-start', textDecorationLine: user ? 'underline' : 'none' }}>
         {user ?? 'log in'}
       </Text>
     </View>
@@ -218,6 +216,7 @@ export default function Today() {
       <Text style={{ ...mono, color: C.text2, fontSize: 14, marginTop: 12 }}>{`${dateLabel(0)}, ${m.call.basis}.`}</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, alignItems: 'baseline', marginTop: 24 }}>
         <Cmd label={speaking ? 'stop' : 'listen'} onPress={() => speak(briefText({ call: m.call, week: m.week, last: m.last, sleep: m.sleep }))} />
+        <Cmd label={listening ? '…' : 'speak'} onPress={askByVoice} />
         {caption ? (
           <Text style={{ ...mono, flex: 1, minWidth: 200, fontSize: 14, color: C.text2 }}>
             {caption.words.map((w, i) => (
@@ -226,7 +225,7 @@ export default function Today() {
           </Text>
         ) : null}
       </View>
-      {/* the prompt line (web: .prompt): a red $, the question on a dashed rule, then ./ask ./speak */}
+      {/* the prompt line (web: .prompt): a red $, the question on a dashed rule, a small enter */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12, borderBottomWidth: 1, borderStyle: 'dashed', borderColor: focused ? C.love : C.rule }}>
         <Text style={{ ...bold, color: C.love, fontSize: 16 }}>$</Text>
         <TextInput value={question} onChangeText={setQuestion} placeholder="how was my week?" placeholderTextColor={C.muted}
@@ -234,14 +233,15 @@ export default function Today() {
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
           onSubmitEditing={() => question.trim() && answer(question.trim())}
           style={{ ...mono, flex: 1, minWidth: 0, fontSize: 16, paddingVertical: 10 }} />
-        <Cmd label="ask" onPress={() => question.trim() && answer(question.trim())} />
-        <Cmd label={listening ? '…' : 'speak'} onPress={askByVoice} />
+        <Pressable onPress={() => question.trim() && answer(question.trim())} accessibilityRole="button" accessibilityLabel="ask" hitSlop={12}>
+          <Text style={{ ...mono, color: C.love, fontSize: 16, paddingHorizontal: 4 }}>{'\u21b5'}</Text>
+        </Pressable>
       </View>
       {asked ? <Text style={{ ...mono, color: C.text2, fontSize: 14, marginTop: 12 }}><Text style={{ color: C.muted }}>{'> '}</Text>{asked.heard}</Text> : null}
       {asked?.curl ? (
         <Text selectable style={{ fontFamily: 'SpaceMono', fontSize: 12.8, lineHeight: 19, color: C.text, borderLeftWidth: 2, borderColor: C.love, paddingVertical: 12, paddingLeft: 16, marginTop: 8 }}>{asked.curl}</Text>
       ) : null}
-      <Text onPress={() => openRef(m.call.ref)} style={{ ...mono, color: C.muted, fontSize: 12.8, marginTop: 8, textDecorationLine: 'underline', textDecorationColor: C.love }}>
+      <Text onPress={() => openRef(m.call.ref)} style={{ ...methodLink(), fontSize: 12.8, marginTop: 8 }}>
         {`method · ${m.call.source.citation} · ${m.call.source.status}`}
       </Text>
       {status ? <Text style={{ ...mono, color: C.text2, fontSize: 14, marginTop: 12 }}>{status}</Text> : null}
@@ -254,7 +254,7 @@ export default function Today() {
           <Text style={{ ...mono, fontSize: 20, lineHeight: 29 }}>{WELCOME}</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginTop: 24 }}>
             <Button label="log in" primary onPress={() => router.push('/sync')} />
-            <Text onPress={() => router.push('/api')} style={{ ...mono, fontSize: 14, textDecorationLine: 'underline', textDecorationColor: C.love }}>how the API works</Text>
+            <Text onPress={() => router.push('/api')} style={{ ...link(), fontSize: 14 }}>how the API works</Text>
           </View>
         </>
       )}

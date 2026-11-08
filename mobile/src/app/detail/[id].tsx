@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { PaperScroll } from '../../components/paper'
 import { openRef } from '../../components/page-blocks'
 import { getToday } from '../../lib/today-store'
-import { C, bold, mono } from '../../lib/theme'
+import { C, bold, mono, link, methodLink } from '../../lib/theme'
 import { DETAIL_PAGES, detailBlocks } from '../../../../web/js/view.js'
 
 type Cell = string | { ch: string; cls: string } | { stack: { ch: string; cls: string }[] }
@@ -71,7 +71,7 @@ function BlockView({ b }: { b: Block }) {
     )
     case 'table': return <Table head={b.head} rows={b.rows} num={b.num} />
     case 'method': return (
-      <Text onPress={() => openRef(b.ref)} style={{ ...mono, color: C.muted, fontSize: 12.8, marginTop: 8, textDecorationLine: 'underline', textDecorationColor: C.love }}>
+      <Text onPress={() => openRef(b.ref)} style={{ ...methodLink(), fontSize: 12.8, marginTop: 8 }}>
         {`method · ${b.source.citation} · ${b.source.status}`}
       </Text>
     )
@@ -87,7 +87,7 @@ export default function Detail() {
   return (
     <PaperScroll contentContainerStyle={{ paddingLeft: 16 + inset.left, paddingRight: 16 + inset.right, paddingTop: inset.top + 24, paddingBottom: 60 + inset.bottom }}>
       <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} accessibilityRole="link">
-        <Text style={{ ...mono, fontSize: 14, textDecorationLine: 'underline', textDecorationColor: C.love }}>{'← today'}</Text>
+        <Text style={{ ...link(), fontSize: 14 }}>{'← today'}</Text>
       </Pressable>
       <Text accessibilityRole="header" style={{ ...bold, fontSize: 28, marginTop: 16, marginBottom: 16 }}>{title}</Text>
       {blocks.map((b, i) => <BlockView key={i} b={b} />)}

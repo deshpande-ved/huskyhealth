@@ -101,10 +101,11 @@ async function playBrief(text, btn) {
 // the API request behind it. Typed questions never leave the page; a spoken one (at most 5 s) goes to Gradium for text.
 let recording = null;
 let micConsent = false;
-function askNode(ctx) {
+function askNode(ctx, speakRow) {
   const input = el("input", { type: "text", placeholder: "how was my week?", autocomplete: "off" });
   input.setAttribute("aria-label", "Ask your API");
-  const ask = el("button", { type: "submit", className: "cmd", textContent: "ask" });
+  const ask = el("button", { type: "submit", className: "enter", textContent: "\u21b5" });
+  ask.setAttribute("aria-label", "ask");
   const mic = el("button", { type: "button", className: "cmd mic", textContent: "speak" });
   mic.classList.toggle("hidden", !state.account || !navigator.mediaDevices || typeof MediaRecorder === "undefined");
   const heard = el("p", { className: "out hidden" });
@@ -117,10 +118,11 @@ function askNode(ctx) {
     curl.textContent = r.curl;
     for (const n of [heard, curl, copy]) n.classList.remove("hidden");
     if (playing) playing.stop();
-    playBrief(r.answer, ask);
+    playBrief(r.answer, speakRow.querySelector(".listen"));
   };
   const form = el("form", { className: "ask prompt" }, el("label", { className: "visually-hidden", htmlFor: "ask-q", textContent: "Ask your API" }),
-    el("span", { className: "sigil", textContent: "$" }), input, ask, mic);
+    el("span", { className: "sigil", textContent: "$" }), input, ask);
+  speakRow.insertBefore(mic, speakRow.querySelector(".caption"));          // ./listen ./speak on one line
   input.id = "ask-q";
   form.addEventListener("submit", (e) => { e.preventDefault(); const q = input.value.trim(); if (q) answer(q); });
   mic.addEventListener("click", async () => {
@@ -206,13 +208,14 @@ function render() {
     const listen = el("button", { type: "button", className: "cmd listen", textContent: "listen" });
     listen.addEventListener("click", () => playBrief(briefText({ call, week, last, sleep: todayModel(an, f).sleep }), listen));
     listen.classList.toggle("hidden", !state.account);
+    const speakRow = el("div", { className: "speak" }, listen, el("p", { id: "caption", className: "caption hidden" }));
     $("hero").replaceChildren(
       ...bannerNode([call.headline.toUpperCase()], call.headline),
       el("p", { className: "reason", textContent: call.reason }),
       el("p", { className: "basis", textContent: `${dateLabel(0)}, ${call.basis}.` }),
-      el("div", { className: "speak" }, listen, el("p", { id: "caption", className: "caption hidden" })),
+      speakRow,
       askNode(() => ({ model: { call, week, last, ...(({ sleep, fitness }) => ({ sleep, fitness }))(todayModel(an, f)) }, week: weekDetail(an, f), session: sessionDetail(an, f), zones: zoneDetail(f),
-        features: state.features, relay: RELAY })),
+        features: state.features, relay: RELAY }), speakRow),
       methodNode(call.source, call.ref));
     $("panels").replaceChildren(...todayRows(todayModel(an, f)).map((fig) => panelNode(fig, { href: `#${ROW_PAGE[fig.id]}` })));
   } else {
