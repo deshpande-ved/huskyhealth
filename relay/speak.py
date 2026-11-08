@@ -7,6 +7,7 @@ import os
 import re
 import struct
 import urllib.error
+import urllib.parse
 import urllib.request
 
 from flask import Blueprint, request
@@ -14,6 +15,8 @@ from flask import Blueprint, request
 bp = Blueprint("speak", __name__)
 
 GRADIUM_BASE = os.environ.get("GRADIUM_BASE_URL", "https://api.gradium.ai") + "/api/post/speech/tts"
+GRADIUM_ASR = os.environ.get("GRADIUM_BASE_URL", "https://api.gradium.ai") + "/api/post/speech/asr"
+MAX_AUDIO = 250_000                          # ~5 s of 24 kHz 16-bit mono WAV: one spoken question, no more
 DEFAULT_VOICE = "YTpq7expH9539ERJ"          # a Gradium library voice; GRADIUM_VOICE_ID (a consenting coach's clone) wins
 MAX_TEXT = 600
 RATE = 24_000                                # pcm_24000: 16-bit mono PCM; the relay adds the WAV header
@@ -83,3 +86,49 @@ def speak():
     if not pcm:
         return {"error": "speech is unavailable", "status": 502}, 502
     return {"audio": base64.b64encode(wav(pcm)).decode(), "mime": "audio/wav", "words": words}
+
+
+def transcribe(wav_bytes: bytes, key: str) -> str:
+    """Gradium speech-to-text (one-shot POST, NDJSON back). Returns the words, at most 200 characters."""
+    url = GRADIUM_ASR + "?" + urllib.parse.urlencode({"json_config": json.dumps({"language": "en"})})
+    req = urllib.request.Request(url, data=wav_bytes, method="POST", headers={"x-api-key": key, "Content-Type": "audio/wav"})
+    parts = []
+    with urllib.request.urlopen(req, timeout=25) as resp:
+        for line in resp:
+            line = line.strip()
+            if not line:
+                continue
+            msg = json.loads(line)
+            if msg.get("type") == "text":
+                parts.append(str(msg.get("text", "")))
+            elif msg.get("type") == "error":
+                raise RuntimeError("gradium error")
+    return " ".join(p.strip() for p in parts if p.strip())[:200]
+
+
+@bp.post("/v1/listen")
+def listen():
+    """Talk to your API: up to 5 s of a spoken question in, its words out. The audio is never stored or logged."""
+    import accounts
+    from app import LISTEN_PER_SESSION
+    aid, err = accounts.require_session()
+    if err:
+        return err
+    wait = LISTEN_PER_SESSION.check(aid)
+    if wait:
+        return _err(429, wait)
+    audio = request.get_data(cache=False)
+    if not audio or len(audio) > MAX_AUDIO:
+        return _err(413 if audio else 422)
+    if audio[:4] != b"RIFF" or audio[8:12] != b"WAVE":
+        return _err(422)
+    key = os.environ.get("GRADIUM_API_KEY", "")
+    if not key:
+        return {"error": "speech is not set up", "status": 503}, 503
+    try:
+        text = transcribe(audio, key)
+    except (urllib.error.URLError, OSError, ValueError, RuntimeError, KeyError):
+        return {"error": "speech is unavailable", "status": 502}, 502
+    finally:
+        del audio
+    return {"text": text}
