@@ -59,13 +59,15 @@ test("favicon set is linked and valid", () => {
   assert.deepEqual([w, h], [96, 96]);
 });
 
-// Header logo: a vector SVG with a fixed square viewBox, shown as an <img> with locked aspect ratio.
+// Header logo: the husky cropped to itself (scripts/make_icons.py), bright in dark mode; fixed square viewBox.
 test("header logo is the fixed-viewBox ASCII husky SVG", () => {
   const html = readFileSync(new URL("../web/index.html", import.meta.url), "utf8");
-  assert.ok(html.includes(`<a class="mark-link" href="#today" aria-label="HuskyHealth, today"><img id="mark" src="/art/husky.svg" alt="" width="72" height="72"></a>`));
-  const svg = read("art/husky.svg").toString("utf8");
-  assert.match(svg, /^<svg [^>]*viewBox="0 0 512 512"/);
-  assert.ok(!/<script|<rect/.test(svg));   // transparent background, no script
+  assert.ok(html.includes(`<a class="mark-link" href="#today" aria-label="HuskyHealth, today"><picture><source srcset="/art/husky-bright.svg" media="(prefers-color-scheme: dark)"><img id="mark" src="/art/husky-mark.svg" alt="" width="72" height="72"></picture></a>`));
+  for (const f of ["art/husky-mark.svg", "art/husky-bright.svg"]) {
+    const svg = read(f).toString("utf8");
+    assert.match(svg, /^<svg [^>]*viewBox="0 0 512 512"/);
+    assert.ok(!/<script|<rect/.test(svg));   // transparent background, no script
+  }
   const css = readFileSync(new URL("../web/css/style.css", import.meta.url), "utf8");
   assert.match(css, /#mark \{[^}]*aspect-ratio: 1 \/ 1;[^}]*object-fit: contain;/);
 });
