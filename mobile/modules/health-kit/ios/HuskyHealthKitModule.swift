@@ -62,8 +62,13 @@ public class HuskyHealthKitModule: Module {
     }
 
     // History of reports and debriefs: on this phone only (file protection: complete).
-    Function("historyAppend") { (line: String) throws in try HealthCore.historyAppend(line) }
-    Function("historyList") { HealthCore.historyList() }
-    Function("historyClear") { HealthCore.historyClear() }
+    // The account vault (HealthCore.swift): the same encrypted history the website reads and writes.
+    AsyncFunction("getVault") { () async -> [String: Any] in await Vault.get() }
+    AsyncFunction("saveVault") { (json: String) async -> Int in await Vault.put(json) }
+
+    // Voice, as on the website: Gradium speaks today's call; a spoken question comes back as words.
+    AsyncFunction("speak") { (text: String) async -> [String: Any] in await Voice.speak(text) }
+    Function("stopSpeaking") { Voice.stop() }
+    AsyncFunction("listen") { () async -> [String: Any] in await Voice.listen() }
   }
 }

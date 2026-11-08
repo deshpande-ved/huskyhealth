@@ -289,3 +289,6 @@ export function answerQuestion(question, { model, week, session, zones, features
   }
   return { intent: "unknown", curl: read, answer: "Ask about today's call, this week, your last session, sleep, VO2 max, heart-rate zones, calories, or how many workouts you have." };
 }
+
+// The logged-out welcome, word for word on the website and in the iPhone app.
+export const WELCOME = "Log in on the HuskyHealth iPhone app and your last 60 days of Apple Watch or Garmin workouts arrive on every screen, encrypted so only you can read them.";

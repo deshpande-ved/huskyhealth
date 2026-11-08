@@ -92,23 +92,6 @@
               "$ref": "#/components/schemas/Sample"
             },
             "maxItems": 4000
-          },
-          "hr_t": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "maxItems": 4000
-          },
-          "hr_v": {
-            "type": "array",
-            "items": {
-              "type": "number",
-              "minimum": 20,
-              "maximum": 300
-            },
-            "maxItems": 4000
           }
         }
       },

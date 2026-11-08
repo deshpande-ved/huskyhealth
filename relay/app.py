@@ -10,7 +10,6 @@ from pathlib import Path
 from flask import Flask, request
 from werkzeug.exceptions import HTTPException
 
-from tokens import mint
 
 app = Flask(__name__, static_folder=None)
 app.config["MAX_CONTENT_LENGTH"] = 256 * 1024
@@ -101,7 +100,6 @@ class KeyedWindow:
             return 0
 
 
-TOKEN_LIMIT = Window(30, 60)
 RECORD_LIMIT = Window(600, 60)              # global backstop for record writes
 ACCOUNT_LIMIT = Window(120, 60)             # global backstop for create/open (each runs scrypt, ~50 ms)
 LOGIN_PER_ACCOUNT = KeyedWindow(10, 900)     # 10 log-in attempts per account per 15 min: no brute force, no lockout of others
@@ -124,16 +122,6 @@ _OPENAPI = (Path(__file__).with_name("openapi.json")).read_text()
 @app.get("/v1/openapi.json")
 def openapi():
     return _OPENAPI, 200, {"Content-Type": "application/json"}
-
-
-@app.post("/v1/token")
-def token():
-    kind = request.args.get("kind")
-    if kind not in ("brief", "listen"):
-        return generic(422)
-    if not TOKEN_LIMIT.allow():
-        return generic(429)
-    return {"token": mint(kind, ttl=600)}
 
 
 from records import bp as records_bp            # noqa: E402  (registered after the shared helpers exist)

@@ -92,7 +92,7 @@ test("relay unreachable: clear message, never throws", async () => {
   assert.equal(r.ok, false); assert.match(r.status, /Could not reach/);
 });
 
-test("vault merge: workouts deduped by date+sport+minutes, newest first; reports newest first", () => {
+test("vault merge: one entry per session, newest first; reports newest first", () => {
   let v = emptyVault();
   v = addToVault(v, { at: "1" }, [{ date: "2026-11-01", sport: "squash", min: 45 }, { date: "2026-11-03", sport: "running", min: 30 }]);
   v = addToVault(v, { at: "2" }, [{ date: "2026-11-03", sport: "running", min: 30.2 }, { date: "2026-11-05", sport: "squash", min: 50 }]);

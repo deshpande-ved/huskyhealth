@@ -1,9 +1,9 @@
 // web/sw.js: app shell cached; works with no network; /v1/ never cached.
 // SHELL grows per epic: each story adds the offline files it creates and bumps CACHE.
-const CACHE = "huskyhealth-v26";
+const CACHE = "huskyhealth-v27";
 const SHELL = ["/", "/css/style.css", "/js/app.js", "/js/engine.js", "/js/features.js",
                "/js/ascii.js", "/js/view.js", "/js/db.js",
-               "/js/box.js", "/js/sync-merge.js", "/js/account.js", "/js/voice.js",
+               "/js/box.js", "/js/sync-merge.js", "/js/account.js", "/js/vault.js", "/js/voice.js",
                "/js/parse-apple.worker.js", "/vendor/fflate.esm.js",
                "/api", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png",
                "/fonts/space-mono-latin-400-normal.woff2", "/fonts/space-mono-latin-700-normal.woff2",
