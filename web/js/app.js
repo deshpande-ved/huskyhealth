@@ -255,7 +255,7 @@ function render() {
     login.addEventListener("click", () => openSheet(true));
     $("hero").replaceChildren(
       ...bannerNode(["HUSKY", "HEALTH"], "HuskyHealth"),
-      el("p", { className: "reason", textContent: "Log in on the HuskyHealth iPhone app and your last 60 days of Apple Watch workouts arrive here, encrypted so only you can read them." }),
+      el("p", { className: "reason", textContent: "Log in on the HuskyHealth iPhone app and your last 60 days of Apple Watch or Garmin workouts arrive here, encrypted so only you can read them." }),
       el("div", { className: "cta" }, login, el("label", { className: "button", htmlFor: "import-file", textContent: "import an Apple Health export" }),
         el("a", { href: "/api", textContent: "how the API works" })));
     $("panels").replaceChildren();

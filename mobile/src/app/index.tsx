@@ -3,6 +3,9 @@ import { Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-na
 import { router } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { TwoPane } from '../components/two-pane'
+import { useDuoLayout } from '../lib/use-duo-layout'
+
 import { HealthKit } from '../../modules/health-kit'
 import { loadFeatures } from '../lib/health'
 import { C, mono } from '../lib/theme'
@@ -88,33 +91,58 @@ export default function Today() {
 
   const { width } = useWindowDimensions()
   const inset = useSafeAreaInsets()   // keeps the account button clear of the camera and status cluster
+  const layout = useDuoLayout()
   const btn = { borderWidth: 1, borderColor: C.text, paddingVertical: 10, paddingHorizontal: 14 } as const
 
+  // The same pieces in every posture (see src/lib/use-duo-layout.ts and src/components/two-pane.tsx):
+  const header = (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', borderBottomWidth: 1, borderColor: C.text, paddingBottom: 12 }}>
+      <View style={{ flexShrink: 1 }}>
+        <Text style={{ ...mono, fontSize: 20, fontWeight: '700' }}>HuskyHealth</Text>
+        <Text style={{ ...mono, color: C.muted, fontSize: 12, marginTop: 2 }}>Your workouts, as an API only you can read.</Text>
+      </View>
+      <Pressable onPress={() => router.push('/sync')} style={btn}><Text style={{ ...mono, fontSize: 13 }}>account</Text></Pressable>
+    </View>
+  )
+  const callBlock = (bannerWidth: number) => (
+    <View style={{ paddingVertical: 18, gap: 12 }}>
+      {call?.headline ? <Banner word={call.headline} width={bannerWidth} /> : <Text style={{ ...mono, color: C.muted }}>…</Text>}
+      {call?.reason ? <Text style={{ ...mono, fontSize: 16, lineHeight: 23 }}>{call.reason}</Text> : null}
+      <Text style={{ ...mono, color: C.muted, fontSize: 13 }}>{call?.basis ? `${dateLabel(0)}, ${call.basis}. ${status}.` : status}</Text>
+    </View>
+  )
+  const rows = <View style={{ borderTopWidth: 1, borderColor: C.text }}>{figs.map((f) => <Row key={f.id} fig={f} />)}</View>
+  const actions = (
+    <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
+      <Pressable onPress={read} style={btn}><Text style={{ ...mono, fontSize: 13 }}>refresh</Text></Pressable>
+      <Pressable onPress={() => router.push('/history')} style={btn}><Text style={{ ...mono, fontSize: 13 }}>history</Text></Pressable>
+      <Pressable onPress={seed} style={{ ...btn, borderColor: C.muted }}><Text style={{ ...mono, color: C.muted, fontSize: 13 }}>demo workout</Text></Pressable>
+    </View>
+  )
+  const pad = { padding: 18, paddingRight: 18 + inset.right, gap: 14 }
+
+  if (layout.wide) {
+    // Unfolded, side by side (columns): the call and its buttons on the left, the evidence on the right.
+    // Half folded like a laptop (rows): the call stands up on the top half to be read; the rows and the
+    // buttons lie flat on the bottom half, under the thumbs. Nothing sits on the crease.
+    const isRows = layout.mode === 'rows'
+    const leftWidth = isRows ? width - inset.left - inset.right : Math.max(320, layout.split.left - inset.left)
+    return (
+      <View style={{ flex: 1, backgroundColor: C.base, paddingTop: inset.top, paddingLeft: inset.left }}>
+        <TwoPane layout={layout}
+          left={<ScrollView contentContainerStyle={{ ...pad, paddingBottom: 24 }}>{header}{callBlock(leftWidth)}{isRows ? null : actions}</ScrollView>}
+          right={<ScrollView contentContainerStyle={{ ...pad, paddingTop: isRows ? 12 : 18 + 58, paddingBottom: 40 + inset.bottom }}>{rows}{isRows ? actions : null}</ScrollView>}
+        />
+      </View>
+    )
+  }
+
   return (
-    <ScrollView style={{ backgroundColor: C.base }} contentContainerStyle={{ padding: 18, paddingTop: inset.top + 16, paddingRight: 18 + inset.right, paddingBottom: 60 + inset.bottom, gap: 14 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', borderBottomWidth: 1, borderColor: C.text, paddingBottom: 12 }}>
-        <View style={{ flexShrink: 1 }}>
-          <Text style={{ ...mono, fontSize: 20, fontWeight: '700' }}>HuskyHealth</Text>
-          <Text style={{ ...mono, color: C.muted, fontSize: 12, marginTop: 2 }}>Your workouts, as an API only you can read.</Text>
-        </View>
-        <Pressable onPress={() => router.push('/sync')} style={btn}><Text style={{ ...mono, fontSize: 13 }}>account</Text></Pressable>
-      </View>
-
-      <View style={{ paddingVertical: 18, gap: 12 }}>
-        {call?.headline ? <Banner word={call.headline} width={width - inset.right - inset.left} /> : <Text style={{ ...mono, color: C.muted }}>…</Text>}
-        {call?.reason ? <Text style={{ ...mono, fontSize: 16, lineHeight: 23 }}>{call.reason}</Text> : null}
-        {call?.basis ? <Text style={{ ...mono, color: C.muted, fontSize: 13 }}>{`${dateLabel(0)}, ${call.basis}. ${status}.`}</Text> : <Text style={{ ...mono, color: C.muted, fontSize: 13 }}>{status}</Text>}
-      </View>
-
-      <View style={{ borderTopWidth: 1, borderColor: C.text }}>
-        {figs.map((f) => <Row key={f.id} fig={f} />)}
-      </View>
-
-      <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
-        <Pressable onPress={read} style={btn}><Text style={{ ...mono, fontSize: 13 }}>refresh</Text></Pressable>
-        <Pressable onPress={() => router.push('/history')} style={btn}><Text style={{ ...mono, fontSize: 13 }}>history</Text></Pressable>
-        <Pressable onPress={seed} style={{ ...btn, borderColor: C.muted }}><Text style={{ ...mono, color: C.muted, fontSize: 13 }}>demo workout</Text></Pressable>
-      </View>
+    <ScrollView style={{ backgroundColor: C.base }} contentContainerStyle={{ ...pad, paddingTop: inset.top + 16, paddingBottom: 60 + inset.bottom }}>
+      {header}
+      {callBlock(width - inset.right - inset.left)}
+      {rows}
+      {actions}
     </ScrollView>
   )
 }

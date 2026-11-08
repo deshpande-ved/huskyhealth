@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f3efe3" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#16140f" media="(prefers-color-scheme: dark)">
-  <meta name="description" content="A zero-knowledge REST API for your Apple Watch workouts.">
+  <meta name="description" content="A zero-knowledge REST API for your Apple Watch and Garmin workouts.">
   <title>HuskyHealth API</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="/fonts/space-mono-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
@@ -25,13 +25,24 @@
 
   <main>
     <section class="page active detail">
-      <h2>Your Apple Watch, over HTTP</h2>
-      <p class="lede">Apple ships no web API for Health. This is one: any device can add your workouts, and you can read them from anywhere. The server stores only ciphertext and cannot read a single record.</p>
+      <h2>Your watch, over HTTP</h2>
+      <p class="lede">Apple ships no web API for Health, and Garmin's is closed to individuals. This is one for both: any device can add your workouts, and you can read them from anywhere. The server stores only ciphertext and cannot read a single record.</p>
 
       <div class="scroll"><pre class="log">  iPhone app ── POST /v1/me/records ──▶  relay seals it to      ──▶  you log in: your
   or any script    (device token)          your public key           private key opens it
                                            stores ciphertext         on your device
                                            for at most 30 days</pre></div>
+
+      <h3>Which watches</h3>
+      <div class="scroll"><table class="data">
+        <thead><tr><th>watch</th><th>how it arrives</th><th>what you get</th></tr></thead>
+        <tbody>
+          <tr><td>Apple Watch</td><td>the HuskyHealth iPhone app reads Apple Health</td><td>workouts, heart rate, calories, effort, resting HR and HRV</td></tr>
+          <tr><td>Garmin</td><td>Garmin Connect syncs into Apple Health; the app picks it up</td><td>workouts, heart rate, calories; HRV usually not, so the call uses training load</td></tr>
+          <tr><td>Whoop, Oura, Polar</td><td>whatever their apps write to Apple Health</td><td>workouts at least; their own scores stay in their apps</td></tr>
+          <tr><td>any script</td><td><code>POST /v1/me/records</code> with a device token</td><td>whatever you send</td></tr>
+        </tbody>
+      </table></div>
 
       <h3>Who can read what</h3>
       <div class="scroll"><table class="data">
