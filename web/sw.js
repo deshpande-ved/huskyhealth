@@ -1,6 +1,6 @@
 // web/sw.js: app shell cached; works with no network; /v1/ never cached.
 // SHELL grows per epic: each story adds the offline files it creates and bumps CACHE.
-const CACHE = "huskyhealth-v17";
+const CACHE = "huskyhealth-v18";
 const SHELL = ["/", "/css/style.css", "/js/app.js", "/js/engine.js", "/js/features.js",
                "/js/ascii.js", "/js/view.js", "/js/db.js",
                "/js/box.js", "/js/sync-merge.js", "/js/account.js",
@@ -8,9 +8,11 @@ const SHELL = ["/", "/css/style.css", "/js/app.js", "/js/engine.js", "/js/featur
                "/api.html", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png",
                "/favicon.ico", "/favicon.svg", "/icons/favicon-96x96.png", "/art/husky.svg"];
 
-self.addEventListener("install", (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL))));
+// A new version takes over at once (no waiting for every tab to close); the page reloads itself once (app.js).
+self.addEventListener("install", (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting?.())));
 self.addEventListener("activate", (e) => e.waitUntil(
-  caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))));
+  caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+    .then(() => self.clients?.claim())));
 self.addEventListener("fetch", (e) => {
   if (new URL(e.request.url).pathname.startsWith("/v1/")) return;   // AI relay: network only
   e.respondWith(caches.match(e.request).then((hit) => hit || fetch(e.request)));
