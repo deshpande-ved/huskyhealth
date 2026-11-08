@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native'
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native'
 import { router } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -54,6 +54,18 @@ export default function Account() {
       : r.status === 409 ? 'Log in on the website once so your account gets its key.'
       : r.reason ?? `The relay answered ${r.status}.`)
   }
+  // Account deletion, as on the website: the relay deletes your vault, records and tokens for every device.
+  const deleteAccount = () => {
+    if (!HealthKit || !user) return
+    Alert.prompt('Delete your account?', 'Your encrypted history and records are deleted for every device, and this cannot be undone. Enter your password to confirm.',
+      [{ text: 'Cancel', style: 'cancel' },
+       { text: 'Delete', style: 'destructive', onPress: async (pw?: string) => {
+         setStatus('Deleting your account…')
+         const st = HealthKit ? await HealthKit.deleteAccount(RELAY, user, pw ?? '') : 0
+         if (st === 204) { setUser(null); setStatus('Account deleted. Nothing of it is left on the relay or this device.') }
+         else setStatus(st === 401 ? 'Wrong password. Your account is unchanged.' : `The relay answered ${st}. Your account is unchanged.`)
+       } }], 'secure-text')
+  }
   const logout = async () => { await HealthKit?.unpair(); setUser(null); setStatus('Logged out. The device token is deleted.') }
 
   const btn = { borderWidth: 1, borderColor: C.text, paddingVertical: 10, paddingHorizontal: 14 } as const
@@ -80,7 +92,8 @@ export default function Account() {
       <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
         {!user ? <Pressable onPress={login} style={{ ...btn, backgroundColor: C.text }}><Text style={{ ...mono, color: C.base }}>{busy ? 'logging in…' : 'log in'}</Text></Pressable> : null}
         <Pressable onPress={syncNow} style={btn}><Text style={mono}>sync now</Text></Pressable>
-        <Pressable onPress={logout} style={{ ...btn, borderColor: C.love }}><Text style={{ ...mono, color: C.love }}>log out</Text></Pressable>
+        <Pressable onPress={logout} style={btn}><Text style={mono}>log out</Text></Pressable>
+        {user ? <Pressable onPress={deleteAccount} style={{ ...btn, borderColor: C.love }}><Text style={{ ...mono, color: C.love }}>delete account</Text></Pressable> : null}
       </View>
     </View>
   )

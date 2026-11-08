@@ -48,7 +48,7 @@ test("no timestamps, dates, raw names, route/ECG/clinical content, or extra keys
     else if (v && typeof v === "object") Object.values(v).forEach(walk); };
   walk(features);
   assert.deepEqual(Object.keys(features).sort(), ["days", "max_hr", "source", "v", "window_days", "workouts"]);
-  for (const d of features.days) assert.deepEqual(Object.keys(d).sort(), ["day", "ln_hrv", "rhr", "srpe", "trimp", "vo2"]);
+  for (const d of features.days) assert.deepEqual(Object.keys(d).sort(), ["day", "ln_hrv", "rhr", "sleep_min", "srpe", "trimp", "vo2"]);   // sleep: minutes per day only
   for (const w of features.workouts) assert.deepEqual(Object.keys(w).sort(),
     ["day", "effort", "hr_sample_ok", "kcal", "min", "source", "sport", "srpe", "trimp", "zone_min"]);
 });

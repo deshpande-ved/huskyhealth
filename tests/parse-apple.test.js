@@ -11,7 +11,7 @@ const scanText = (text, now = NOW) => { const s = createScanner({ now, days: 60 
 test("kept samples per allowlisted type", () => {
   const { samples } = scanText(xml);
   assert.deepEqual(Object.fromEntries(Object.entries(samples).map(([k, v]) => [k, v.length])),
-    { hr: 21, rhr: 3, hrv: 3, vo2: 1, effort: 1, effortEst: 1 });
+    { hr: 21, rhr: 3, hrv: 3, vo2: 1, effort: 1, effortEst: 1, sleep: 0 });
   assert.deepEqual(samples.vo2[0], [toMs("2026-11-06 13:00:00 -0500"), 45.2]);
   assert.ok(!samples.hr.some(([, v]) => v === 230 || v === 61), "InstantaneousBeatsPerMinute counted as HR");
   assert.equal(Object.keys(KEEP).length, 6);

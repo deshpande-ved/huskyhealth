@@ -131,3 +131,15 @@ test("featuresFromVault: a new browser gets today back from the account (workout
   assert.equal(m.call.basis, "from your training load (not enough HRV yet)");
   assert.match(m.last.label, /^Last session: Squash, today, 45 min, load 169, effort 7 of 10$/);
 });
+
+test("vault keeps day summaries (sleep, VO2 max, resting HR, HRV) so every device rebuilds them", async () => {
+  const { daySummaries, addToVault, featuresFromVault } = await import("../web/js/account.js");
+  const now = Date.parse("2026-11-07T20:00:00Z");
+  const features = { workouts: [], days: [{ day: -1, sleep_min: 430, vo2: 47.2, rhr: 52, ln_hrv: 4.1 }, { day: 0, sleep_min: null, vo2: null, rhr: null, ln_hrv: null }] };
+  const days = daySummaries(features, now);
+  assert.deepEqual(days, [{ date: "2026-11-06", sleep_min: 430, vo2: 47.2, rhr: 52, ln_hrv: 4.1 }]);
+  const v = addToVault(emptyVault(), { at: "x" }, [], days);
+  const f = featuresFromVault(v, now);
+  const d = f.days.find((x) => x.day === -1);
+  assert.deepEqual([d.sleep_min, d.vo2, d.rhr, d.ln_hrv], [430, 47.2, 52, 4.1]);
+});

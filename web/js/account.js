@@ -93,18 +93,28 @@ export function featuresFromVault(vault, nowMs = Date.now(), windowDays = 60) {
       source: "account", hr_sample_ok: true }))
     .filter((w) => Number.isFinite(w.day) && w.day <= 0 && w.day > -windowDays)
     .sort((a, b) => a.day - b.day);
+  const dayInfo = new Map((vault.days || []).map((d) => [Math.round((Date.parse(d.date) - today) / DAY), d]));
   const days = Array.from({ length: windowDays }, (_, i) => {
     const day = i - (windowDays - 1);
+    const info = dayInfo.get(day) || {};
     const ws = workouts.filter((w) => w.day === day);
     const rated = ws.filter((w) => w.srpe != null);
     return { day, trimp: r1(ws.reduce((s, w) => s + (w.trimp || 0), 0)), srpe: rated.length ? r1(rated.reduce((s, w) => s + w.srpe, 0)) : null,
-             rhr: null, ln_hrv: null, vo2: null };
+             rhr: info.rhr ?? null, ln_hrv: info.ln_hrv ?? null, vo2: info.vo2 ?? null, sleep_min: info.sleep_min ?? null };
   });
   return { v: 1, source: "account", window_days: windowDays, max_hr: null, days, workouts };
 }
 
+// Day summaries for the vault (sleep, VO2 max, resting HR, HRV), only days that have any.
+export function daySummaries(features, nowMs = Date.now()) {
+  return (features.days || []).filter((d) => d.sleep_min != null || d.vo2 != null || d.rhr != null || d.ln_hrv != null)
+    .map((d) => ({ date: isoDay(nowMs + d.day * DAY), sleep_min: d.sleep_min ?? null, vo2: d.vo2 ?? null, rhr: d.rhr ?? null, ln_hrv: d.ln_hrv ?? null }));
+}
+
 // Merge a new report and its workouts into the vault: workouts deduped by date+sport+minutes, newest report first.
-export function addToVault(vault, report, workouts) {
+export function addToVault(vault, report, workouts, days = []) {
+  const byDate = new Map((vault.days || []).map((d) => [d.date, d]));
+  for (const d of days) byDate.set(d.date, { ...(byDate.get(d.date) || {}), ...Object.fromEntries(Object.entries(d).filter(([, v]) => v != null)) });
   const key = (w) => `${w.date}|${w.sport}|${Math.round(w.min)}`;
   const byKey = new Map((vault.workouts || []).map((w) => [key(w), w]));
   for (const w of workouts) byKey.set(key(w), w);
@@ -113,6 +123,7 @@ export function addToVault(vault, report, workouts) {
     v: 1,
     reports: [report, ...(vault.reports || [])].slice(0, MAX_REPORTS),
     workouts: [...byKey.values()].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
+    days: [...byDate.values()].sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-120),
   };
 }
 

@@ -33,7 +33,9 @@ interface HuskyHealthKitNative {
   login(relay: string, username: string, password: string): Promise<{ ok: boolean; status: number; background: boolean }>
   user(): string | null
   unpair(): Promise<void>
+  deleteAccount(relay: string, username: string, password: string): Promise<number>
   isPaired(): boolean
+  getSleep(startMs: number, endMs: number): Promise<[number, number][]>
   syncNow(): Promise<SyncResult>
   backfill(days: number): Promise<{ status: number; workouts: number; total: number; daily?: number }>
   seedDemoWorkout(sport: string, minutes: number, endedMinutesAgo: number): Promise<boolean>

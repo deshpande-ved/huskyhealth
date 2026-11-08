@@ -61,7 +61,7 @@ export default function Today() {
       // Same model as the website (web/js/view.js): call, this week, last session, zones.
       const m = todayModel(analysis, features)
       setCall(m.call)
-      setFigs([m.week, m.last, m.zones].filter(Boolean) as Fig[])
+      setFigs([m.week, m.last, m.sleep, m.fitness, m.zones].filter(Boolean) as Fig[])   // the same rows as the website
       const n = features.workouts.length
       setStatus(`${n} workout${n === 1 ? '' : 's'} in the last 60 days`)
       const ff = analysis.fitnessFatigue
