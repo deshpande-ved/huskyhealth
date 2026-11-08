@@ -35,13 +35,14 @@ test("calendar and plot", () => {
   assert.ok(lines.join("").includes("+") && lines.join("").includes("o"));
 });
 
-test("banner: 5 rows, <= 44 columns, only the call letters", () => {
-  for (const w of ["HARD", "EASY", "NO DATA"]) {
+test("banner: 5 rows, every letter A-Z, the call and wordmark fit; unknown characters throw", () => {
+  for (const w of ["GO EASY", "TRAIN HARD", "HUSKY", "HEALTH", "ABCDEFGHIJKLMNOPQRSTUVWXYZ"]) {
     const rows = banner(w);
     assert.equal(rows.length, 5);
-    assert.ok(rows.every((r) => r.length <= 44), w);
+    assert.ok(rows.every((r) => /^[# ]*$/.test(r)), w);
   }
-  assert.throws(() => banner("HUSKY"));
+  assert.ok(Math.max(...banner("TRAIN HARD").map((r) => r.length)) <= 64);
+  assert.throws(() => banner("GO!"));
 });
 
 test("ascii.js: DOM only in paint(), no network", () => {

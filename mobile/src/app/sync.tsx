@@ -5,7 +5,7 @@ import { router } from 'expo-router'
 import { HealthKit } from '../../modules/health-kit'
 import { C, mono, RELAY } from '../lib/theme'
 
-// Your HuskyHealth account on this phone. Log in once: the keys are derived here (the password never leaves the
+// Your HuskyHealth account on this device. Log in once: the keys are derived here (the password never leaves the
 // phone), and the phone keeps only a write token. When the Watch saves a workout, iOS wakes the app and it posts
 // the workout to your personal API, where it is encrypted to your account's key on arrival.
 const SAY: Record<number, string> = {
@@ -18,13 +18,13 @@ export default function Account() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const latest = useRef({ username: '', password: '' })     // the return key can fire before the last keystroke re-renders
-  const [status, setStatus] = useState(user ? `Logged in as ${user}. New workouts sync automatically.` : 'Not logged in. Nothing leaves this phone.')
+  const [status, setStatus] = useState(user ? `Logged in as ${user}. New workouts sync automatically.` : 'Not logged in. Nothing leaves this device.')
   const [busy, setBusy] = useState(false)
 
   const login = async () => {
     if (!HealthKit || busy) return
     setBusy(true)
-    setStatus('Making your key on this phone and logging in…')
+    setStatus('Making your key and logging in…')
     await HealthKit.requestAuthorization()
     const r = await HealthKit.login(RELAY, latest.current.username, latest.current.password)
     latest.current.password = ''
@@ -43,11 +43,11 @@ export default function Account() {
     if (!HealthKit) return
     const r = await HealthKit.syncNow()
     setStatus(r.status === 201 ? `Sent ${r.workouts} workout${r.workouts === 1 ? '' : 's'} to your API (encrypted on arrival).`
-      : r.status === 401 ? 'This phone\'s token was revoked. Log in again.'
+      : r.status === 401 ? 'This device\'s token was revoked. Log in again.'
       : r.status === 409 ? 'Log in on the website once so your account gets its key.'
       : r.reason ?? `The relay answered ${r.status}.`)
   }
-  const logout = async () => { await HealthKit?.unpair(); setUser(null); setStatus('Logged out. The token is deleted from this phone.') }
+  const logout = async () => { await HealthKit?.unpair(); setUser(null); setStatus('Logged out. The device token is deleted.') }
 
   return (
     <ScrollView style={{ backgroundColor: C.base }} contentContainerStyle={{ padding: 20, paddingTop: 70, gap: 14 }}>

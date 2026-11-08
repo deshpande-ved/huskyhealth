@@ -9,7 +9,7 @@ const html = readFileSync(new URL("../web/index.html", import.meta.url), "utf8")
 test("index.html has the required head tags", () => {
   for (const tag of [
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
-    '<meta name="theme-color" content="#191724">',
+    '<meta name="theme-color" content="#f3efe3" media="(prefers-color-scheme: light)">',
     '<link rel="manifest" href="/manifest.webmanifest">',
     '<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">',
     '<link rel="stylesheet" href="/css/style.css">',

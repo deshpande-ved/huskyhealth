@@ -180,3 +180,14 @@ test("fetchRecords unwraps the exact receive time sealed inside; deleteRecords s
   assert.equal(del.calls[0].url, "https://r/v1/me/records?upto=9");
   assert.equal(del.calls[0].method, "DELETE");
 });
+
+test("calories survive the API merge and show in today's summaries", async () => {
+  const { todayModel } = await import("../web/js/view.js");
+  const { analyze } = await import("../web/js/engine.js");
+  const { features } = mergeDrop(null, DROP, { nowMs: NOW, ageS: 0, refDay: null });
+  assert.equal(features.workouts.length, 1);
+  assert.equal(features.workouts[0].kcal, 500);
+  const m = todayModel(analyze(features), features);
+  assert.match(m.week.summary, /500 kcal/);
+  assert.match(m.last.summary, /500 kcal/);
+});

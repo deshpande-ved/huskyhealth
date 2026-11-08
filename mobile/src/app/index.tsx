@@ -1,46 +1,52 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Pressable, ScrollView, Text, View } from 'react-native'
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native'
 import { router } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { HealthKit } from '../../modules/health-kit'
 import { loadFeatures } from '../lib/health'
 import { C, mono } from '../lib/theme'
 // @ts-expect-error plain ES module shared with the website: the same ASCII figures as huskyhealth.pages.dev
-import { todayModel } from '../../../web/js/view.js'
+import { todayModel, dateLabel } from '../../../web/js/view.js'
+// @ts-expect-error same block-letter font as the website's call
+import { banner } from '../../../web/js/ascii.js'
 
 type Cell = { ch: string; cls: string }
-type Fig = { id: string; title?: string; explain?: string; label: string; rows: Cell[][]; stats?: { k: string; v: string; cls?: string }[]; headline?: string; reason?: string; basis?: string; cls?: string }
+type Fig = { id: string; title?: string; summary?: string; label: string; rows: Cell[][]; headline?: string; reason?: string; basis?: string }
 
 const CLS: Record<string, string> = { z0: C.muted, muted: C.muted, z1: C.foam, z2: C.pine, z3: C.gold, z4: C.rose, z5: C.love, alert: C.love }
 
-function Figure({ fig }: { fig: Fig }) {
+// A row of the printout, as on the website: title, one plain sentence, the ASCII figure.
+function Row({ fig }: { fig: Fig }) {
   return (
-    <View style={{ borderWidth: 1, borderColor: '#6e6a8688', backgroundColor: C.surface, padding: 12, gap: 8 }}>
-      {fig.title ? <Text style={{ ...mono, color: C.iris, fontSize: 12, letterSpacing: 1.5 }}>[ {fig.title.toUpperCase()} ]</Text> : null}
-      {fig.explain ? <Text style={{ ...mono, color: C.muted, fontSize: 12 }}>{fig.explain}</Text> : null}
-      <View accessible accessibilityRole="image" accessibilityLabel={fig.label}>
+    <View style={{ borderTopWidth: 1, borderColor: C.rule, borderStyle: 'dashed', paddingVertical: 18, gap: 6 }}>
+      <Text style={{ ...mono, fontSize: 17, fontWeight: '700' }}>{fig.title}</Text>
+      {fig.summary ? <Text style={{ ...mono, color: C.muted, fontSize: 13, lineHeight: 19 }}>{fig.summary}</Text> : null}
+      <View accessible accessibilityRole="image" accessibilityLabel={fig.label} style={{ marginTop: 6 }}>
         {fig.rows.map((row, r) => (
-          <Text key={r} style={{ fontFamily: 'Menlo', fontSize: 12.5, lineHeight: 16 }}>
+          <Text key={r} style={{ fontFamily: 'Menlo', fontSize: 12, lineHeight: 17 }}>
             {row.map((c, i) => <Text key={i} style={{ color: CLS[c.cls] ?? C.text }}>{c.ch}</Text>)}
           </Text>
         ))}
       </View>
-      {fig.stats?.length ? (
-        <View style={{ flexDirection: 'row', gap: 20, flexWrap: 'wrap' }}>
-          {fig.stats.map((s) => (
-            <View key={s.k}>
-              <Text style={{ ...mono, fontSize: 20, fontWeight: '700', color: CLS[s.cls ?? ''] ?? C.text }}>{s.v}</Text>
-              <Text style={{ ...mono, color: C.muted, fontSize: 10, letterSpacing: 1 }}>{s.k.toUpperCase()}</Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
     </View>
   )
 }
 
+// The call in block letters, sized to fit the screen width.
+function Banner({ word, width }: { word: string; width: number }) {
+  const lines: string[] = banner(word.toUpperCase())
+  const cols = Math.max(...lines.map((l) => l.length))
+  const size = Math.min(16, (width - 40) / (cols * 0.64))   // Menlo advance is ~0.6 em; leave a margin
+  return (
+    <Text accessibilityRole="header" accessibilityLabel={word} style={{ fontFamily: 'Menlo', fontWeight: '700', color: C.love, fontSize: size, lineHeight: size * 1.05 }}>
+      {lines.join('\n')}
+    </Text>
+  )
+}
+
 export default function Today() {
-  const [status, setStatus] = useState('Reading Health on this phone…')
+  const [status, setStatus] = useState('Reading Apple Health…')
   const [call, setCall] = useState<Fig | null>(null)
   const [figs, setFigs] = useState<Fig[]>([])
 
@@ -53,7 +59,8 @@ export default function Today() {
       const m = todayModel(analysis, features)
       setCall(m.call)
       setFigs([m.week, m.last, m.zones].filter(Boolean) as Fig[])
-      setStatus(`${features.workouts.length} workouts in the last 60 days · computed on this phone`)
+      const n = features.workouts.length
+      setStatus(`${n} workout${n === 1 ? '' : 's'} in the last 60 days`)
       const ff = analysis.fitnessFatigue
       HealthKit.historyAppend(JSON.stringify({
         at: new Date().toLocaleString(), call: m.call.headline, workouts: features.workouts.length,
@@ -79,27 +86,34 @@ export default function Today() {
     }
   }
 
-  const hero = call
+  const { width } = useWindowDimensions()
+  const inset = useSafeAreaInsets()   // keeps the account button clear of the camera and status cluster
+  const btn = { borderWidth: 1, borderColor: C.text, paddingVertical: 10, paddingHorizontal: 14 } as const
 
   return (
-    <ScrollView style={{ backgroundColor: C.base }} contentContainerStyle={{ padding: 18, paddingTop: 70, paddingBottom: 60, gap: 16 }}>
-      <Text style={{ ...mono, fontSize: 18, fontWeight: '700' }}>HuskyHealth</Text>
-      <Text style={{ ...mono, color: C.muted, fontSize: 11 }}>training insight from your watch · computed on this phone</Text>
+    <ScrollView style={{ backgroundColor: C.base }} contentContainerStyle={{ padding: 18, paddingTop: inset.top + 16, paddingRight: 18 + inset.right, paddingBottom: 60 + inset.bottom, gap: 14 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', borderBottomWidth: 1, borderColor: C.text, paddingBottom: 12 }}>
+        <View style={{ flexShrink: 1 }}>
+          <Text style={{ ...mono, fontSize: 20, fontWeight: '700' }}>HuskyHealth</Text>
+          <Text style={{ ...mono, color: C.muted, fontSize: 12, marginTop: 2 }}>Your workouts, as an API only you can read.</Text>
+        </View>
+        <Pressable onPress={() => router.push('/sync')} style={btn}><Text style={{ ...mono, fontSize: 13 }}>account</Text></Pressable>
+      </View>
 
-      <Text style={{ ...mono, color: C.muted, letterSpacing: 2, fontSize: 12, marginTop: 10 }}>{'> TODAY’S CALL'}</Text>
-      <Text style={{ ...mono, fontSize: 44, fontWeight: '700', color: CLS[hero?.cls ?? 'muted'] ?? C.muted }}>{hero?.headline ?? '…'}</Text>
-      {hero?.reason ? <Text style={{ ...mono, fontSize: 15 }}>{hero.reason}</Text> : null}
-      {hero?.basis ? <Text style={{ ...mono, color: C.muted, fontSize: 12 }}>{hero.basis}</Text> : null}
-      <Text style={{ ...mono, color: C.muted, fontSize: 12 }}>{status}</Text>
+      <View style={{ paddingVertical: 18, gap: 12 }}>
+        {call?.headline ? <Banner word={call.headline} width={width - inset.right - inset.left} /> : <Text style={{ ...mono, color: C.muted }}>…</Text>}
+        {call?.reason ? <Text style={{ ...mono, fontSize: 16, lineHeight: 23 }}>{call.reason}</Text> : null}
+        {call?.basis ? <Text style={{ ...mono, color: C.muted, fontSize: 13 }}>{`${dateLabel(0)}, ${call.basis}. ${status}.`}</Text> : <Text style={{ ...mono, color: C.muted, fontSize: 13 }}>{status}</Text>}
+      </View>
 
+      <View style={{ borderTopWidth: 1, borderColor: C.text }}>
+        {figs.map((f) => <Row key={f.id} fig={f} />)}
+      </View>
 
-      {figs.map((f) => <Figure key={f.id} fig={f} />)}
-
-      <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
-        <Pressable onPress={read} style={{ borderWidth: 1, borderColor: C.foam, padding: 12 }}><Text style={{ ...mono, color: C.foam }}>Refresh</Text></Pressable>
-        <Pressable onPress={() => router.push('/sync')} style={{ borderWidth: 1, borderColor: C.muted, padding: 12 }}><Text style={mono}>Account</Text></Pressable>
-        <Pressable onPress={() => router.push('/history')} style={{ borderWidth: 1, borderColor: C.muted, padding: 12 }}><Text style={mono}>History</Text></Pressable>
-        <Pressable onPress={seed} style={{ borderWidth: 1, borderColor: C.muted, padding: 12 }}><Text style={{ ...mono, color: C.muted }}>Demo workout</Text></Pressable>
+      <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
+        <Pressable onPress={read} style={btn}><Text style={{ ...mono, fontSize: 13 }}>refresh</Text></Pressable>
+        <Pressable onPress={() => router.push('/history')} style={btn}><Text style={{ ...mono, fontSize: 13 }}>history</Text></Pressable>
+        <Pressable onPress={seed} style={{ ...btn, borderColor: C.muted }}><Text style={{ ...mono, color: C.muted, fontSize: 13 }}>demo workout</Text></Pressable>
       </View>
     </ScrollView>
   )
