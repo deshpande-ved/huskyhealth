@@ -13,6 +13,7 @@ import { TwoPane } from '../components/two-pane'
 import { useDuoLayout } from '../lib/use-duo-layout'
 import { HealthKit } from '../../modules/health-kit'
 import { loadToday, type Today as TodayData } from '../lib/today'
+import { setToday } from '../lib/today-store'
 import { C, bold, mono, RELAY, SITE } from '../lib/theme'
 import { todayModel, dateLabel, briefText, answerQuestion, weekDetail, sessionDetail, zoneDetail, WELCOME } from '../../../web/js/view.js'
 import { banner } from '../../../web/js/ascii.js'
@@ -32,10 +33,12 @@ function Button({ label, onPress, primary = false }: { label: string; onPress: (
   )
 }
 
-// A row of the printout (web: a.row): title, one plain sentence, the ASCII figure. Dashed rule under each.
+// A row of the printout (web: a.row): title, one plain sentence, the ASCII figure. The whole row opens its page.
+const PAGE: Record<string, string> = { week: 'week', last: 'session', sleep: 'sleep', fitness: 'fitness', zones: 'zones' }
 function Row({ fig }: { fig: Fig }) {
   return (
-    <View style={{ borderBottomWidth: 1, borderColor: C.rule, borderStyle: 'dashed', paddingVertical: 24, paddingHorizontal: 8, gap: 8 }}>
+    <Pressable onPress={() => router.push(`/detail/${PAGE[fig.id] ?? fig.id}`)} accessibilityRole="link" accessibilityLabel={`${fig.title}. ${fig.summary || fig.label}`}
+      style={({ pressed }) => ({ borderBottomWidth: 1, borderColor: C.rule, borderStyle: 'dashed', paddingVertical: 24, paddingHorizontal: 8, gap: 8, backgroundColor: pressed ? C.surface : 'transparent' })}>
       <View>
         <Text style={{ ...bold, fontSize: 20 }}>{fig.title}</Text>
         <Text style={{ ...mono, color: C.text2, fontSize: 14, lineHeight: 21, marginTop: 4 }}>{fig.summary || fig.label}</Text>
@@ -49,7 +52,7 @@ function Row({ fig }: { fig: Fig }) {
           ))}
         </View>
       ) : null}
-    </View>
+    </Pressable>
   )
 }
 
@@ -110,12 +113,13 @@ export default function Today() {
   const read = useCallback(async () => {
     const u = HealthKit?.user() ?? null
     setUser(u)
-    if (!u) { setData(null); return }
+    if (!u) { setData(null); setToday(null); return }
     setBusy(true)
     setStatus('Reading Apple Health and your history…')
     try {
       const t = await loadToday()
       setData(t)
+      setToday(t)
       setStatus(t.saved === 204 ? '' : `Your history could not be saved (${t.saved}); showing it anyway.`)
     } catch (e) {
       setStatus((e as Error).message)

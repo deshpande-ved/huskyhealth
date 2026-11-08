@@ -2,7 +2,7 @@
 import { analyze } from "./engine.js";
 import { paint, banner } from "./ascii.js";
 import { createDb } from "./db.js";
-import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel, briefText, answerQuestion, hm, WELCOME } from "./view.js";
+import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel, briefText, answerQuestion, hm, WELCOME, DETAIL_PAGES, detailBlocks } from "./view.js";
 import { recordQuestion } from "./voice.js";
 import { signIn, saveVault, fetchVault, deleteAccount, addToVault, makeReport, workoutSummaries, daySummaries, fetchRecords, deleteRecords, newToken, listTokens, revokeToken, featuresFromVault, speakBrief, listenQuestion, RELAY } from "./account.js";
 import { dayNumber, dropToVault, validDrop } from "./sync-merge.js";
@@ -176,78 +176,22 @@ function table(headers, rows, numeric = [], narrow = false) {
 }
 const cellsSpan = (cells) => el("span", { className: "stack" }, ...cells.map((c) => el("span", { className: c.cls, textContent: c.ch })));
 const sectionTitle = (text) => el("h3", { className: "subhead", textContent: text });
-const emptyNote = () => el("p", { className: "explain", textContent: "Nothing here yet. Import your export or log in to your account." });
 
-function renderWeek(a, f) {
-  if (!state.features) return $("week-body").replaceChildren(emptyNote());
-  const w = weekDetail(a, f);
-  $("week-body").replaceChildren(
-    el("p", { className: "lede", textContent: w.ratio == null ? "No training in the last four weeks yet."
-      : `This week's load is ${w.acute}, ${w.ratio} % of your usual week (${w.usual}).` }),
-    sectionTitle("Day by day"),
-    table(["day", "sessions", "load", "kcal"], w.days.map((d) => [d.date,
-      d.sessions.length ? d.sessions.map((x) => `${x.sport} ${x.min} min${x.effort != null ? ` \u00b7 effort ${x.effort}` : ""}`).join(", ") : "rest",
-      d.load ? String(d.load) : "\u2014", d.kcal ? String(d.kcal) : "\u2014"]), [2, 3]),
-    sectionTitle("Week by week"),
-    table(["week", "load", "", "sessions", "minutes", "kcal"], w.weeks.map((x, i) => [x.name, String(x.load),
-      cellsSpan([{ ch: x.bar, cls: i === 0 ? "z1" : "z2" }]), String(x.sessions), String(x.minutes), x.kcal ? String(x.kcal) : "\u2014"]), [1, 3, 4, 5]),
-    methodNode(w.source, w.ref));
+// The detail pages, drawn from view.js detailBlocks: the same blocks the iPhone app draws.
+function cellNode(v) {
+  if (v && typeof v === "object" && v.stack) return cellsSpan(v.stack);
+  if (v && typeof v === "object") return el("span", { className: v.cls, textContent: v.ch });
+  return v;
 }
-
-function renderSession(a, f) {
-  if (!state.features || !f.workouts.length) return $("session-body").replaceChildren(emptyNote());
-  const s = sessionDetail(a, f);
-  const L = s.last;
-  const facts = [["date", `${L.date} (${L.ago})`], ["sport", L.sport], ["minutes", String(L.min)], ["load", String(L.load)],
-    ["effort", L.effort != null ? `${L.effort}/10 (Watch)` : "not rated"], ["session-RPE", L.srpe != null ? String(L.srpe) : "\u2014"],
-    ["calories", L.kcal != null ? `${L.kcal} kcal` : "\u2014"],
-    ["vs your " + L.sport.toLowerCase(), L.vsSport ? `${L.vsSport.pct} % of your average load (${L.vsSport.mean}, ${L.vsSport.count} sessions)` : "first one"]];
-  $("session-body").replaceChildren(
-    sectionTitle("Last session"),
-    el("dl", { className: "facts" }, ...facts.map(([k, v]) => el("div", {}, el("dt", { textContent: k }), el("dd", { textContent: v })))),
-    table(["zone", "minutes"], L.zones.map((m, k) => [el("span", { className: `z${k + 1}`, textContent: `Z${k + 1}` }), String(m)]), [1], true),
-    sectionTitle("Recent sessions"),
-    table(["date", "sport", "min", "load", "kcal", "effort", "Z1", "Z2", "Z3", "Z4", "Z5"],
-      s.recent.map((r) => [r.date, r.sport, String(r.min), String(r.load), r.kcal != null ? String(r.kcal) : "\u2014",
-        r.effort != null ? String(r.effort) : "\u2014", ...r.zones.map(String)]),
-      [2, 3, 4, 5, 6, 7, 8, 9, 10]),
-    methodNode(s.source, s.ref));
-}
-
-function renderSleep(an, f) {
-  const nights = f.days.filter((d) => d.sleep_min != null).slice(-14).reverse();
-  if (!state.features || !nights.length) return $("sleep-body").replaceChildren(emptyNote());
-  const s = an.sleep;
-  $("sleep-body").replaceChildren(
-    el("p", { className: "lede", textContent: `Last night ${hm(s.last)}. Your 7-night average is ${hm(s.avg7)}${s.avg28 != null ? `, 28-night ${hm(s.avg28)}` : ""}.` }),
-    table(["night", "asleep", "vs 7-night average"], nights.map((d) => [dateLabel(d.day), hm(d.sleep_min),
-      `${d.sleep_min >= s.avg7 ? "+" : "\u2212"}${hm(Math.abs(d.sleep_min - s.avg7))}`]), [1, 2]),
-    methodNode(s.source, "ref-sleep"));
-}
-
-function renderFitness(an, f) {
-  const pts = f.days.filter((d) => d.vo2 != null).reverse();
-  if (!state.features || !pts.length) return $("fitness-body").replaceChildren(emptyNote());
-  const t = an.vo2Trend.value;
-  $("fitness-body").replaceChildren(
-    el("p", { className: "lede", textContent: `Apple estimates VO2 max after outdoor walks, runs and hikes. ${t == null ? "" : `Over four weeks it moved ${t >= 0 ? "up" : "down"} ${Math.abs(Math.round(t * 10) / 10)} ml/kg/min.`}` }),
-    table(["day", "VO2 max (ml/kg/min)"], pts.map((d) => [dateLabel(d.day), String(Math.round(d.vo2 * 10) / 10)]), [1], true),
-    methodNode(an.vo2Trend.source, "ref-vo2-trend"));
-}
-
-function renderZones(f) {
-  if (!state.features || !f.workouts.length) return $("zones-body").replaceChildren(emptyNote());
-  const z = zoneDetail(f);
-  const pct = (m, tot) => (tot ? `${Math.round((m / tot) * 100)} %` : "\u2014");
-  $("zones-body").replaceChildren(
-    el("p", { className: "lede", textContent: `${z.minutes} minutes of workout heart rate in the last 60 days. Zones are % of your highest recorded heart rate: Z1 50\u201360 %, up to Z5 90\u2013100 %.` }),
-    el("p", {}, cellsSpan(z.stack)),
-    table(["zone", "", "minutes", "share"], z.total.map((m, k) => [el("span", { className: `z${k + 1}`, textContent: `Z${k + 1}` }), z.names[k], String(m), pct(m, z.minutes)]), [2, 3], true),
-    sectionTitle("Week by week"),
-    table(["week", "mix", "minutes"], z.weeks.map((w) => [w.name, cellsSpan(w.stack), String(w.minutes)]), [2]),
-    sectionTitle("By sport"),
-    table(["sport", "mix", "sessions", "minutes"], z.sports.map((x) => [x.sport, cellsSpan(x.stack), String(x.sessions), String(x.minutes)]), [2, 3]),
-    methodNode(z.source, z.ref));
+function renderDetail(id, an, f) {
+  $(`${id}-body`).replaceChildren(...detailBlocks(id, an, f, Boolean(state.features)).map((b) =>
+    b.t === "lede" ? el("p", { className: "lede", textContent: b.text })
+    : b.t === "empty" ? el("p", { className: "explain", textContent: b.text })
+    : b.t === "subhead" ? sectionTitle(b.text)
+    : b.t === "stack" ? el("p", {}, cellsSpan(b.cells))
+    : b.t === "facts" ? el("dl", { className: "facts" }, ...b.items.map(([k, v]) => el("div", {}, el("dt", { textContent: k }), el("dd", { textContent: v }))))
+    : b.t === "table" ? table(b.head, b.rows.map((r) => r.map(cellNode)), b.num, Boolean(b.narrow))
+    : methodNode(b.source, b.ref)));
 }
 
 let state = { features: null, imp: { progress: null, error: null, done: null }, account: null };   // account: RAM only
@@ -283,11 +227,7 @@ function render() {
         el("a", { href: "/api", textContent: "how the API works" })));
     $("panels").replaceChildren();
   }
-  renderWeek(an, f);
-  renderSession(an, f);
-  renderZones(f);
-  renderSleep(an, f);
-  renderFitness(an, f);
+  for (const [id] of DETAIL_PAGES) renderDetail(id, an, f);
   $("stored").textContent = storedLine(state.features);
 }
 
