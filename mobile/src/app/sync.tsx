@@ -1,6 +1,10 @@
 import { useRef, useState } from 'react'
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native'
 import { router } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+import { TwoPane } from '../components/two-pane'
+import { useDuoLayout } from '../lib/use-duo-layout'
 
 import { HealthKit } from '../../modules/health-kit'
 import { C, mono, RELAY } from '../lib/theme'
@@ -20,6 +24,8 @@ export default function Account() {
   const latest = useRef({ username: '', password: '' })     // the return key can fire before the last keystroke re-renders
   const [status, setStatus] = useState(user ? `Logged in as ${user}. New workouts sync automatically.` : 'Not logged in. Nothing leaves this device.')
   const [busy, setBusy] = useState(false)
+  const inset = useSafeAreaInsets()
+  const layout = useDuoLayout()
 
   const login = async () => {
     if (!HealthKit || busy) return
@@ -50,27 +56,53 @@ export default function Account() {
   }
   const logout = async () => { await HealthKit?.unpair(); setUser(null); setStatus('Logged out. The device token is deleted.') }
 
-  return (
-    <ScrollView style={{ backgroundColor: C.base }} contentContainerStyle={{ padding: 20, paddingTop: 70, gap: 14 }}>
-      <Pressable onPress={() => router.back()}><Text style={{ ...mono, color: C.foam }}>{'< back'}</Text></Pressable>
-      <Text style={{ ...mono, color: C.iris, letterSpacing: 2 }}>[ ACCOUNT ]</Text>
-      <Text style={{ ...mono, color: C.muted }}>
-        Log in to send new workouts to your personal API automatically: type, minutes, heart rate, Watch effort. The Pi encrypts each one to your account's key the moment it arrives and keeps only ciphertext. Only you can read them, on the website, after logging in.
+  const btn = { borderWidth: 1, borderColor: C.text, paddingVertical: 10, paddingHorizontal: 14 } as const
+  const about = (
+    <View style={{ gap: 14 }}>
+      <Pressable onPress={() => router.back()}><Text style={{ ...mono, color: C.muted, fontSize: 13 }}>{'\u2190 today'}</Text></Pressable>
+      <Text style={{ ...mono, fontSize: 24, fontWeight: '700' }}>Account</Text>
+      <Text style={{ ...mono, color: C.muted, fontSize: 13, lineHeight: 19 }}>
+        Log in once and new workouts from your Apple Watch or Garmin go to your personal API by themselves: type, minutes, heart rate, calories, effort. Each one is encrypted to your account's key the moment it arrives; only you can read them.
       </Text>
-      <Text style={{ ...mono, fontSize: 16 }}>{status}</Text>
+      <Text style={{ ...mono, fontSize: 15, lineHeight: 21 }}>{status}</Text>
+    </View>
+  )
+  const form = (
+    <View style={{ gap: 12 }}>
       {!user ? (
         <>
           <TextInput value={username} onChangeText={(t) => { latest.current.username = t; setUsername(t) }} placeholder="username" placeholderTextColor={C.muted}
-            autoCapitalize="none" autoCorrect={false} textContentType="username" style={{ ...mono, borderWidth: 1, borderColor: C.muted, padding: 12 }} />
+            autoCapitalize="none" autoCorrect={false} textContentType="username" style={{ ...mono, borderWidth: 1, borderColor: C.text, padding: 12 }} />
           <TextInput value={password} onChangeText={(t) => { latest.current.password = t; setPassword(t) }} placeholder="password" placeholderTextColor={C.muted}
-            secureTextEntry textContentType="password" onSubmitEditing={login} style={{ ...mono, borderWidth: 1, borderColor: C.muted, padding: 12 }} />
+            secureTextEntry textContentType="password" onSubmitEditing={login} style={{ ...mono, borderWidth: 1, borderColor: C.text, padding: 12 }} />
         </>
       ) : null}
       <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
-        {!user ? <Pressable onPress={login} style={{ borderWidth: 1, borderColor: C.foam, padding: 12 }}><Text style={{ ...mono, color: C.foam }}>{busy ? 'Logging in…' : 'Log in'}</Text></Pressable> : null}
-        <Pressable onPress={syncNow} style={{ borderWidth: 1, borderColor: C.muted, padding: 12 }}><Text style={mono}>Sync now</Text></Pressable>
-        <Pressable onPress={logout} style={{ borderWidth: 1, borderColor: C.love, padding: 12 }}><Text style={{ ...mono, color: C.love }}>Log out</Text></Pressable>
+        {!user ? <Pressable onPress={login} style={{ ...btn, backgroundColor: C.text }}><Text style={{ ...mono, color: C.base }}>{busy ? 'logging in…' : 'log in'}</Text></Pressable> : null}
+        <Pressable onPress={syncNow} style={btn}><Text style={mono}>sync now</Text></Pressable>
+        <Pressable onPress={logout} style={{ ...btn, borderColor: C.love }}><Text style={{ ...mono, color: C.love }}>log out</Text></Pressable>
       </View>
+    </View>
+  )
+
+  if (layout.wide) {
+    // Side by side: what this is on the left, the fields on the right. Half folded: read on top, type below;
+    // when the keyboard opens, the fields lift above the crease (TwoPane, typing="second").
+    return (
+      <View style={{ flex: 1, backgroundColor: C.base, paddingTop: inset.top, paddingLeft: inset.left }}>
+        <TwoPane layout={layout} typing="second"
+          left={<ScrollView contentContainerStyle={{ padding: 20, paddingRight: 20 }}>{about}</ScrollView>}
+          right={<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 20, paddingRight: 20 + inset.right, paddingTop: layout.mode === 'rows' ? 12 : 20 + 70 }}>{form}</ScrollView>}
+        />
+      </View>
+    )
+  }
+
+  return (
+    <ScrollView style={{ backgroundColor: C.base }} keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{ padding: 20, paddingTop: inset.top + 16, paddingRight: 20 + inset.right, gap: 18 }}>
+      {about}
+      {form}
     </ScrollView>
   )
 }
