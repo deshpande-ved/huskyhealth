@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native'
 import { router } from 'expo-router'
 
@@ -14,9 +14,10 @@ const SAY: Record<number, string> = {
 }
 
 export default function Account() {
-  const user = HealthKit?.user() ?? null
+  const [user, setUser] = useState<string | null>(HealthKit?.user() ?? null)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const latest = useRef({ username: '', password: '' })     // the return key can fire before the last keystroke re-renders
   const [status, setStatus] = useState(user ? `Logged in as ${user}. New workouts sync automatically.` : 'Not logged in. Nothing leaves this phone.')
   const [busy, setBusy] = useState(false)
 
@@ -25,12 +26,14 @@ export default function Account() {
     setBusy(true)
     setStatus('Making your key on this phone and logging in…')
     await HealthKit.requestAuthorization()
-    const r = await HealthKit.login(RELAY, username, password)
+    const r = await HealthKit.login(RELAY, latest.current.username, latest.current.password)
+    latest.current.password = ''
     setPassword('')
+    if (r.ok) setUser(HealthKit.user())
     setBusy(false)
     setStatus(!r.ok ? (SAY[r.status] ?? `The relay answered ${r.status}.`)
-      : r.background ? `Logged in as ${username.trim().toLowerCase()}. iOS will wake HuskyHealth when a workout is saved.`
-      : `Logged in as ${username.trim().toLowerCase()}. Background sync is off here (turn on Background App Refresh); use Sync now.`)
+      : r.background ? `Logged in as ${latest.current.username.trim().toLowerCase()}. iOS will wake HuskyHealth when a workout is saved.`
+      : `Logged in as ${latest.current.username.trim().toLowerCase()}. Background sync is off here (turn on Background App Refresh); use Sync now.`)
   }
   const syncNow = async () => {
     if (!HealthKit) return
@@ -40,7 +43,7 @@ export default function Account() {
       : r.status === 409 ? 'Log in on the website once so your account gets its key.'
       : r.reason ?? `The relay answered ${r.status}.`)
   }
-  const logout = async () => { await HealthKit?.unpair(); setStatus('Logged out. The token is deleted from this phone.') }
+  const logout = async () => { await HealthKit?.unpair(); setUser(null); setStatus('Logged out. The token is deleted from this phone.') }
 
   return (
     <ScrollView style={{ backgroundColor: C.base }} contentContainerStyle={{ padding: 20, paddingTop: 70, gap: 14 }}>
@@ -52,9 +55,9 @@ export default function Account() {
       <Text style={{ ...mono, fontSize: 16 }}>{status}</Text>
       {!user ? (
         <>
-          <TextInput value={username} onChangeText={setUsername} placeholder="username" placeholderTextColor={C.muted}
+          <TextInput value={username} onChangeText={(t) => { latest.current.username = t; setUsername(t) }} placeholder="username" placeholderTextColor={C.muted}
             autoCapitalize="none" autoCorrect={false} textContentType="username" style={{ ...mono, borderWidth: 1, borderColor: C.muted, padding: 12 }} />
-          <TextInput value={password} onChangeText={setPassword} placeholder="password" placeholderTextColor={C.muted}
+          <TextInput value={password} onChangeText={(t) => { latest.current.password = t; setPassword(t) }} placeholder="password" placeholderTextColor={C.muted}
             secureTextEntry textContentType="password" onSubmitEditing={login} style={{ ...mono, borderWidth: 1, borderColor: C.muted, padding: 12 }} />
         </>
       ) : null}
