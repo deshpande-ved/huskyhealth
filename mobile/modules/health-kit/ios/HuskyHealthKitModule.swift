@@ -21,11 +21,14 @@ public class HuskyHealthKitModule: Module {
     }
 
     // Convenience mode: pair with a box (code BOX:WRITESECRET from the website), sync, background delivery.
-    AsyncFunction("pair") { (relay: String, code: String) async -> Bool in
+    // Pairing succeeds once the box and secret are saved; background delivery is reported separately
+    // (it needs the HealthKit background entitlement and Background App Refresh, and is off in some simulators).
+    AsyncFunction("pair") { (relay: String, code: String) async -> [String: Bool] in
       let parts = code.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: ":", maxSplits: 1).map(String.init)
-      guard parts.count == 2, SyncConfig.save(relay: relay, box: parts[0], write: parts[1]) else { return false }
+      guard parts.count == 2, SyncConfig.save(relay: relay, box: parts[0], write: parts[1]) else { return ["ok": false, "background": false] }
       SyncConfig.lastEnd = nil
-      return await HealthCore.startBackgroundSync()
+      let bg = await HealthCore.startBackgroundSync()
+      return ["ok": true, "background": bg]
     }
 
     AsyncFunction("unpair") { () async in

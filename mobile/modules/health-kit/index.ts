@@ -30,7 +30,7 @@ interface HuskyHealthKitNative {
   requestAuthorization(): Promise<boolean>
   getWorkouts(days: number): Promise<HKWorkoutRow[]>
   getSamples(kind: SampleKind, startMs: number, endMs: number): Promise<[number, number][]>
-  pair(relay: string, code: string): Promise<boolean>
+  pair(relay: string, code: string): Promise<{ ok: boolean; background: boolean }>
   unpair(): Promise<void>
   isPaired(): boolean
   syncNow(): Promise<SyncResult>

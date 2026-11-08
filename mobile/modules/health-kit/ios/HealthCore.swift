@@ -148,7 +148,9 @@ enum HealthCore {
       ])
     }
     let effort = try await quantity("effort", from: floor, to: now).map { ["t_s": Int(now.timeIntervalSince1970 - $0[0] / 1000), "v": $0[1]] }
-    let body: [String: Any] = ["v": 1, "workouts": items, "rhr": [Any](), "hrv": [Any](), "effort": effort.suffix(50)]
+    let body: [String: Any] = ["v": 1, "workouts": items, "rhr": [Any](), "hrv": [Any](), "effort": Array(effort.suffix(50))]
+    // JSONSerialization raises an Objective-C exception (a crash) on non-JSON values; check first so it throws instead.
+    guard JSONSerialization.isValidJSONObject(body) else { throw NSError(domain: "HuskyHealth", code: 1) }
     return (try JSONSerialization.data(withJSONObject: body), ws.last?.endDate, items.count)
   }
 

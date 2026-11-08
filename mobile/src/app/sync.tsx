@@ -15,9 +15,11 @@ export default function Sync() {
   const pair = async () => {
     if (!HealthKit) return
     await HealthKit.requestAuthorization()
-    const ok = await HealthKit.pair(RELAY, code)
+    const r = await HealthKit.pair(RELAY, code)
     setCode('')
-    setStatus(ok ? 'Paired. iOS will wake HuskyHealth when a workout is saved.' : 'That code did not work. Copy it again from the website.')
+    setStatus(!r.ok ? 'That code did not work. Copy it again from the website.'
+      : r.background ? 'Paired. iOS will wake HuskyHealth when a workout is saved.'
+      : 'Paired. Background sync is unavailable here (turn on Background App Refresh); use Sync now.')
   }
   const syncNow = async () => {
     if (!HealthKit) return
