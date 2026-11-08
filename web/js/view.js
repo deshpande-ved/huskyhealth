@@ -53,7 +53,10 @@ function weekBlock(features, t) {
   const top = Math.max(t.acute, t.usual, 1);
   const line = (name, v, cls) => cells(`${name.padEnd(10)} ${bar((v / top) * 100)} ${String(round(v)).padStart(5)}`, cls);
   const label = `This week: load ${round(t.acute)} from ${plural(last7.length, "session")}; your usual week is ${round(t.usual)}`;
-  return { id: "week", ref: REF.trimp, source: source("trimp"), title: "This week",
+  const summary = t.usual
+    ? `Load ${round(t.acute)} from ${plural(last7.length, "session")}, against a usual week of ${round(t.usual)}.`
+    : `Load ${round(t.acute)} from ${plural(last7.length, "session")}. No usual week yet.`;
+  return { id: "week", ref: REF.trimp, source: source("trimp"), title: "This week", summary,
     explain: "Load = minutes weighted by heart-rate zone. Usual = your average week over the last 4.",
     stats: [{ k: "sessions", v: String(last7.length) }, { k: "minutes", v: String(round(last7.reduce((s, w) => s + w.min, 0))) }],
     label, plain: label, rows: [line("this week", t.acute, "z2"), line("usual", t.usual, "muted")] };
@@ -67,7 +70,8 @@ function lastBlock(features) {
   const stats = [{ k: "minutes", v: String(round(w.min)) }, { k: "load", v: String(round(w.trimp)) }];
   if (w.effort != null) stats.push({ k: "effort", v: `${round(w.effort)}/10` });
   const label = `Last session: ${sportName(w.sport)}, ${ago(w.day)}, ${round(w.min)} min, load ${round(w.trimp)}${w.effort != null ? `, effort ${round(w.effort)} of 10` : ""}`;
-  return { id: "last", ref: REF["zone-minutes"], source: source("zone-minutes"), title: `Last session · ${sportName(w.sport)} · ${ago(w.day)}`,
+  const summary = `${sportName(w.sport)}, ${ago(w.day)}: ${round(w.min)} minutes, load ${round(w.trimp)}${w.effort != null ? `, effort ${round(w.effort)}/10` : ""}.`;
+  return { id: "last", ref: REF["zone-minutes"], source: source("zone-minutes"), title: "Last session", summary,
     explain: "Minutes in each heart-rate zone. Effort is your rating on the Watch.", stats, label, plain: label, rows: zones };
 }
 
@@ -85,13 +89,15 @@ export function zoneBars(features) {
   const tot = [0, 0, 0, 0, 0];
   for (const w of features.workouts) w.zone_min.forEach((m, k) => { tot[k] += m; });
   const all = tot.reduce((s, v) => s + v, 0);
-  const base = { id: "zones", ref: REF["zone-minutes"], source: source("zone-minutes"), title: "Heart-rate zones · 60 days",
+  const base = { id: "zones", ref: REF["zone-minutes"], source: source("zone-minutes"), title: "Heart-rate zones", summary: "No heart-rate workouts yet.",
     explain: "Share of workout time in each zone, as % of your max heart rate: Z1 is 50–60 %, Z5 is 90–100 %." };
   if (!all) return { ...base, label: "Zone minutes: no heart-rate workouts yet", plain: "Zone minutes: no heart-rate workouts yet",
                      stats: [], rows: [cells("no heart-rate workouts yet", "muted")] };
   const pct = tot.map((m) => Math.round((m / all) * 100));
   const label = `Zone minutes: ${pct.map((p, k) => `z${k + 1} ${p}%`).join(", ")}`;
-  return { ...base, label, plain: label, stats: [{ k: "workout time", v: `${round(all)} min` }],
+  const top = pct.indexOf(Math.max(...pct));
+  const summary = `${round(all)} minutes of workout heart rate, most of it Z${top + 1} ${ZONE_NAMES[top]} (${pct[top]} %).`;
+  return { ...base, label, plain: label, summary, stats: [{ k: "workout time", v: `${round(all)} min` }],
            rows: pct.map((p, k) => cells(`Z${k + 1} ${ZONE_NAMES[k].padEnd(9)} ${bar(p)} ${String(p).padStart(3)}%`, `z${k + 1}`)) };
 }
 
