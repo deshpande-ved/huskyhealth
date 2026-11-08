@@ -5,13 +5,13 @@ import os
 import secrets
 import threading
 import time
-from typing import Literal
+from typing import Annotated, Literal
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from flask import Blueprint, request
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError, model_validator
 
 BOXES: dict[str, dict] = {}            # box_id -> {"pub", "write", "read", "drop", "exp"}; RAM only
 _LOCK = threading.Lock()
@@ -41,6 +41,10 @@ class Mark(_Strict):
     t_s: int = Field(ge=0, le=10_000_000)          # seconds before sending; old marks are ignored by the phone
 
 
+IsoTime = Annotated[str, StringConstraints(pattern=r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$", max_length=40)]
+Bpm = Annotated[float, Field(ge=20, le=300)]                 # a real heart rate; catches per-minute sums
+
+
 class SyncWorkout(_Strict):
     sport: SyncSport
     start_s: int = Field(ge=0, le=DAY3)
@@ -48,6 +52,15 @@ class SyncWorkout(_Strict):
     kcal: float | None = Field(default=None, ge=0, le=10000)
     src: Literal["watch", "garmin", "other"] = "watch"
     hr: list[Sample] = Field(default_factory=list, max_length=4000)
+    # List format (no per-reading loop in Shortcuts): parallel lists of ISO 8601 times and heart rates.
+    hr_t: list[IsoTime] = Field(default_factory=list, max_length=4000)
+    hr_v: list[Bpm] = Field(default_factory=list, max_length=4000)
+
+    @model_validator(mode="after")
+    def _same_length(self):
+        if len(self.hr_t) != len(self.hr_v):
+            raise ValueError("hr_t and hr_v differ in length")
+        return self
 
 
 class SyncDrop(_Strict):
