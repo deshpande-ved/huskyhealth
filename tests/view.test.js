@@ -55,5 +55,5 @@ test("every method link points at a card on the methods page", () => {
 
 test("removed screens stay removed", () => {
   for (const id of ["settings", "effort", "caveats", "plain-view", "sync-toggle"]) assert.ok(!html.includes(`id="${id}"`), id);
-  assert.match(html, /<nav class="tabs" aria-label="Pages"><a href="#today">today<\/a><a href="#import">import<\/a><a href="#account">account<\/a><\/nav>/);
+  assert.match(html, /<nav class="tabs" aria-label="Pages"><a href="#today">today<\/a><a href="#import">import<\/a><a href="#account">account<\/a><a href="\/api.html">api<\/a><\/nav>/);
 });

@@ -3,7 +3,7 @@ import { requireOptionalNativeModule } from 'expo'
 /**
  * HuskyHealth's HealthKit module (ios/HuskyHealthKitModule.swift + HealthCore.swift).
  * iOS only; null elsewhere. Reads workouts (with their real types) and heart rate on the phone;
- * the only thing that ever leaves is the convenience-mode drop to the paired relay.
+ * the only thing that ever leaves is a record POSTed to your own personal API (/v1/me/records).
  */
 
 export interface HKWorkoutRow {
@@ -30,7 +30,8 @@ interface HuskyHealthKitNative {
   requestAuthorization(): Promise<boolean>
   getWorkouts(days: number): Promise<HKWorkoutRow[]>
   getSamples(kind: SampleKind, startMs: number, endMs: number): Promise<[number, number][]>
-  pair(relay: string, code: string): Promise<{ ok: boolean; background: boolean }>
+  login(relay: string, username: string, password: string): Promise<{ ok: boolean; status: number; background: boolean }>
+  user(): string | null
   unpair(): Promise<void>
   isPaired(): boolean
   syncNow(): Promise<SyncResult>

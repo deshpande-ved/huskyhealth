@@ -3,7 +3,8 @@ import { analyze } from "./engine.js";
 import { paint } from "./ascii.js";
 import { createDb } from "./db.js";
 import { todayModel, storedLine, onImportMessage } from "./view.js";
-import { signIn, saveVault, deleteAccount, addToVault, makeReport, workoutSummaries } from "./account.js";
+import { signIn, saveVault, deleteAccount, addToVault, makeReport, workoutSummaries, fetchRecords, newToken, listTokens, revokeToken } from "./account.js";
+import { dayNumber, mergeDrop, validDrop } from "./sync-merge.js";
 
 const HEX_COMMIT = /^[0-9a-f]{7,40}$/;
 const WORKER = "/js/parse-apple.worker.js";
@@ -108,6 +109,7 @@ function startImport(file) {
     if (data.done || data.error) worker.terminate();
     if (data.done) {
       await db.saveFeatures(data.features);
+      await db.saveRecord("ref", { day: dayNumber(Date.now()) });   // offsets now count from today
       state.features = await db.loadFeatures();
       render();
       autoSave("import");
@@ -154,6 +156,54 @@ async function autoSave(source) {
   renderAccount();
 }
 
+// Records your devices sent since last time: open them here, fold them into today, remember the cursor in the vault.
+let pulling = false;
+async function pullInbox(quiet = false) {
+  const a = state.account;
+  if (!a || pulling) return;
+  pulling = true;
+  try {
+    const r = await fetchRecords({ account: a, after: a.vault.inbox || 0 });
+    if (!r.ok) { if (!quiet) acctSay(r.status); return; }
+    if (!r.records.length) { if (!quiet) acctSay("No new records from your devices."); return; }
+    const now = Date.now();
+    let f = state.features;
+    let ref = (await db.loadRecord("ref"))?.day ?? null;
+    let added = 0;
+    for (const x of r.records) {
+      if (!validDrop(x.drop)) continue;
+      const m = mergeDrop(f, x.drop, { nowMs: now, ageS: Math.max(0, now / 1000 - x.at), refDay: ref });
+      f = m.features; ref = m.refDay; added += m.added;
+    }
+    await db.saveFeatures(f);
+    await db.saveRecord("ref", { day: ref });
+    state.features = await db.loadFeatures();
+    render();
+    a.vault = { ...a.vault, inbox: r.last };
+    acctSay(`${r.records.length} new record${r.records.length === 1 ? "" : "s"} from your devices, ${added} new workout${added === 1 ? "" : "s"}.`);
+    if (added) await autoSave("sync"); else await saveVault({ account: a, vault: a.vault });
+  } finally {
+    pulling = false;
+  }
+}
+
+async function renderTokens() {
+  const a = state.account;
+  if (!a) return;
+  const r = await listTokens({ account: a });
+  if (!r.ok) return;
+  $("api-tokens").replaceChildren(...r.tokens.map((t) => {
+    const b = el("button", { type: "button", className: "danger", textContent: "revoke" });
+    b.addEventListener("click", async () => {
+      if (!confirm("Revoke this device token? That device can no longer send records.")) return;
+      const x = await revokeToken({ account: a, id: t.id });
+      acctSay(x.ok ? "Token revoked." : x.status);
+      renderTokens();
+    });
+    return el("li", {}, el("span", { textContent: `device token \u2026${t.id} \u00b7 ${t.scope} \u00b7 made ${t.created} ` }), b);
+  }));
+}
+
 function wireAccount() {
   const go = async (create) => {
     const username = $("acct-user").value; const password = $("acct-pass").value;
@@ -166,13 +216,28 @@ function wireAccount() {
     state.account = { username: username.trim().toLowerCase(), session: r.session, keys: r.keys, vault: r.vault };
     acctSay(create ? "Account created. Reports save here after each import or sync." : `Logged in. ${r.vault.reports.length} reports, ${r.vault.workouts.length} workouts.`);
     renderAccount();
-    if (create || !r.vault.reports.length) autoSave("import");
+    renderTokens();
+    if (create || !r.vault.reports.length) await autoSave("import");
+    await pullInbox(true);
   };
+  setInterval(() => { if (!document.hidden) pullInbox(true); }, 30_000);   // while logged in: new records within 30 s
+  $("api-pull").addEventListener("click", () => pullInbox(false));
+  $("api-new").addEventListener("click", async () => {
+    const r = await newToken({ account: state.account });
+    if (!r.ok) return acctSay(r.status);
+    $("api-token-text").textContent = r.token;
+    $("api-token").classList.remove("hidden");
+    renderTokens();
+  });
+  $("api-copy").addEventListener("click", () => navigator.clipboard && navigator.clipboard.writeText($("api-token-text").textContent));
+  const hideToken = () => { $("api-token-text").textContent = ""; $("api-token").classList.add("hidden"); };
+  addEventListener("hashchange", hideToken);                        // shown once: gone when you leave the page
+  document.addEventListener("visibilitychange", () => { if (document.hidden) hideToken(); });
   $("acct-login").addEventListener("click", () => go(false));
   $("acct-create").addEventListener("click", () => go(true));
   $("acct-pass").addEventListener("keydown", (e) => { if (e.key === "Enter") go(false); });
   $("acct-save").addEventListener("click", () => (state.features ? autoSave("manual") : acctSay("Nothing to report yet: import your export first.")));
-  $("acct-logout").addEventListener("click", () => { state.account = null; acctSay("Logged out. The key is gone from this page."); renderAccount(); });
+  $("acct-logout").addEventListener("click", () => { state.account = null; hideToken(); acctSay("Logged out. The key is gone from this page."); renderAccount(); });
   $("acct-delete").addEventListener("click", async () => {
     if (!confirm("Delete your account? The Pi deletes your encrypted history. This cannot be undone.")) return;
     const r = await deleteAccount({ account: state.account });

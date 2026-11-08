@@ -1,13 +1,31 @@
-# Demo: convenience mode (about 90 seconds)
+# Demo: the zero-knowledge personal API
 
-Before going on camera: install the app from the public site, import an export once, and **pair off camera**. Pairing shows the write secret; never show it on screen or in the video.
+Apple has no web API for HealthKit. HuskyHealth gives you one, and the server can't read it.
 
-1. **Off by default.** Show Settings → Convenience mode: `OFF (off by default)`. Read the four consent lines aloud (what is sent, who can read it, how long, how to turn it off).
-2. **(Off camera) Pair.** Turn it on, copy the pairing code into the HuskyHealth Sync Shortcut once.
-3. **Finish a workout** on the Watch (at least 10 minutes; the app finds it from the heart rate) and wait 10 minutes.
-4. **Open Messages.** The automation runs silently: it counts the last 3 hours of heart-rate readings locally and, because there was a workout, sends one drop that the relay encrypts.
-5. **Open HuskyHealth.** The status line says `Synced 1 new workout.` and the calendar, zones and load update.
-6. **What the Pi held.** On the Mac, run `python3 relay/tools/dump_boxes.py`: one line per box, ciphertext length and the first 16 bytes in hex. No plaintext, no keys. (It runs the same code in-process on synthetic data.)
-7. **Turn it off.** Settings → Turn off convenience mode. The phone deletes its key; the relay forgets the box. A `curl` GET on the old box now returns 404.
+## Setup (once)
 
-Honest caveats to say: with the mode on, the relay sees the drop in memory for milliseconds before encrypting it, and recent raw heart rate leaves the phone (encrypted at rest). With it off, nothing leaves.
+1. Website → `./account` → log in. The first login after this feature makes your account's keypair in the browser; only the public key goes to the Pi.
+2. iPhone app → **Account** → log in with the same username and password. The phone derives the keys itself, makes its own write token, and keeps it in the Keychain.
+
+## Show it (about 60 s)
+
+1. Finish a workout on the Watch (or tap **Demo workout** in the app). iOS wakes HuskyHealth, which posts the workout to `POST /v1/me/records`.
+2. Website → `./account` (logged in): within 30 s, "1 new record from your devices", and `./today` updates.
+3. The golden egg, from a terminal:
+   ```bash
+   curl -X POST https://veds-pi5.polecat-nominal.ts.net:10000/v1/me/records \
+     -H "Authorization: Bearer $HH_TOKEN" -H "Content-Type: application/json" \
+     -d '{"v":1,"workouts":[{"sport":"running","start_s":3600,"end_s":600,"hr":[{"t_s":3500,"v":142},{"t_s":3490,"v":145}]}]}'
+   ```
+   ```bash
+   node scripts/huskyhealth.mjs records --user <you>
+   ```
+4. Proof the Pi can't read it (on the Pi):
+   ```bash
+   cd ~/services/huskyhealth && docker compose exec -T relay sh -c 'ls /data/vaults; head -c 400 /data/vaults/*.inbox.json'
+   ```
+   Only ciphertext (`key`, `nonce`, `ct`) and receive times.
+
+## What leaves the phone
+
+Each new workout: sport, start and end (seconds before sending), heart rate during it, calories, resting HR, HRV and Watch effort. No names, places, GPS or device names: the relay's schema rejects them.

@@ -156,6 +156,7 @@ input[type="text"], input[type="password"] {
   font: inherit; color: var(--text); background: var(--base); border: 1px solid var(--line); padding: 8px 10px; width: 100%;
 }
 input[type="text"]:focus, input[type="password"]:focus { outline: none; border-color: var(--foam); }
+code.wrap { word-break: break-all; }
 pre.log { margin: 0; font-size: 0.82rem; line-height: 1.5; overflow-x: auto; max-height: 28rem; }
 
 .hidden { display: none; }
