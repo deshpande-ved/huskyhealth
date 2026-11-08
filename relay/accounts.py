@@ -29,14 +29,26 @@ SESSIONS: dict[str, tuple[str, float]] = {}  # token -> (account id, expiry); RA
 LOCK = threading.Lock()
 
 
-def _err(code):
+def _err(code, retry_after=None):
     from app import generic                  # shared fixed-body errors
-    return generic(code)
+    return generic(code, retry_after)
 
 
 def _limit():
     from app import ACCOUNT_LIMIT
     return ACCOUNT_LIMIT.allow()
+
+
+def require_session():
+    """(account id, None) for a valid session within its rate limit, else (None, error response)."""
+    from app import SESSION_LIMIT
+    h = request.headers.get("Authorization", "")
+    tok = h[7:] if h.startswith("Bearer ") else ""
+    aid = session_id()
+    if not aid:
+        return None, _err(401)
+    wait = SESSION_LIMIT.check(hashlib.sha256(tok.encode()).hexdigest())
+    return (None, _err(429, wait)) if wait else (aid, None)
 
 
 def _path(aid: str) -> str:
@@ -98,8 +110,9 @@ def _new_session(aid: str) -> str:
 
 @bp.post("/v1/account/create")
 def create():
-    if not _limit():
-        return _err(429)
+    from app import CREATE_LIMIT
+    if not _limit() or not CREATE_LIMIT.allow():
+        return _err(429, 60)
     c = _creds()
     if not c:
         return _err(422)
@@ -119,12 +132,16 @@ def create():
 
 @bp.post("/v1/account/open")
 def open_account():
+    from app import LOGIN_PER_ACCOUNT
     if not _limit():
-        return _err(429)
+        return _err(429, 60)
     c = _creds()
     if not c:
         return _err(422)
     aid, auth = c
+    wait = LOGIN_PER_ACCOUNT.check(aid)          # brute force on one account is slowed; nobody else is locked out
+    if wait:
+        return _err(429, wait)
     rec = read_account(aid)
     # Unknown account and wrong password look the same (401). A dummy hash keeps the timing the same too.
     salt = base64.b64decode(rec["salt"]) if rec else b"\0" * 16
@@ -136,9 +153,9 @@ def open_account():
 
 @bp.post("/v1/account/vault")
 def save_vault():
-    aid = session_id()
-    if not aid:
-        return _err(401)
+    aid, err = require_session()
+    if err:
+        return err
     body = request.get_json(silent=True)
     vault = body.get("vault") if isinstance(body, dict) and set(body) == {"vault"} else None
     if not isinstance(vault, str) or not B64_RE.match(vault):
@@ -156,9 +173,9 @@ def save_vault():
 
 @bp.post("/v1/account/delete")
 def delete():
-    aid = session_id()
-    if not aid:
-        return _err(401)
+    aid, err = require_session()
+    if err:
+        return err
     with LOCK:
         for path in (_path(aid), _path(aid).replace(".json", ".inbox.json")):
             try:
@@ -178,9 +195,9 @@ def _body():
 @bp.post("/v1/account/pubkey")
 def set_pubkey():
     """The browser made the account's keypair; only the public half comes here (records are sealed to it)."""
-    aid = session_id()
-    if not aid:
-        return _err(401)
+    aid, err = require_session()
+    if err:
+        return err
     b = _body()
     if set(b) != {"pub"} or not isinstance(b["pub"], str) or not load_pub(b["pub"]):
         return _err(422)
@@ -199,10 +216,12 @@ MAX_TOKENS = 10
 @bp.post("/v1/account/tokens")
 def new_token():
     """A write token for one device (the iPhone, a script). Shown once; the Pi keeps only its SHA-256."""
-    aid = session_id()
-    if not aid:
-        return _err(401)
-    if _body().get("scope", "write") != "write":
+    aid, err = require_session()
+    if err:
+        return err
+    b = _body()
+    days = b.get("days", 90)
+    if b.get("scope", "write") != "write" or not isinstance(days, int) or isinstance(days, bool) or not 1 <= days <= 365:
         return _err(422)
     secret = secrets.token_urlsafe(24)
     tid = secrets.token_hex(4)
@@ -213,26 +232,30 @@ def new_token():
         toks = rec.setdefault("tokens", [])
         if len(toks) >= MAX_TOKENS:
             return _err(409)
+        now = time.time()
         toks.append({"id": tid, "h": hashlib.sha256(secret.encode()).hexdigest(), "scope": "write",
-                     "created": time.strftime("%Y-%m-%d", time.gmtime())})
+                     "created": time.strftime("%Y-%m-%d", time.gmtime(now)),
+                     "expires": time.strftime("%Y-%m-%d", time.gmtime(now + days * 86400)), "last_used": None})
         _write(aid, rec)
-    return {"id": tid, "token": f"hhw_{aid}_{secret}", "scope": "write"}, 201
+    return {"id": tid, "token": f"hhw_{aid}_{secret}", "scope": "write", "expires": toks[-1]["expires"]}, 201
 
 
 @bp.get("/v1/account/tokens")
 def list_tokens():
-    aid = session_id()
-    rec = read_account(aid) if aid else None
+    aid, err = require_session()
+    if err:
+        return err
+    rec = read_account(aid)
     if not rec:
         return _err(401)
-    return {"tokens": [{k: t[k] for k in ("id", "scope", "created")} for t in rec.get("tokens", [])]}
+    return {"tokens": [{k: t.get(k) for k in ("id", "scope", "created", "expires", "last_used")} for t in rec.get("tokens", [])]}
 
 
 @bp.delete("/v1/account/tokens/<tid>")
 def revoke_token(tid: str):
-    aid = session_id()
-    if not aid:
-        return _err(401)
+    aid, err = require_session()
+    if err:
+        return err
     with LOCK:
         rec = read_account(aid)
         if not rec:

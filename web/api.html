@@ -58,6 +58,19 @@
       </table></div>
       <p class="note">Base URL <code class="wrap">https://veds-pi5.polecat-nominal.ts.net:10000</code>. A record holds workouts (sport, start and end as seconds before sending, heart rate), resting heart rate, HRV and Watch effort. Names, places, GPS and device names are rejected.</p>
 
+      <h3>Limits</h3>
+      <div class="scroll"><table class="data">
+        <thead><tr><th>what</th><th>limit</th></tr></thead>
+        <tbody>
+          <tr><td>log-in attempts</td><td>10 per account per 15 minutes</td></tr>
+          <tr><td>records</td><td>120 per device token per hour, 300 per account</td></tr>
+          <tr><td>reads and token changes</td><td>120 per session per minute</td></tr>
+          <tr><td>device tokens</td><td>write-only; expire after 1&ndash;365 days (default 90); 10 per account</td></tr>
+          <tr><td>bodies</td><td>JSON only; records up to 128 KB</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note">Over a limit you get <code>429</code> with <code>Retry-After</code>. Errors are always <code>{ "error", "status" }</code>; every response carries <code>API-Version: 1</code>.</p>
+
       <h3>Try it</h3>
       <p class="lede">Make a device token on your <a href="/#account">account</a>, then send a run:</p>
       <div class="scroll"><pre class="log">curl -X POST https://veds-pi5.polecat-nominal.ts.net:10000/v1/me/records \

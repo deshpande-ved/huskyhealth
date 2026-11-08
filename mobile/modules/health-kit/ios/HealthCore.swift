@@ -169,6 +169,7 @@ enum HealthCore {
     return (try await recordBody(workouts: ws, daily: (floor, now), now: now), ws.last?.endDate, ws.count)
   }
 
+  /// POST one record. On 429 the relay says how long to wait (Retry-After); wait (at most 60 s) and try once more.
   private static func post(_ cfg: SyncConfig, _ body: Data) async -> Int {
     var req = URLRequest(url: cfg.relay.appendingPathComponent("v1/me/records"))
     req.httpMethod = "POST"
@@ -176,8 +177,13 @@ enum HealthCore {
     req.setValue("Bearer \(cfg.token)", forHTTPHeaderField: "Authorization")
     req.httpBody = body
     req.timeoutInterval = 30
-    guard let (_, resp) = try? await URLSession.shared.data(for: req) else { return -1 }
-    return (resp as? HTTPURLResponse)?.statusCode ?? 0
+    for attempt in 0..<2 {
+      guard let (_, resp) = try? await URLSession.shared.data(for: req), let http = resp as? HTTPURLResponse else { return -1 }
+      guard http.statusCode == 429, attempt == 0 else { return http.statusCode }
+      let wait = min(Double(http.value(forHTTPHeaderField: "Retry-After") ?? "") ?? 10, 60)
+      try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
+    }
+    return 429
   }
 
   /// POST new workouts to your personal API. Returns the HTTP status (0 = nothing to send / not logged in).
@@ -380,7 +386,7 @@ enum Account {
     guard let base = URL(string: relay), let k = derive(username: username, password: password) else { return 422 }
     let (s1, open) = await post(base.appendingPathComponent("v1/account/open"), ["id": k.id, "auth": k.auth])
     guard s1 == 200, let session = open["session"] as? String else { return s1 }
-    let (s2, tok) = await post(base.appendingPathComponent("v1/account/tokens"), ["scope": "write"], bearer: session)
+    let (s2, tok) = await post(base.appendingPathComponent("v1/account/tokens"), ["scope": "write", "days": 365], bearer: session)
     guard s2 == 201, let token = tok["token"] as? String, SyncConfig.save(relay: relay, token: token) else { return s2 == 201 ? 500 : s2 }
     SyncConfig.user = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     SyncConfig.lastEnd = nil
