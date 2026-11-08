@@ -133,13 +133,15 @@ enum HealthCore {
 
   /// Payload matching relay/dropbox.py SyncDrop: explicit workout windows with the real sport,
   /// and the heart rate inside each as parallel ISO-time / bpm lists. No names, places or devices.
-  static func dropPayload(since: Date, now: Date = Date()) async throws -> (body: Data, newest: Date?, count: Int) {
-    let floor = max(since, now.addingTimeInterval(-3 * 86400 + 60))
-    let ws = try await workouts(since: floor, until: now).filter { $0.endDate <= now }
+  /// One record: workouts (heart rate capped at `hrCap` readings each), their Watch effort scores, and optionally
+  /// daily resting HR and HRV over `daily`. Times are seconds before `now`; heart rate uses ISO times.
+  static func recordBody(workouts ws: [HKWorkout], daily: (from: Date, to: Date)?, now: Date, hrCap: Int = 1500) async throws -> Data {
+    let tS = { (x: [Double]) -> [String: Any] in ["t_s": max(0, Int(now.timeIntervalSince1970 - x[0] / 1000)), "v": x[1]] }
     var items: [[String: Any]] = []
-    for w in ws.suffix(20) {
+    var effort: [[String: Any]] = []
+    for w in ws {
       var hr = try await quantity("hr", from: w.startDate, to: w.endDate)
-      if hr.count > 4000 { let step = Int((Double(hr.count) / 4000).rounded(.up)); hr = stride(from: 0, to: hr.count, by: step).map { hr[$0] } }
+      if hr.count > hrCap { let step = Int((Double(hr.count) / Double(hrCap)).rounded(.up)); hr = stride(from: 0, to: hr.count, by: step).map { hr[$0] } }
       items.append([
         "sport": sport(w.workoutActivityType),
         "start_s": Int(now.timeIntervalSince(w.startDate)), "end_s": Int(now.timeIntervalSince(w.endDate)),
@@ -148,34 +150,70 @@ enum HealthCore {
         "hr_t": hr.map { iso.string(from: Date(timeIntervalSince1970: $0[0] / 1000)) },
         "hr_v": hr.map { min(max($0[1], 20), 300) },
       ])
+      effort += try await quantity("effort", from: w.startDate, to: w.endDate.addingTimeInterval(3600)).map(tS)
     }
-    let effort = try await quantity("effort", from: floor, to: now).map { ["t_s": Int(now.timeIntervalSince1970 - $0[0] / 1000), "v": $0[1]] }
-    let body: [String: Any] = ["v": 1, "workouts": items, "rhr": [Any](), "hrv": [Any](), "effort": Array(effort.suffix(50))]
+    var rhr: [[String: Any]] = [], hrv: [[String: Any]] = []
+    if let d = daily {
+      rhr = Array(try await quantity("rhr", from: d.from, to: d.to).suffix(120)).map(tS)
+      hrv = Array(try await quantity("hrv", from: d.from, to: d.to).suffix(400)).map(tS)
+    }
+    let body: [String: Any] = ["v": 1, "workouts": items, "rhr": rhr, "hrv": hrv, "effort": Array(effort.suffix(50))]
     // JSONSerialization raises an Objective-C exception (a crash) on non-JSON values; check first so it throws instead.
     guard JSONSerialization.isValidJSONObject(body) else { throw NSError(domain: "HuskyHealth", code: 1) }
-    return (try JSONSerialization.data(withJSONObject: body), ws.last?.endDate, items.count)
+    return try JSONSerialization.data(withJSONObject: body)
   }
 
-  /// POST new workouts to the paired box. Returns the HTTP status (0 = nothing to send / not paired).
+  static func dropPayload(since: Date, now: Date = Date()) async throws -> (body: Data, newest: Date?, count: Int) {
+    let floor = max(since, now.addingTimeInterval(-3 * 86400 + 60))
+    let ws = Array(try await workouts(since: floor, until: now).filter { $0.endDate <= now }.suffix(20))
+    return (try await recordBody(workouts: ws, daily: (floor, now), now: now), ws.last?.endDate, ws.count)
+  }
+
+  private static func post(_ cfg: SyncConfig, _ body: Data) async -> Int {
+    var req = URLRequest(url: cfg.relay.appendingPathComponent("v1/me/records"))
+    req.httpMethod = "POST"
+    req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    req.setValue("Bearer \(cfg.token)", forHTTPHeaderField: "Authorization")
+    req.httpBody = body
+    req.timeoutInterval = 30
+    guard let (_, resp) = try? await URLSession.shared.data(for: req) else { return -1 }
+    return (resp as? HTTPURLResponse)?.statusCode ?? 0
+  }
+
+  /// POST new workouts to your personal API. Returns the HTTP status (0 = nothing to send / not logged in).
   @discardableResult
   static func syncNow() async -> [String: Any] {
-    guard let cfg = SyncConfig.load() else { return ["status": 0, "workouts": 0, "reason": "not paired"] }
+    guard let cfg = SyncConfig.load() else { return ["status": 0, "workouts": 0, "reason": "not logged in"] }
     do {
       let since = SyncConfig.lastEnd ?? Date().addingTimeInterval(-86400)
       let (body, newest, count) = try await dropPayload(since: since.addingTimeInterval(1))
       if count == 0 { return ["status": 0, "workouts": 0, "reason": "no new workouts"] }
-      var req = URLRequest(url: cfg.relay.appendingPathComponent("v1/me/records"))
-      req.httpMethod = "POST"
-      req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-      req.setValue("Bearer \(cfg.token)", forHTTPHeaderField: "Authorization")
-      req.httpBody = body
-      req.timeoutInterval = 20
-      let (_, resp) = try await URLSession.shared.data(for: req)
-      let status = (resp as? HTTPURLResponse)?.statusCode ?? 0
+      let status = await post(cfg, body)
       if status == 201, let newest { SyncConfig.lastEnd = newest }
       return ["status": status, "workouts": count]
     } catch {
-      return ["status": -1, "workouts": 0, "reason": "could not reach the relay"]
+      return ["status": -1, "workouts": 0, "reason": "could not read Health"]
+    }
+  }
+
+  /// First login: send the last `days` days so a new account has its history without an export.
+  /// One record per workout keeps each under the relay's 128 KB cap; then one record of daily resting HR and HRV.
+  static func backfill(days: Int = 60) async -> [String: Any] {
+    guard let cfg = SyncConfig.load() else { return ["status": 0, "workouts": 0, "total": 0] }
+    let now = Date()
+    let floor = now.addingTimeInterval(-Double(days) * 86400 + 3600)
+    do {
+      let ws = try await workouts(since: floor, until: now).filter { $0.endDate <= now }
+      var sent = 0, last = 0
+      for w in ws {
+        last = await post(cfg, try await recordBody(workouts: [w], daily: nil, now: now, hrCap: 900))
+        if last == 201 { sent += 1 } else if last == 401 || last == 409 { break }
+      }
+      let dailyStatus = await post(cfg, try await recordBody(workouts: [], daily: (floor, now), now: now))
+      if sent == ws.count, let end = ws.last?.endDate { SyncConfig.lastEnd = end }
+      return ["status": ws.isEmpty ? dailyStatus : last, "workouts": sent, "total": ws.count, "daily": dailyStatus]
+    } catch {
+      return ["status": -1, "workouts": 0, "total": 0]
     }
   }
 

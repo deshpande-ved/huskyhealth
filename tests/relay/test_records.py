@@ -147,3 +147,13 @@ def test_no_logging_full_cycle(c, acct, caplog):
     c.post("/v1/me/records", data=json.dumps(payload()), headers=bearer(acct["token"]))
     c.get("/v1/me/records", headers=bearer(acct["session"]))
     assert caplog.records == []
+
+
+def test_backfill_window_60_days_ok_62_rejected(c, acct):
+    day = 86400
+    ok = payload(workouts=[{"sport": "squash", "start_s": 60 * day, "end_s": 60 * day - 2700, "src": "watch",
+                            "hr": [{"t_s": 60 * day - 100, "v": 150.0}]}],
+                 rhr=[{"t_s": d * day, "v": 52.0} for d in range(60)], hrv=[{"t_s": d * 3600, "v": 60.0} for d in range(400)])
+    assert c.post("/v1/me/records", data=json.dumps(ok), headers=bearer(acct["token"])).status_code == 201
+    old = payload(workouts=[{"sport": "squash", "start_s": 62 * day, "end_s": 62 * day - 2700}])
+    assert c.post("/v1/me/records", data=json.dumps(old), headers=bearer(acct["token"])).status_code == 422
