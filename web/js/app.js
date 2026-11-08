@@ -230,7 +230,7 @@ function render() {
       ...bannerNode(["HUSKY", "HEALTH"], "HuskyHealth"),
       el("p", { className: "reason", textContent: WELCOME }),
       el("p", { className: "about", textContent: ABOUT }),
-      el("div", { className: "cta" }, login, el("label", { className: "button", htmlFor: "import-file", textContent: "import an Apple Health export" }),
+      el("div", { className: "cta" }, login,
         el("a", { href: "/api", textContent: "how the API works" })));
     $("panels").replaceChildren();
   }
