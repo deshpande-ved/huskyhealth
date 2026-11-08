@@ -1,6 +1,6 @@
 # HuskyHealth
 
-**Your workouts, as an API only you can read.**
+**Zero knowledge, personal API.**
 
 Your Apple Watch (or Garmin) workouts reach your own private REST API, automatically, and nobody can read them
 on the way, not even the server that stores them. On top of that API: a daily training call from published
