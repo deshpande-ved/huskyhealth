@@ -37,23 +37,23 @@ Automations that call it (Shortcuts → Automation → **+** → **Workout**), o
 
 ## Build the payload
 
-6b. **Find Health Samples** again: type **Heart Rate**, **Start Date is in the last 1 days**, **Group by: Minute**, sort Oldest First. Health averages the readings per minute, so the loop below runs about 250–350 times instead of 1,000–2,000 (much faster). Keep the ungrouped search above for the Count: the density check needs raw readings.
-7. **Repeat with Each** (the **grouped** Health Samples from 6b):
-   - **Get Details of Health Sample** → Start Date (Repeat Item) → **Get Time Between Dates** (Start Date → Current Date, **Seconds**)
-   - **Get Details of Health Sample** → Value (Repeat Item)
-   - **Text**: `{"t_s":`*Time Between Dates*`,"v":`*Value*`}`
-8. **Combine Text**: Repeat Results, separator **Custom** `,`
-9. **Read the mark**: **Get File** `HuskyHealth/mark.txt` from the Shortcuts folder (*Error If Not Found* off). **If** File *has any value*: **Split Text** by Custom `|` → **Get Item from List** First → **Set Variable** `mark_sport`; **Get Item from List** Last → **Get Dates from Input** → **Get Time Between Dates** (that date → Current Date, **Seconds**) → **Text** `{"sport":"`*mark_sport*`","t_s":`*Time Between Dates*`}`. **End If** (the If's result is empty when there's no mark yet).
-10. **Text** (one line): `{"v":1,"workouts":[{"sport":"other","start_s":86400,"end_s":0,"kcal":null,"src":"watch","hr":[`*Combined Text*`]}],"rhr":[],"hrv":[],"effort":[],"marks":[`*If Result*`]}`
+No per-reading loop: Shortcuts turns a whole list in one step, so this stays fast with thousands of readings. (Don't use *Group by*: for heart rate it **sums** the readings in each interval instead of averaging them.)
 
-If times come out negative, swap the two dates in step 7. If Value includes units, add **Get Numbers from Input** after it.
+7. **Get Details of Health Sample** → **Start Date** (input: the Health Samples from step 4) → a list of dates.
+8. **Format Date** (input: those dates) → Date Format **ISO 8601** → a list like `2026-11-07T18:01:02-05:00`.
+9. **Combine Text** (Formatted Date), separator **Custom** `","` (quote, comma, quote).
+10. **Get Details of Health Sample** → **Value** (input: the Health Samples from step 4).
+11. **Combine Text** (Value), separator **Custom** `,`
+12. **Text** (one line): `{"v":1,"workouts":[{"sport":"squash","start_s":86400,"end_s":0,"kcal":null,"src":"watch","hr_t":["`*Combined dates*`"],"hr_v":[`*Combined values*`]}],"rhr":[],"hrv":[],"effort":[]}`
+
+If Value includes units, add **Get Numbers from Input** before step 11. Times are real timestamps here; the relay seals them within milliseconds, and the phone keeps only day offsets.
 
 Payload schema (anything else gets a generic 422; times are **seconds before sending**, never dates; no device names, source names or GPS):
 
 | Field | Type |
 |---|---|
 | `v` | always `1` |
-| `workouts[]` | up to 20 windows: `sport` (`squash` / `running` / `walking` / `cycling` / `strength` / `hiit` / `other`), `start_s` ≥ `end_s` (int, 0–259200), `kcal` (number or null), `src` (`watch` / `garmin` / `other`), `hr[]` (up to 4000 `{t_s, v}`) |
+| `workouts[]` | up to 20 windows (`hr[]` of `{t_s, v}`, **or** parallel `hr_t[]` ISO 8601 times + `hr_v[]` heart rates 20–300): `sport` (`squash` / `running` / `walking` / `cycling` / `strength` / `hiit` / `other`), `start_s` ≥ `end_s` (int, 0–259200), `kcal` (number or null), `src` (`watch` / `garmin` / `other`), `hr[]` (up to 4000 `{t_s, v}`) |
 | `rhr[]`, `hrv[]`, `effort[]` | `{t_s, v}` samples (empty from this Shortcut) |
 | `marks[]` | up to 20 `{sport, t_s}`: the Watch's workout type and seconds since it started |
 
@@ -68,7 +68,7 @@ Example:
 
 ## POST the drop
 
-11. **Get Contents of URL**: `https://veds-pi5.polecat-nominal.ts.net:10000/v1/drop/` + `box`. **Show More**: Method **POST**; Headers `Authorization` = `Bearer ` + `write`, `Content-Type` = `application/json`; Request Body **File** = the Text from step 10.
+11. **Get Contents of URL**: `https://veds-pi5.polecat-nominal.ts.net:10000/v1/drop/` + `box`. **Show More**: Method **POST**; Headers `Authorization` = `Bearer ` + `write`, `Content-Type` = `application/json`; Request Body **File** = the Text from step 12.
 
 An empty reply (HTTP 204) is success. `{"error":"conflict"}` means the app hasn't collected the previous drop yet; the next run after you open the app sends again. Repeats are harmless: the relay keeps one drop per box and the app ignores sessions it already has.
 

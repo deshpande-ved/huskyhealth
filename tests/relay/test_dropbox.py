@@ -182,3 +182,19 @@ def test_marks_schema(c):
     for bad in [payload(marks=[{"sport": "golf", "t_s": 5}]), payload(marks=[{"sport": "squash", "t_s": 5, "name": "x"}]),
                 payload(marks=[{"sport": "squash", "t_s": "5"}])]:
         assert c.post(url, data=json.dumps(bad), headers=auth(b["write"])).status_code == 422
+
+
+
+def test_list_format(c):
+    b = mkbox(c)
+    url = f"/v1/drop/{b['box']}"
+    good = {"v": 1, "workouts": [{"sport": "squash", "start_s": 86400, "end_s": 0, "kcal": None, "src": "watch",
+                                  "hr_t": ["2026-11-07T18:01:02-05:00", "2026-11-07T18:01:07-05:00"], "hr_v": [150, 151.5]}],
+            "rhr": [], "hrv": [], "effort": []}
+    assert c.post(url, data=json.dumps(good), headers=auth(b["write"])).status_code == 204
+    c.get(url, headers=auth(b["read"]))
+    for change in [{"hr_v": [150]}, {"hr_v": [1336, 151]}, {"hr_t": ["Nov 7", "x"]}]:
+        d = json.loads(json.dumps(good))
+        d["workouts"][0].update(change)
+        r = c.post(url, data=json.dumps(d), headers=auth(b["write"]))
+        assert r.status_code == 422 and r.get_json() == {"error": "rejected"}

@@ -59,7 +59,7 @@ test("off by default: no keys, no network; consent wording", async () => {
   const r = await collect({ db, fetchFn });
   assert.deepEqual([r.called, fetchFn.calls.length, await isOn(db), db.recs.size], [false, 0, false, 0]);
   const text = CONSENT.join(" ");
-  for (const s of ["What is sent", "Who can read it", "How long it is kept", "How to turn it off", "De-identified", "24 hours"]) assert.ok(text.includes(s), s);
+  for (const s of ["What is sent", "Who can read it", "How long it is kept", "How to turn it off", "with their times", "24 hours"]) assert.ok(text.includes(s), s);
   assert.ok(!/anonymous|anonymi[sz]|injury|diagnos|medical/i.test(text));
 });
 
@@ -215,4 +215,17 @@ test("per-minute averaged heart rate (Shortcut 'Group by Minute') still finds th
   assert.equal(features.workouts.length, 1);
   assert.ok(Math.abs(features.workouts[0].min - 45) < 1.1);
   assert.equal(features.workouts[0].hr_sample_ok, true);
+});
+
+test("list format (hr_t ISO times + hr_v) from a loop-free Shortcut finds the same session", () => {
+  const sent = NOW;
+  const hr_t = [], hr_v = [];
+  const iso = (ms) => new Date(ms).toISOString();
+  for (let s = 86400; s >= 0; s -= 300) { hr_t.push(iso(sent - s * 1000)); hr_v.push(70); }
+  for (let s = 100 * 60; s >= 55 * 60; s -= 5) { hr_t.push(iso(sent - s * 1000)); hr_v.push(150); }
+  const drop = { v: 1, workouts: [{ sport: "squash", start_s: 86400, end_s: 0, kcal: null, src: "watch", hr_t, hr_v }], rhr: [], hrv: [], effort: [] };
+  const { features } = mergeDrop(emptyFeatures(), drop, { nowMs: NOW, refDay: dayNumber(NOW) });
+  assert.equal(features.workouts.length, 1);
+  assert.ok(Math.abs(features.workouts[0].min - 45) < 0.2);
+  assert.ok(!/\d{4}-\d{2}-\d{2}/.test(JSON.stringify(features)), "no dates stored on the phone");
 });

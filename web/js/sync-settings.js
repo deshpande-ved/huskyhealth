@@ -6,7 +6,7 @@ export const RELAY = "https://veds-pi5.polecat-nominal.ts.net:10000";
 
 // The consent screen, in the plan's wording (5.4). De-identified, never "anonymous"; no medical claims.
 export const CONSENT = [
-  "What is sent: new workouts since the last sync with their heart rate, plus the last 3 days of resting heart rate, HRV and effort. De-identified: no names, dates, places or device names.",
+  "What is sent: heart-rate readings from the last day, with their times, when there was a workout. No names, places, GPS or device names.",
   "Who can read it: the relay on the Pi, in memory, for milliseconds; it then encrypts it to a key that only this phone holds.",
   "How long it is kept: until this phone collects it, at most 24 hours, in memory only.",
   "How to turn it off: tap “Turn off convenience mode” here; this phone deletes its key and the Pi forgets the box.",

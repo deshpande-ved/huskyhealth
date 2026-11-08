@@ -63,7 +63,11 @@ export function splitSessions(hr, sentAt = Infinity) {
 export function dropToScan(drop, sentAt) {
   const at = (s) => sentAt - s * 1000;
   const pts = (list) => (list || []).map((x) => [at(x.t_s), x.v]).sort((a, b) => a[0] - b[0]);
-  const hr = drop.workouts.flatMap((w) => pts(w.hr)).sort((a, b) => a[0] - b[0]);
+  // Two formats: hr[] of {t_s, v} (seconds before sending) or parallel hr_t[] (ISO 8601) + hr_v[] lists.
+  const wHr = (w) => (w.hr_t && w.hr_t.length
+    ? w.hr_t.map((t, i) => [Date.parse(t), w.hr_v[i]]).filter(([t]) => Number.isFinite(t)).sort((a, b) => a[0] - b[0])
+    : pts(w.hr));
+  const hr = drop.workouts.flatMap(wHr).sort((a, b) => a[0] - b[0]);
   const marks = (drop.marks || []).map((m) => ({ sport: m.sport, t: at(m.t_s) }));
   const sportFor = (start, fallback) => {
     const near = marks.filter((m) => Math.abs(m.t - start) <= MARK_WINDOW_MS)
@@ -72,7 +76,7 @@ export function dropToScan(drop, sentAt) {
   };
   const workouts = drop.workouts.flatMap((w) => {
     const lo = at(w.start_s), hi = at(w.end_s);
-    return splitSessions(pts(w.hr).filter(([t]) => t >= lo && t <= hi), sentAt).map((s) => ({
+    return splitSessions(wHr(w).filter(([t]) => t >= lo && t <= hi), sentAt).map((s) => ({
       type: SPORT_TYPE[sportFor(s.start, w.sport)] || SPORT_TYPE.other, start: s.start, end: s.end,
       min: Math.round((s.end - s.start) / 6000) / 10, kcal: null, ...(SRC[w.src] || SRC.other),
     }));
