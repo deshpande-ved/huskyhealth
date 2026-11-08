@@ -33,6 +33,7 @@ updated_at: YYYY-MM-DD
 | `project/infra-pwa.md` | project | PROJECT-INFRA-003 | 2026-11-07 |
 | `project/infra-relay.md` | project | PROJECT-INFRA-004 | 2026-11-07 |
 | `project/prizes-and-demo.md` | project | PROJECT-PRIZES-001 | 2026-11-07 |
+| `project/build-status.md` | project | PROJECT-STATUS-001 | 2026-11-07 |
 
 ## Project Memory Topics
 
@@ -55,6 +56,7 @@ Load only what the story needs.
 | `project/infra-pwa.md` | plan 10.4: PWA files, service worker, offline |
 | `project/infra-relay.md` | plan 10.5: relay app, tokens, routes |
 | `project/prizes-and-demo.md` | plan 0, 12: prize strategy, demo video, expo, pitch |
+| `project/build-status.md` | what is built, session decisions (Shortcut superseded by iOS companion), what is left |
 
 ---
 

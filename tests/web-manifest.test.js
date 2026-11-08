@@ -41,3 +41,31 @@ test("apple-touch-icon is an opaque 180x180 PNG", () => {
   assert.equal(h, 180);
   assert.ok(colorType === 2 || colorType === 0, `colour type ${colorType} has alpha`);
 });
+
+// Tab icons (favicon set, like vedsite): linked from index.html, files present and valid.
+test("favicon set is linked and valid", () => {
+  const html = readFileSync(new URL("../web/index.html", import.meta.url), "utf8");
+  for (const tag of ['<link rel="icon" href="/favicon.ico" sizes="48x48">',
+                     '<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
+                     '<link rel="icon" href="/icons/favicon-96x96.png" type="image/png" sizes="96x96">']) {
+    assert.ok(html.includes(tag), tag);
+  }
+  const ico = read("favicon.ico");
+  assert.deepEqual([ico.readUInt16LE(0), ico.readUInt16LE(2), ico.readUInt16LE(4)], [0, 1, 3]);
+  assert.deepEqual([0, 1, 2].map((i) => ico[6 + i * 16]), [16, 32, 48]);
+  const svg = read("favicon.svg").toString("utf8");
+  assert.ok(svg.startsWith("<svg") && !/<script|https?:\/\/(?!www\.w3\.org)/.test(svg));
+  const { w, h } = ihdr(read("icons/favicon-96x96.png"));
+  assert.deepEqual([w, h], [96, 96]);
+});
+
+// Header logo: a vector SVG with a fixed square viewBox, shown as an <img> with locked aspect ratio.
+test("header logo is the fixed-viewBox ASCII husky SVG", () => {
+  const html = readFileSync(new URL("../web/index.html", import.meta.url), "utf8");
+  assert.ok(html.includes('<img id="mark" src="/art/husky.svg" alt="" width="72" height="72">'));
+  const svg = read("art/husky.svg").toString("utf8");
+  assert.match(svg, /^<svg [^>]*viewBox="0 0 512 512"/);
+  assert.ok(!/<script|<rect/.test(svg));   // transparent background, no script
+  const css = readFileSync(new URL("../web/css/style.css", import.meta.url), "utf8");
+  assert.match(css, /#mark \{[^}]*aspect-ratio: 1 \/ 1;[^}]*object-fit: contain;/);
+});

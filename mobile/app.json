@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "HuskyHealth",
+    "slug": "huskyhealth",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "../web/icons/icon-512.png",
+    "scheme": "huskyhealth",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#191724",
+    "ios": {
+      "bundleIdentifier": "dev.huskyhealth.companion",
+      "buildNumber": "1",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSHealthShareUsageDescription": "HuskyHealth reads your workouts and heart rate to compute your training load and readiness on this phone. Nothing is stored on any server.",
+        "NSHealthUpdateUsageDescription": "Only used in the simulator demo to add a sample workout to Health."
+      },
+      "entitlements": {
+        "com.apple.developer.healthkit": true,
+        "com.apple.developer.healthkit.access": [],
+        "com.apple.developer.healthkit.background-delivery": true
+      }
+    },
+    "plugins": [
+      "expo-router",
+      ["expo-splash-screen", { "backgroundColor": "#191724", "image": "../web/icons/icon-512.png", "imageWidth": 120 }],
+      "expo-secure-store",
+      "expo-status-bar"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

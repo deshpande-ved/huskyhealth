@@ -90,8 +90,9 @@ items:
   epic: E02
   title: "Zone minutes, TRIMP and session-RPE"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E02S01.story.md
   dependencies: [E01S03]
@@ -103,8 +104,9 @@ items:
   epic: E02
   title: "Fitness/fatigue and monotony"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E02S02.story.md
   dependencies: [E02S01]
@@ -116,8 +118,9 @@ items:
   epic: E02
   title: "The readiness band"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E02S03.story.md
   dependencies: [E02S02]
@@ -129,8 +132,9 @@ items:
   epic: E02
   title: "Data gates"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E02S04.story.md
   dependencies: [E02S03]
@@ -142,8 +146,9 @@ items:
   epic: E02
   title: "Scenario tests"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E02S05.story.md
   dependencies: [E02S04]
@@ -155,8 +160,9 @@ items:
   epic: E03
   title: "Read the records and workouts we need from export.xml text"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E03S01.story.md
   dependencies: [E01S03, E02S01]
@@ -168,8 +174,9 @@ items:
   epic: E03
   title: "Import a .zip or .xml file in the worker, with progress"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E03S02.story.md
   dependencies: [E03S01, E01S03]
@@ -181,8 +188,9 @@ items:
   epic: E03
   title: "Turn workouts into feature rows (sport, zones, effort, source, day)"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E03S03.story.md
   dependencies: [E03S01, E01S03, E02S01]
@@ -194,8 +202,9 @@ items:
   epic: E03
   title: "Build the full Features JSON and prove it on the synthetic fixture"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E03S04.story.md
   dependencies: [E03S02, E03S03, E02S01]
@@ -207,8 +216,9 @@ items:
   epic: E03
   title: "Run Ved's real export locally and print counts only"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E03S05.story.md
   dependencies: [E03S04]
@@ -220,8 +230,9 @@ items:
   epic: E04
   title: "ASCII drawing primitives and call banner font"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E04S01.story.md
   dependencies: [E01S03]
@@ -233,8 +244,9 @@ items:
   epic: E04
   title: "Rosé Pine palette and 44-column layout"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E04S02.story.md
   dependencies: [E01S01]
@@ -246,8 +258,9 @@ items:
   epic: E04
   title: "References page with a card per method"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E04S03.story.md
   dependencies: [E01S01]
@@ -259,8 +272,9 @@ items:
   epic: E04
   title: "Main screen figures from fixture features"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E04S04.story.md
   dependencies: [E04S01, E04S02, E04S03, E01S01, E01S03, E02S02, E02S03]
@@ -272,8 +286,9 @@ items:
   epic: E04
   title: "Plain view toggle"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E04S05.story.md
   dependencies: [E04S04, E01S01]
@@ -285,8 +300,9 @@ items:
   epic: E04
   title: "Store features only and Forget everything"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E04S06.story.md
   dependencies: [E04S04, E01S01, E01S03]
@@ -298,8 +314,9 @@ items:
   epic: E04
   title: "End to end and airplane-mode run"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E04S07.story.md
   dependencies: [E04S04, E04S05, E04S06, E04S08, E04S10, E01S03, E02S04, E03S02, E03S04]
@@ -311,8 +328,9 @@ items:
   epic: E04
   title: "Remaining screen items: zone bars, load flags and gate messages"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E04S08.story.md
   dependencies: [E04S03, E04S04, E02S02, E02S04]
@@ -337,8 +355,9 @@ items:
   epic: E04
   title: "Import progress bar and typed effort entry"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E04S10.story.md
   dependencies: [E04S04, E04S06, E04S08, E02S01, E02S04, E03S02, E03S03]
@@ -350,8 +369,9 @@ items:
   epic: E05
   title: "Strict BriefIn schema and single-use RAM tokens"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E05S01.story.md
   dependencies: []
@@ -363,8 +383,9 @@ items:
   epic: E05
   title: "Relay app with health check, token route and quiet errors"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E05S02.story.md
   dependencies: [E05S01]
@@ -389,8 +410,9 @@ items:
   epic: E05
   title: "Compose stack with a /v1-only gateway and a read-only relay"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E05S04.story.md
   dependencies: [E05S02]
@@ -415,8 +437,9 @@ items:
   epic: E05
   title: "Relay on the Pi behind Funnel :10000"
   priority: high
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E05S06.story.md
   dependencies: [E05S04]
@@ -454,8 +477,9 @@ items:
   epic: E06
   title: "Drop box API"
   priority: medium
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E06S01.story.md
   dependencies: [E05S02]
@@ -467,8 +491,9 @@ items:
   epic: E06
   title: "Pairing in the PWA"
   priority: medium
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E06S02.story.md
   dependencies: [E06S01, E04S06, E05S08]
@@ -480,8 +505,9 @@ items:
   epic: E06
   title: "Collect on open"
   priority: medium
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E06S03.story.md
   dependencies: [E06S01, E06S02, E06S04, E03S04, E04S06]
@@ -493,8 +519,9 @@ items:
   epic: E06
   title: "Shortcut build sheet"
   priority: medium
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E06S04.story.md
   dependencies: [E06S01]
@@ -506,8 +533,9 @@ items:
   epic: E06
   title: "Turn-off flow and demo"
   priority: medium
-  status: refined
-  phase_status: not_started
+  status: in_progress
+  phase_status: qa_passed
+  pr_status: pending_review
   delivery_pipeline: 3phase
   artefact: contexts/artefacts/stories/E06S05.story.md
   dependencies: [E06S01, E06S02, E06S03, E06S04, E04S06]
