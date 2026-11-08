@@ -3,7 +3,7 @@ import { analyze } from "./engine.js";
 import { paint } from "./ascii.js";
 import { createDb } from "./db.js";
 import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel } from "./view.js";
-import { signIn, saveVault, deleteAccount, addToVault, makeReport, workoutSummaries, fetchRecords, newToken, listTokens, revokeToken, featuresFromVault } from "./account.js";
+import { signIn, saveVault, deleteAccount, addToVault, makeReport, workoutSummaries, fetchRecords, deleteRecords, newToken, listTokens, revokeToken, featuresFromVault } from "./account.js";
 import { dayNumber, mergeDrop, validDrop } from "./sync-merge.js";
 
 const HEX_COMMIT = /^[0-9a-f]{7,40}$/;
@@ -223,6 +223,7 @@ async function autoSave(source) {
   if (r.ok) { a.vault = vault; acctSay(`Saved: report ${fmtAt(report.at)}, ${vault.workouts.length} workouts in your history.`); }
   else acctSay(r.status);
   renderAccount();
+  return r;
 }
 
 // Records your devices sent since last time: open them here, fold them into today, remember the cursor in the vault.
@@ -250,7 +251,8 @@ async function pullInbox(quiet = false) {
     render();
     a.vault = { ...a.vault, inbox: r.last };
     acctSay(`${r.records.length} new record${r.records.length === 1 ? "" : "s"} from your devices, ${added} new workout${added === 1 ? "" : "s"}.`);
-    if (added) await autoSave("sync"); else await saveVault({ account: a, vault: a.vault });
+    const saved = added ? await autoSave("sync") : await saveVault({ account: a, vault: a.vault });
+    if (saved && saved.ok) await deleteRecords({ account: a, upto: r.last });   // safely in the vault: the Pi forgets them
   } finally {
     pulling = false;
   }

@@ -165,3 +165,18 @@ test("an imported workout and its backfilled copy are the same workout", async (
   assert.ok(!sameWorkout({ day: -3, min: 45 }, { day: -3, min: 60 }));
   assert.ok(!sameWorkout({ day: -3, min: 45 }, { day: -2, min: 45 }));
 });
+
+test("fetchRecords unwraps the exact receive time sealed inside; deleteRecords sends DELETE upto", async () => {
+  const { deleteRecords } = await import("../web/js/account.js");
+  const { pub, pkcs8 } = await makeAccountKeys();
+  const account = { session: "s1", privateKey: await importPriv(pkcs8) };
+  const wrapped = { received: 1794103242, record: DROP };
+  const fetchFn = stubFetch(() => json({ records: [{ id: 9, at: 1794099600, ...seal(pub, wrapped) }], last: 9 }));
+  const r = await fetchRecords({ account, fetchFn, relay: "https://r" });
+  assert.deepEqual(r.records.map((x) => [x.id, x.at]), [[9, 1794103242]]);
+  assert.deepEqual(r.records[0].drop, DROP);
+  const del = stubFetch(() => ({ ok: true, status: 204, json: async () => null }));
+  assert.ok((await deleteRecords({ account, upto: 9, fetchFn: del, relay: "https://r" })).ok);
+  assert.equal(del.calls[0].url, "https://r/v1/me/records?upto=9");
+  assert.equal(del.calls[0].method, "DELETE");
+});

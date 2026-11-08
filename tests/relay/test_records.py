@@ -67,7 +67,8 @@ def test_post_then_read_back_and_decrypt(c, acct):
     c.post("/v1/me/records", data=json.dumps(payload()), headers=bearer(acct["token"]))
     got = c.get("/v1/me/records", headers=bearer(acct["session"])).json
     assert [x["id"] for x in got["records"]] == [1, 2] and got["last"] == 2
-    assert unseal(got["records"][0]) == payload()
+    opened = unseal(got["records"][0])
+    assert opened["record"] == payload() and abs(opened["received"] - got["records"][0]["at"]) < 3600
     assert c.get("/v1/me/records?after=1", headers=bearer(acct["session"])).json["last"] == 2
     assert len(c.get("/v1/me/records?after=2", headers=bearer(acct["session"])).json["records"]) == 0
 
@@ -157,3 +158,30 @@ def test_backfill_window_60_days_ok_62_rejected(c, acct):
     assert c.post("/v1/me/records", data=json.dumps(ok), headers=bearer(acct["token"])).status_code == 201
     old = payload(workouts=[{"sport": "squash", "start_s": 62 * day, "end_s": 62 * day - 2700}])
     assert c.post("/v1/me/records", data=json.dumps(old), headers=bearer(acct["token"])).status_code == 422
+
+
+def test_receive_time_is_rounded_outside_exact_inside(c, acct):
+    r = c.post("/v1/me/records", data=json.dumps(payload()), headers=bearer(acct["token"])).json
+    assert r["at"] % 3600 == 0
+    rec = c.get("/v1/me/records", headers=bearer(acct["session"])).json["records"][0]
+    assert rec["at"] % 3600 == 0 and unseal(rec)["received"] >= rec["at"]
+
+
+def test_delete_after_sync_and_ids_never_repeat(c, acct):
+    for _ in range(3):
+        c.post("/v1/me/records", data=json.dumps(payload()), headers=bearer(acct["token"]))
+    assert c.delete("/v1/me/records?upto=3", headers=bearer(acct["session"])).status_code == 204
+    assert c.get("/v1/me/records", headers=bearer(acct["session"])).json["records"] == []
+    assert c.post("/v1/me/records", data=json.dumps(payload()), headers=bearer(acct["token"])).json["id"] == 4
+    assert c.delete("/v1/me/records?upto=x", headers=bearer(acct["session"])).status_code == 422
+    assert c.delete("/v1/me/records?upto=9", headers=bearer(acct["token"])).status_code == 401   # tokens cannot delete
+
+
+def test_uncollected_records_expire_after_30_days(c, acct):
+    c.post("/v1/me/records", data=json.dumps(payload()), headers=bearer(acct["token"]))
+    items = records.read_inbox(AID)
+    items[0]["at"] -= 31 * 86400                                   # pretend it arrived 31 days ago
+    records.write_inbox(AID, items)
+    assert c.get("/v1/me/records", headers=bearer(acct["session"])).json["records"] == []
+    c.post("/v1/me/records", data=json.dumps(payload()), headers=bearer(acct["token"]))
+    assert [r["id"] for r in records.read_inbox(AID)] == [2]        # the stale one is gone from disk too

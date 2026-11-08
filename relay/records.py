@@ -1,4 +1,5 @@
-# relay/records.py: the zero-knowledge personal API. Any device POSTs health records with a write token; the relay
+# relay/records.py: the zero-knowledge personal API. Records are a short-lived encrypted queue: deleted once your
+# website or CLI collects them into your vault, and after 30 days if nobody does. Any device POSTs health records with a write token; the relay
 # validates each one, seals it to the account's public key in memory, and stores only the ciphertext. Reading needs
 # the account's private key, which lives inside the password-encrypted vault: the Pi can never read a record.
 import base64
@@ -18,6 +19,8 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, Validation
 
 MAX_RECORD = 128 * 1024                 # ~3 h of workout-rate heart rate as JSON
 MAX_INBOX = 400                         # records kept per account; the oldest are dropped first
+RECORD_TTL = 30 * 86400                 # a record nobody collects is deleted after 30 days
+HOUR = 3600
 WINDOW = 61 * 86400                     # records may reach back 61 days (the app backfills 60 on first login)
 
 bp = Blueprint("records", __name__)
@@ -154,15 +157,20 @@ def post_record():
         SyncDrop.model_validate_json(raw)                # never echo or log the error: it contains input
     except ValidationError:
         return _err(422)
-    at = int(time.time())
-    sealed = seal(base64.b64decode(rec["pub"]), raw)
+    now = int(time.time())
+    # The exact receive time travels inside the ciphertext (the client needs it to place workouts in time);
+    # only the hour is stored in the clear, so the Pi keeps as little timing metadata as possible.
+    sealed = seal(base64.b64decode(rec["pub"]), json.dumps({"received": now, "record": json.loads(raw)}).encode())
     del raw
     with accounts.LOCK:
-        items = read_inbox(aid)
-        rid = (items[-1]["id"] + 1) if items else 1
-        items.append({"id": rid, "at": at, **sealed})
+        acct = accounts.read_account(aid) or rec
+        items = [r for r in read_inbox(aid) if r["at"] >= now - RECORD_TTL]
+        rid = acct.get("next_id") or ((items[-1]["id"] + 1) if items else 1)   # ids never repeat, even after deletes
+        items.append({"id": rid, "at": now - now % HOUR, **sealed})
         write_inbox(aid, items[-MAX_INBOX:])
-    return {"id": rid, "at": at}, 201
+        acct["next_id"] = rid + 1
+        accounts._write(aid, acct)
+    return {"id": rid, "at": now - now % HOUR}, 201
 
 
 @bp.get("/v1/me/records")
@@ -175,5 +183,22 @@ def list_records():
         after = int(request.args.get("after", "0"))
     except ValueError:
         return _err(422)
-    items = [r for r in read_inbox(aid) if r["id"] > after][:100]
+    cutoff = int(time.time()) - RECORD_TTL
+    items = [r for r in read_inbox(aid) if r["id"] > after and r["at"] >= cutoff][:100]
     return {"records": items, "last": items[-1]["id"] if items else after}
+
+
+@bp.delete("/v1/me/records")
+def delete_records():
+    """Delete-after-sync: once a client has folded records into the encrypted vault, it removes them here."""
+    import accounts
+    aid = accounts.session_id()
+    if not aid:
+        return _err(401)
+    try:
+        upto = int(request.args.get("upto", ""))
+    except ValueError:
+        return _err(422)
+    with accounts.LOCK:
+        write_inbox(aid, [r for r in read_inbox(aid) if r["id"] > upto])
+    return "", 204
