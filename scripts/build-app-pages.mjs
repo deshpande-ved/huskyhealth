@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The website's API page (web/api.html) and Methods page (web/index.html #references), as data for the iPhone app,
+// The website's API page (web/api.html) Methods page (web/index.html #references) and Privacy page (#privacy), as data for the iPhone app,
 // so the app shows the same pages inside the app, word for word. tests/app-pages.test.js fails if
 // mobile/src/content/pages.json no longer matches the HTML; run `node scripts/build-app-pages.mjs` after editing
 // either page.
@@ -100,7 +100,8 @@ export function buildPages() {
   const index = parse(readFileSync(`${ROOT}web/index.html`, "utf8"));
   const apiSection = find(api, (n) => n.tag === "main");
   const refs = find(index, (n) => n.attrs.id === "references");
-  return { api: blocks(apiSection), methods: blocks(refs) };
+  const privacy = find(index, (n) => n.attrs.id === "privacy");
+  return { api: blocks(apiSection), methods: blocks(refs), privacy: blocks(privacy) };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

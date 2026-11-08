@@ -1088,5 +1088,203 @@
     }
    ]
   }
+ ],
+ "privacy": [
+  {
+   "t": "h2",
+   "text": "Privacy"
+  },
+  {
+   "t": "p",
+   "cls": "lede",
+   "runs": [
+    {
+     "text": "HuskyHealth is built so that only you can read your health data. Not us, not the server, not anyone who breaks into it."
+    }
+   ]
+  },
+  {
+   "t": "h3",
+   "text": "Who can read what"
+  },
+  {
+   "t": "table",
+   "head": [
+    [
+     {
+      "text": "What"
+     }
+    ],
+    [
+     {
+      "text": "Where it lives"
+     }
+    ],
+    [
+     {
+      "text": "Who can read it"
+     }
+    ]
+   ],
+   "rows": [
+    [
+     [
+      {
+       "text": "Your password"
+      }
+     ],
+     [
+      {
+       "text": "your device only"
+      }
+     ],
+     [
+      {
+       "text": "you"
+      }
+     ]
+    ],
+    [
+     [
+      {
+       "text": "Your username"
+      }
+     ],
+     [
+      {
+       "text": "your device; the server sees a SHA-256 hash"
+      }
+     ],
+     [
+      {
+       "text": "you"
+      }
+     ]
+    ],
+    [
+     [
+      {
+       "text": "Workouts, sleep, heart rate"
+      }
+     ],
+     [
+      {
+       "text": "sealed on your device; the server holds ciphertext"
+      }
+     ],
+     [
+      {
+       "text": "you"
+      }
+     ]
+    ],
+    [
+     [
+      {
+       "text": "The key that opens them"
+      }
+     ],
+     [
+      {
+       "text": "made from your password, on your device"
+      }
+     ],
+     [
+      {
+       "text": "you"
+      }
+     ]
+    ],
+    [
+     [
+      {
+       "text": "Your location, routes, ECGs"
+      }
+     ],
+     [
+      {
+       "text": "never read"
+      }
+     ],
+     [
+      {
+       "text": "nobody"
+      }
+     ]
+    ]
+   ]
+  },
+  {
+   "t": "h3",
+   "text": "What the server keeps"
+  },
+  {
+   "t": "p",
+   "cls": "",
+   "runs": [
+    {
+     "text": "One file per account: a scrypt hash of your login key, your history as AES-256-GCM ciphertext, and a public key so your devices can add workouts. Without your password, that file is noise. Sessions live in memory for an hour. There are no access logs."
+    }
+   ]
+  },
+  {
+   "t": "h3",
+   "text": "Nothing to leak"
+  },
+  {
+   "t": "p",
+   "cls": "",
+   "runs": [
+    {
+     "text": "Most health APIs decrypt your data on their servers to work with it. HuskyHealth does the maths on your own devices instead, so the server never needs to read anything. If the server were stolen, the thief would get ciphertext, not your health."
+    }
+   ]
+  },
+  {
+   "t": "h3",
+   "text": "Voice"
+  },
+  {
+   "t": "p",
+   "cls": "",
+   "runs": [
+    {
+     "text": "./listen",
+     "code": true
+    },
+    {
+     "text": " sends one short passage of today's call to Gradium to be spoken. "
+    },
+    {
+     "text": "./speak",
+     "code": true
+    },
+    {
+     "text": " sends at most five seconds of your question to be written down. Neither is stored, and every request that leaves the server goes through a proxy you can watch."
+    }
+   ]
+  },
+  {
+   "t": "h3",
+   "text": "Never"
+  },
+  {
+   "t": "p",
+   "cls": "",
+   "runs": [
+    {
+     "text": "No ads, no analytics, no trackers. Your data is never sold or shared, and HuskyHealth never asks for your Garmin or Apple password."
+    }
+   ]
+  },
+  {
+   "t": "p",
+   "cls": "note",
+   "runs": [
+    {
+     "text": "The trade-off: there is no password reset. Nobody can read your history, so nobody can recover it."
+    }
+   ]
+  }
  ]
 }

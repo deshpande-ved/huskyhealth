@@ -135,13 +135,14 @@ nav.tabs a[aria-current="page"] { color: var(--ink); text-decoration: underline;
 }
 @media (max-width: 640px) {
   .masthead { grid-template-columns: auto 1fr auto; column-gap: var(--s-3); }
-  .mark-link { grid-column: 1; }
+  .mark-link { grid-column: 1; grid-row: 1; }
   #mark { width: 68px; }
   .brand { min-width: 0; }
   .brand h1 { font-size: var(--t-lg); }
   .brand { grid-column: 2; }
   .who { grid-column: 3; grid-row: 1; }
-  nav.tabs { grid-column: 2; flex-wrap: wrap; gap: var(--s-1) var(--s-4); }
+  /* the tabs get their own full-width row under the mark and title, all on one line */
+  nav.tabs { grid-column: 1 / -1; grid-row: 2; justify-content: space-between; gap: var(--s-3); white-space: nowrap; margin-top: var(--s-2); }
   .sheet { position: fixed; left: var(--s-4); right: var(--s-4); top: 84px; width: auto; }
 }
 

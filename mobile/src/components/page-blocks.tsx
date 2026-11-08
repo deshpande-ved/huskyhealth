@@ -18,7 +18,6 @@ export type PageBlock =
   | { t: 'card'; id: string; title: string; paras: Run[][] }
 
 const SIZE = 14
-const CH = SIZE * 0.6125
 
 /** Where a website link goes in the app: the account screen, the API page, a method card, or today. Links to a
  *  paper (doi.org, PubMed) open the paper itself in an in-app reader sheet. */
@@ -26,6 +25,7 @@ export function appRoute(href: string): Href {
   const h = href.replace(/^\//, '')
   if (h === '#account' || h === 'account') return '/sync'
   if (h === 'api') return '/api'
+  if (h === '#privacy' || h === 'privacy') return '/privacy'
   if (h.startsWith('#ref-')) return { pathname: '/methods', params: { focus: h.slice(1) } }
   return '/'
 }
@@ -49,23 +49,22 @@ export function Runs({ runs, size = SIZE, color }: { runs: Run[]; size?: number;
 const plain = (rs: Run[]) => rs.map((r) => r.text).join('')
 
 function Table({ head, rows }: { head: Run[][]; rows: Run[][][] }) {
-  // monospace: a column is as wide as its longest entry, capped so long sentences wrap as they do on the site
-  const widths = head.map((h, i) => Math.min(230, Math.ceil(Math.max(plain(h).length, ...rows.map((r) => plain(r[i] ?? []).length)) * CH) + 16))
+  // as on the site: the table fits the screen and cells wrap; a column's share follows its longest entry (monospace),
+  // capped so one long sentence can't squeeze the others
+  const share = head.map((h, i) => Math.min(30, Math.max(plain(h).length, ...rows.map((r) => plain(r[i] ?? []).length), 6)))
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
-      <View>
-        <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderColor: C.text }}>
-          {head.map((h, i) => (
-            <Text key={i} style={{ width: widths[i], paddingRight: 16, paddingVertical: 8 }}><Runs runs={h} size={12.8} color={C.muted} /></Text>
-          ))}
-        </View>
-        {rows.map((r, j) => (
-          <View key={j} style={{ flexDirection: 'row', borderBottomWidth: 1, borderColor: C.rule, borderStyle: 'dashed' }}>
-            {r.map((c, i) => <Text key={i} style={{ width: widths[i], paddingRight: 16, paddingVertical: 8, lineHeight: 21 }}><Runs runs={c} /></Text>)}
-          </View>
+    <View style={{ marginBottom: 16 }}>
+      <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderColor: C.text }}>
+        {head.map((h, i) => (
+          <Text key={i} style={{ flex: share[i], paddingRight: 12, paddingVertical: 8 }}><Runs runs={h} size={12.8} color={C.muted} /></Text>
         ))}
       </View>
-    </ScrollView>
+      {rows.map((r, j) => (
+        <View key={j} style={{ flexDirection: 'row', borderBottomWidth: 1, borderColor: C.rule, borderStyle: 'dashed' }}>
+          {r.map((c, i) => <Text key={i} style={{ flex: share[i], paddingRight: 12, paddingVertical: 8, lineHeight: 21 }}><Runs runs={c} /></Text>)}
+        </View>
+      ))}
+    </View>
   )
 }
 
