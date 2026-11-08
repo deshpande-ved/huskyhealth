@@ -7,6 +7,7 @@
   <title>HuskyHealth API</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="/fonts/instrument-serif-latin-400-italic.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/instrument-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -21,7 +22,6 @@
     <nav class="tabs" aria-label="Pages"><a href="/#today">today</a><a href="/#import">import</a><a href="/#account">account</a><a href="/api" aria-current="page">api</a></nav>
 
     <section class="block page active">
-      <p class="eyebrow"><span class="sec">§</span>personal api &middot; v1</p>
       <h2 class="verdict z1">Your Health data, over HTTP</h2>
       <p class="lede">Apple gives HealthKit no web API. This is yours: any device can <code>POST</code> your workouts, and you can <code>GET</code> them back from anywhere. The server stores only ciphertext and cannot read a single record.</p>
 
@@ -47,7 +47,7 @@ Authorization: Bearer hhw_…</pre>
         </article>
       </div>
 
-      <h3 class="subhead"><span class="sec">04</span>Who can read what</h3>
+      <h3 class="subhead">Who can read what</h3>
       <div class="scroll"><table class="data">
         <thead><tr><th>holder</th><th>can</th><th>cannot</th></tr></thead>
         <tbody>
@@ -57,7 +57,7 @@ Authorization: Bearer hhw_…</pre>
         </tbody>
       </table></div>
 
-      <h3 class="subhead"><span class="sec">05</span>Endpoints</h3>
+      <h3 class="subhead">Endpoints</h3>
       <div class="scroll"><table class="data">
         <thead><tr><th>method</th><th>path</th><th>auth</th><th>does</th></tr></thead>
         <tbody>
@@ -71,7 +71,7 @@ Authorization: Bearer hhw_…</pre>
       </table></div>
       <p class="explain">Base URL <code class="wrap">https://veds-pi5.polecat-nominal.ts.net:10000</code>. A record holds workouts (sport, start and end as seconds before sending, heart rate), resting heart rate, HRV and Watch effort.</p>
 
-      <h3 class="subhead"><span class="sec">06</span>Try it</h3>
+      <h3 class="subhead">Try it</h3>
       <p class="lede">Make a token on <a href="/#account">./account</a>, then send a run:</p>
       <pre class="log code">curl -X POST https://veds-pi5.polecat-nominal.ts.net:10000/v1/me/records \
   -H "Authorization: Bearer $HH_TOKEN" -H "Content-Type: application/json" \
