@@ -205,3 +205,51 @@ export function briefText(model, max = 600) {
   }
   return text;
 }
+
+// ---- talk to your API: a question in plain words -> an answer from your own data, and the request behind it ----
+// Keyword intents, on the device (no AI). Answers use the page's own numbers; the curl shows the API call involved.
+const SPORT_WORDS = [[/squash/, "squash"], [/\brun|running|jog/, "running"], [/walk/, "walking"], [/ride|cycl|bike/, "cycling"],
+  [/strength|weights|gym|lift/, "strength"], [/hiit|interval/, "hiit"]];
+const plain = (s) => String(s || "").replace(/[^A-Za-z0-9 .,;:%'()/\-’–—]/g, "");
+
+export function answerQuestion(question, { model, week, session, zones, features, relay }) {
+  const q = String(question || "").toLowerCase();
+  const read = `curl -H "Authorization: Bearer $HH_SESSION" \\\n  "${relay}/v1/me/records?after=0"\n# each record opens with your private key, on your device`;
+  const n = features ? features.workouts.length : 0;
+  const mins = q.match(/(\d+)\s*(?:min|minute)/);
+  if (mins && /send|log|post|add|record|save/.test(q)) {
+    const sport = (SPORT_WORDS.find(([re]) => re.test(q)) || [null, "other"])[1];
+    const m = Math.min(Number(mins[1]), 600);
+    const body = JSON.stringify({ v: 1, workouts: [{ sport, start_s: m * 60, end_s: 0 }] });
+    const noun = { squash: "squash session", running: "run", walking: "walk", cycling: "ride", strength: "strength session", hiit: "HIIT session" }[sport] || "workout";
+    return { intent: "write", answer: plain(`Here is the request that adds a ${m} minute ${noun} to your API. Your iPhone app sends the same thing, with heart rate.`),
+      curl: `curl -X POST "${relay}/v1/me/records" \\\n  -H "Authorization: Bearer $HH_TOKEN" -H "Content-Type: application/json" \\\n  -d '${body}'` };
+  }
+  if (!n) return { intent: "empty", answer: "There are no workouts yet. Log in on the iPhone app and your last 60 days arrive here.", curl: read };
+  if (/calor|kcal|burn|energy/.test(q)) {
+    const wk = week.days.reduce((s, d) => s + (d.kcal || 0), 0);
+    const L = session.last;
+    return { intent: "calories", curl: read, answer: plain(`This week you burned ${round(wk)} kcal across ${plural(week.days.reduce((s, d) => s + d.sessions.length, 0), "session")}.${L && L.kcal != null ? ` Your last session, ${L.sport.toLowerCase()} ${L.ago}, burned ${L.kcal} kcal.` : ""}`) };
+  }
+  if (/zone|heart rate|intens|hard was/.test(q)) {
+    const top = zones.total.indexOf(Math.max(...zones.total));
+    return { intent: "zones", curl: read, answer: plain(`In the last 60 days you spent ${zones.minutes} minutes with workout heart rate. Most of it was zone ${top + 1}, ${zones.names[top]}, at ${Math.round((zones.total[top] / Math.max(zones.minutes, 1)) * 100)} %.`) };
+  }
+  if (/how many|count|number of|sessions/.test(q)) {
+    const bySport = [...new Set(features.workouts.map((w) => w.sport))].map((s) => `${features.workouts.filter((w) => w.sport === s).length} ${sportName(s).toLowerCase()}`);
+    return { intent: "count", curl: read, answer: plain(`You have ${plural(n, "workout")} in the last 60 days: ${bySport.join(", ")}.`) };
+  }
+  if (/last|latest|previous|recent|yesterday|session|workout/.test(q)) {
+    return { intent: "last", curl: read, answer: plain(model.last ? `Your last session: ${model.last.summary}` : "No sessions yet.") };
+  }
+  if (/week|load|usual|month/.test(q)) {
+    return { intent: "week", curl: read, answer: plain(`This week: ${model.week.summary.replace(/^Load/, "load")}${week.ratio != null ? ` That is ${week.ratio} % of your usual week.` : ""}`) };
+  }
+  if (/train|hard|easy|should|today|recover|rest|ready/.test(q)) {
+    return { intent: "call", curl: read, answer: plain(`${model.call.headline}. ${model.call.reason}`) };
+  }
+  if (/api|curl|request|endpoint/.test(q)) {
+    return { intent: "api", curl: read, answer: "Your workouts come from your own API: records your devices send, opened with your private key on this device." };
+  }
+  return { intent: "unknown", curl: read, answer: "Ask about today's call, this week, your last session, heart-rate zones, calories, or how many workouts you have." };
+}
