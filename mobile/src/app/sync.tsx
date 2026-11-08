@@ -10,7 +10,7 @@ import { C, mono, RELAY } from '../lib/theme'
 // the workout to your personal API, where it is encrypted to your account's key on arrival.
 const SAY: Record<number, string> = {
   0: 'Could not reach the relay.', 401: 'Wrong username or password.', 409: 'Ten devices is the limit: revoke one on the website.',
-  422: 'Enter your username and password.', 429: 'Too many tries. Wait a minute.',
+  422: 'Enter your username and password.', 429: 'Too many log-in attempts for this account. Wait a few minutes.',
 }
 
 export default function Account() {
@@ -43,7 +43,8 @@ export default function Account() {
     if (!HealthKit) return
     const r = await HealthKit.syncNow()
     setStatus(r.status === 201 ? `Sent ${r.workouts} workout${r.workouts === 1 ? '' : 's'} to your API (encrypted on arrival).`
-      : r.status === 401 ? 'This device\'s token was revoked. Log in again.'
+      : r.status === 401 ? 'This device\'s token expired or was revoked. Log in again.'
+      : r.status === 429 ? 'The relay asked this device to slow down. It will try again on the next sync.'
       : r.status === 409 ? 'Log in on the website once so your account gets its key.'
       : r.reason ?? `The relay answered ${r.status}.`)
   }

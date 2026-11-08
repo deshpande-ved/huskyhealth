@@ -89,6 +89,14 @@ enum HealthCore {
     (s.sourceRevision.productType ?? "").contains("Watch") || (s.device?.model ?? "").contains("Watch")
   }
 
+  /// Garmin Connect writes workouts into Apple Health; so may Whoop, Oura, Polar. The relay accepts watch / garmin / other.
+  static func fromGarmin(_ s: HKSample) -> Bool {
+    let src = s.sourceRevision.source
+    return src.bundleIdentifier.lowercased().contains("garmin") || src.name.lowercased().contains("garmin")
+  }
+
+  static func srcTag(_ s: HKSample) -> String { fromWatch(s) ? "watch" : fromGarmin(s) ? "garmin" : "other" }
+
   // MARK: - Queries
 
   static func workouts(since start: Date, until end: Date = Date()) async throws -> [HKWorkout] {
@@ -118,7 +126,7 @@ enum HealthCore {
       return [
         "type": hkName[sp] ?? "HKWorkoutActivityTypeOther", "sport": sp,
         "start": ms(w.startDate), "end": ms(w.endDate), "min": w.duration / 60,
-        "kcal": kcal(w).map { $0 as Any } ?? NSNull(), "device": fromWatch(w) ? "Apple Watch" : "", "sourceName": "",
+        "kcal": kcal(w).map { $0 as Any } ?? NSNull(), "device": fromWatch(w) ? "Apple Watch" : "", "sourceName": fromGarmin(w) ? "Garmin" : "",   // a category, never the device's own name
       ]
     }
   }
@@ -146,7 +154,7 @@ enum HealthCore {
         "sport": sport(w.workoutActivityType),
         "start_s": Int(now.timeIntervalSince(w.startDate)), "end_s": Int(now.timeIntervalSince(w.endDate)),
         "kcal": kcal(w).map { min(max($0, 0), 10000) as Any } ?? NSNull(),
-        "src": fromWatch(w) ? "watch" : "other",
+        "src": srcTag(w),
         "hr_t": hr.map { iso.string(from: Date(timeIntervalSince1970: $0[0] / 1000)) },
         "hr_v": hr.map { min(max($0[1], 20), 300) },
       ])
@@ -169,6 +177,7 @@ enum HealthCore {
     return (try await recordBody(workouts: ws, daily: (floor, now), now: now), ws.last?.endDate, ws.count)
   }
 
+  /// POST one record. On 429 the relay says how long to wait (Retry-After); wait (at most 60 s) and try once more.
   private static func post(_ cfg: SyncConfig, _ body: Data) async -> Int {
     var req = URLRequest(url: cfg.relay.appendingPathComponent("v1/me/records"))
     req.httpMethod = "POST"
@@ -176,8 +185,13 @@ enum HealthCore {
     req.setValue("Bearer \(cfg.token)", forHTTPHeaderField: "Authorization")
     req.httpBody = body
     req.timeoutInterval = 30
-    guard let (_, resp) = try? await URLSession.shared.data(for: req) else { return -1 }
-    return (resp as? HTTPURLResponse)?.statusCode ?? 0
+    for attempt in 0..<2 {
+      guard let (_, resp) = try? await URLSession.shared.data(for: req), let http = resp as? HTTPURLResponse else { return -1 }
+      guard http.statusCode == 429, attempt == 0 else { return http.statusCode }
+      let wait = min(Double(http.value(forHTTPHeaderField: "Retry-After") ?? "") ?? 10, 60)
+      try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
+    }
+    return 429
   }
 
   /// POST new workouts to your personal API. Returns the HTTP status (0 = nothing to send / not logged in).
@@ -380,7 +394,7 @@ enum Account {
     guard let base = URL(string: relay), let k = derive(username: username, password: password) else { return 422 }
     let (s1, open) = await post(base.appendingPathComponent("v1/account/open"), ["id": k.id, "auth": k.auth])
     guard s1 == 200, let session = open["session"] as? String else { return s1 }
-    let (s2, tok) = await post(base.appendingPathComponent("v1/account/tokens"), ["scope": "write"], bearer: session)
+    let (s2, tok) = await post(base.appendingPathComponent("v1/account/tokens"), ["scope": "write", "days": 365], bearer: session)
     guard s2 == 201, let token = tok["token"] as? String, SyncConfig.save(relay: relay, token: token) else { return s2 == 201 ? 500 : s2 }
     SyncConfig.user = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     SyncConfig.lastEnd = nil

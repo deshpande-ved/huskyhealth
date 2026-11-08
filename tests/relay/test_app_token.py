@@ -33,7 +33,7 @@ def test_rate_limit_window(client, monkeypatch):
     for _ in range(30):
         assert client.post("/v1/token?kind=brief").status_code == 200
     r = client.post("/v1/token?kind=brief")
-    assert r.status_code == 429 and r.get_json() == {"error": "slow down"}
+    assert r.status_code == 429 and r.get_json() == {"error": "slow down", "status": 429}
     now[0] += 61
     assert client.post("/v1/token?kind=brief").status_code == 200
 
@@ -47,8 +47,8 @@ def test_errors_are_generic(client, monkeypatch):
     ]
     for r in cases:
         assert r.status_code >= 400 and SENTINEL.encode() not in r.data
-        assert set(r.get_json()) == {"error"}
+        assert set(r.get_json()) == {"error", "status"} and r.headers["API-Version"] == "1"
 
     with relay_app.app.app_context():                               # unhandled exception -> fixed body
-        body, code = relay_app.any_error(RuntimeError(SENTINEL))
-    assert code == 500 and body == {"error": "server error"}
+        body, code, _headers = relay_app.any_error(RuntimeError(SENTINEL))
+    assert code == 500 and body == {"error": "server error", "status": 500}

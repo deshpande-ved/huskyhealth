@@ -64,3 +64,13 @@ test("removed screens stay removed; log in lives top right; no device-specific c
     assert.ok(!/>\s*(open|details)\s*(&rarr;|\u2192)?\s*</i.test(src), `${name} labels a row "open/details"`);
   }
 });
+
+test("spoken brief: written from the page's numbers, passes the relay's privacy filter, at most 600 characters", async () => {
+  const { briefText } = await import("../web/js/view.js");
+  const text = briefText(m);
+  assert.ok(text.startsWith(`${m.call.headline}. ${m.call.reason}`));
+  assert.ok(text.includes("This week: load") && text.length <= 600);
+  assert.match(text, /^[A-Za-z0-9 .,;:%'()/\-’–—]+$/);          // the relay's ALLOWED pattern
+  assert.ok(!/\d{5,}|https?|www\.|@/i.test(text));                             // and its SUSPECT pattern
+  assert.ok(briefText(m, 60).length <= 60);
+});

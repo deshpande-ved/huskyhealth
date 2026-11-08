@@ -3,7 +3,7 @@
   "info": {
     "title": "HuskyHealth personal API",
     "version": "1.0.0",
-    "description": "A zero-knowledge REST API for your own Apple Health workouts. Devices POST records with a write token; the server seals each record to your account's RSA public key on arrival and stores only ciphertext. Reading returns that ciphertext: only the private key in your password-encrypted vault opens it, in your browser or the CLI. The server cannot read your records, your username or your password. Records are a short-lived queue: your client deletes them once they are folded into your encrypted vault, and any record nobody collects is deleted after 30 days. Stored receive times are rounded to the hour; the exact time is sealed inside the record."
+    "description": "A zero-knowledge REST API for your own Apple Health workouts. Devices POST records with a write token; the server seals each record to your account's RSA public key on arrival and stores only ciphertext. Reading returns that ciphertext: only the private key in your password-encrypted vault opens it, in your browser or the CLI. The server cannot read your records, your username or your password. Records are a short-lived queue: your client deletes them once they are folded into your encrypted vault, and any record nobody collects is deleted after 30 days. Stored receive times are rounded to the hour; the exact time is sealed inside the record. Errors are always JSON {error, status}; 429 responses carry Retry-After. Every response carries API-Version. Limits: 10 log-in attempts per account per 15 minutes; 120 records per device token per hour (300 per account); 120 session requests per minute; per-client request and connection limits at the gateway. Device tokens are write-only and expire (1-365 days, default 90). Request bodies must be application/json (else 415)."
   },
   "servers": [
     {
@@ -209,6 +209,12 @@
           },
           "422": {
             "description": "Not a valid record (never echoed)"
+          },
+          "429": {
+            "description": "Slow down; see Retry-After (seconds)"
+          },
+          "415": {
+            "description": "Body is not application/json"
           }
         }
       },
@@ -250,6 +256,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Slow down; see Retry-After (seconds)"
           }
         }
       },
@@ -276,6 +285,9 @@
           },
           "401": {
             "description": "Needs a session (device tokens cannot delete)"
+          },
+          "429": {
+            "description": "Slow down; see Retry-After (seconds)"
           }
         }
       }
@@ -290,7 +302,33 @@
         ],
         "responses": {
           "201": {
-            "description": "{ id, token, scope }"
+            "description": "{ id, token, scope, expires }"
+          },
+          "409": {
+            "description": "ten tokens already"
+          },
+          "429": {
+            "description": "Slow down; see Retry-After (seconds)"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scope": {
+                    "const": "write"
+                  },
+                  "days": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 365,
+                    "default": 90
+                  }
+                }
+              }
+            }
           }
         }
       },
@@ -303,7 +341,10 @@
         ],
         "responses": {
           "200": {
-            "description": "{ tokens: [{ id, scope, created }] }"
+            "description": "{ tokens: [{ id, scope, created, expires, last_used }] }"
+          },
+          "429": {
+            "description": "Slow down; see Retry-After (seconds)"
           }
         }
       }
@@ -329,6 +370,9 @@
         "responses": {
           "204": {
             "description": "Revoked"
+          },
+          "429": {
+            "description": "Slow down; see Retry-After (seconds)"
           }
         }
       }
@@ -343,6 +387,9 @@
           },
           "401": {
             "description": "Wrong username or password"
+          },
+          "429": {
+            "description": "Slow down; see Retry-After (seconds)"
           }
         }
       }

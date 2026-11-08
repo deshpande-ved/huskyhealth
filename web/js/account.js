@@ -186,6 +186,12 @@ export async function fetchRecords({ account, after = 0, fetchFn = fetch, relay 
   return { ok: true, records, last: r.json.last };
 }
 
+// The spoken brief: one passage of text to the relay, which asks Gradium and returns audio plus word timings.
+export async function speakBrief({ account, text, fetchFn = fetch, relay = RELAY }) {
+  const r = await call(fetchFn, relay, "/v1/speak", { text }, account.session);
+  return r.status === 200 && r.json && r.json.audio ? { ok: true, ...r.json } : { ok: false, status: r.status };
+}
+
 // Delete-after-sync: once records are folded into the encrypted vault, remove them from the Pi.
 export async function deleteRecords({ account, upto, fetchFn = fetch, relay = RELAY }) {
   const r = await call(fetchFn, relay, `/v1/me/records?upto=${Number(upto) || 0}`, null, account.session, "DELETE");
