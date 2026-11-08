@@ -137,9 +137,11 @@ nav.tabs a[aria-current="page"] { color: var(--ink); text-decoration: underline;
   .masthead { grid-template-columns: auto 1fr auto; column-gap: var(--s-3); }
   .mark-link { grid-column: 1; }
   #mark { width: 68px; }
+  .brand { min-width: 0; }
+  .brand h1 { font-size: var(--t-lg); }
   .brand { grid-column: 2; }
   .who { grid-column: 3; grid-row: 1; }
-  nav.tabs { grid-column: 2; }
+  nav.tabs { grid-column: 2; flex-wrap: wrap; gap: var(--s-1) var(--s-4); }
   .sheet { position: fixed; left: var(--s-4); right: var(--s-4); top: 84px; width: auto; }
 }
 
@@ -153,7 +155,8 @@ nav.tabs a[aria-current="page"] { color: var(--ink); text-decoration: underline;
    controls: ./listen ./speak centred above the prompt */
 .hero .banner { width: fit-content; max-width: 100%; margin-inline: auto; }
 @media (min-width: 860px) {
-  .hero .reason, .hero .basis, .hero .method { text-align: center; margin-inline: auto; }
+  .hero .reason, .hero .basis, .hero .method, .hero .about { text-align: center; margin-inline: auto; }
+  .hero .cta { justify-content: center; }
 }
 .banner {
   --cols: 40;
@@ -162,6 +165,7 @@ nav.tabs a[aria-current="page"] { color: var(--ink); text-decoration: underline;
   overflow: hidden; white-space: pre;
 }
 .reason { margin: 0; max-width: 58ch; font-size: var(--t-lg); line-height: 1.45; }
+.about { margin: var(--s-4) 0 0; max-width: 64ch; color: var(--ink-2); line-height: 1.6; }
 .basis { margin: var(--s-3) 0 0; color: var(--ink-2); font-size: var(--t-sm); }
 .method { margin: var(--s-2) 0 0; font-size: var(--t-xs); }
 .method a { color: var(--ink-3); text-decoration-color: var(--ink-3); text-decoration-style: dotted; }

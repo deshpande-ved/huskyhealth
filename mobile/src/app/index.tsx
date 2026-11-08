@@ -15,7 +15,7 @@ import { HealthKit } from '../../modules/health-kit'
 import { loadToday, type Today as TodayData } from '../lib/today'
 import { setToday } from '../lib/today-store'
 import { C, bold, mono, RELAY, link, methodLink, filled } from '../lib/theme'
-import { todayModel, dateLabel, briefText, answerQuestion, weekDetail, sessionDetail, zoneDetail, WELCOME, todayRows, ROW_PAGE } from '../../../web/js/view.js'
+import { todayModel, dateLabel, briefText, answerQuestion, weekDetail, sessionDetail, zoneDetail, WELCOME, ABOUT, todayRows, ROW_PAGE } from '../../../web/js/view.js'
 import { banner } from '../../../web/js/ascii.js'
 
 type Cell = { ch: string; cls: string }
@@ -263,6 +263,7 @@ export default function Today() {
       {user ? <Text style={{ ...mono, color: C.text2, fontSize: 14 }}>{status}</Text> : (
         <>
           <Text style={{ ...mono, fontSize: 20, lineHeight: 29 }}>{WELCOME}</Text>
+          <Text style={{ ...mono, fontSize: 15, lineHeight: 24, color: C.text2, marginTop: 16 }}>{ABOUT}</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginTop: 24 }}>
             <Button label="log in" primary onPress={() => router.push('/sync')} />
             <Text onPress={() => router.push('/api')} style={{ ...link(), fontSize: 14 }}>how the API works</Text>

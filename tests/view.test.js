@@ -143,3 +143,13 @@ test("rows run zones, last session, this week, VO2 max, sleep, on the website an
   assert.match(app, /todayRows\(m\)/);
   assert.match(site, /todayRows\(todayModel/);
 });
+
+test("logged out: who it is for, at most 70 words, the same on the website and in the app", async () => {
+  const { ABOUT } = await import("../web/js/view.js");
+  assert.ok(ABOUT.split(/\s+/).length <= 70);
+  assert.match(ABOUT, /Northeastern/);
+  assert.match(ABOUT, /REST API/);
+  assert.match(ABOUT, /Gradium/);
+  assert.match(readFileSync(new URL("../web/js/app.js", import.meta.url), "utf8"), /textContent: ABOUT/);
+  assert.match(readFileSync(new URL("../mobile/src/app/index.tsx", import.meta.url), "utf8"), /\{ABOUT\}/);
+});

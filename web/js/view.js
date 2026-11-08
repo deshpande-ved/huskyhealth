@@ -291,7 +291,7 @@ export function answerQuestion(question, { model, week, session, zones, features
 }
 
 // The logged-out welcome, word for word on the website and in the iPhone app.
-export const WELCOME = "Log in on the HuskyHealth iPhone app and your last 60 days of Apple Watch or Garmin workouts arrive on every screen, encrypted so only you can read them.";
+export const WELCOME = "Log in and your last 60 days of workouts arrive, encrypted.";
 
 // ---- Detail pages, as data: the website (app.js) and the iPhone app draw these same blocks, word for word ----
 // Blocks: { t: "lede" | "subhead" | "empty", text } · { t: "facts", items: [[k, v]] } · { t: "stack", cells }
@@ -378,3 +378,6 @@ export function detailBlocks(id, an, f, hasData = true) {
   }
   return [EMPTY_NOTE];
 }
+
+// Who it is for, under the welcome when logged out (website and app, word for word; at most 70 words).
+export const ABOUT = "Built at Northeastern for athletes in season. Varsity and club players juggle training, travel and classes; HuskyHealth turns every Apple Watch or Garmin session into one daily call, hard or easy, from your recovery and weekly load. Ask it out loud and Gradium's AI voice answers. For developers, it is a personal REST API: your workouts, encrypted so only you can read them, for your own site or tools.";

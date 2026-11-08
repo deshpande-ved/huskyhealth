@@ -2,7 +2,7 @@
 import { analyze } from "./engine.js";
 import { paint, banner } from "./ascii.js";
 import { createDb } from "./db.js";
-import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel, briefText, answerQuestion, hm, WELCOME, DETAIL_PAGES, detailBlocks, todayRows, ROW_PAGE } from "./view.js";
+import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel, briefText, answerQuestion, hm, WELCOME, ABOUT, DETAIL_PAGES, detailBlocks, todayRows, ROW_PAGE } from "./view.js";
 import { recordQuestion } from "./voice.js";
 import { signIn, saveVault, fetchVault, deleteAccount, addToVault, makeReport, workoutSummaries, daySummaries, fetchRecords, deleteRecords, newToken, listTokens, revokeToken, featuresFromVault, speakBrief, listenQuestion, RELAY } from "./account.js";
 import { dayNumber, dropToVault, validDrop } from "./sync-merge.js";
@@ -229,6 +229,7 @@ function render() {
     $("hero").replaceChildren(
       ...bannerNode(["HUSKY", "HEALTH"], "HuskyHealth"),
       el("p", { className: "reason", textContent: WELCOME }),
+      el("p", { className: "about", textContent: ABOUT }),
       el("div", { className: "cta" }, login, el("label", { className: "button", htmlFor: "import-file", textContent: "import an Apple Health export" }),
         el("a", { href: "/api", textContent: "how the API works" })));
     $("panels").replaceChildren();
