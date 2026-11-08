@@ -17,7 +17,7 @@ import { banner } from '../../../web/js/ascii.js'
 type Cell = { ch: string; cls: string }
 type Fig = { id: string; title?: string; summary?: string; label: string; rows: Cell[][]; headline?: string; reason?: string; basis?: string }
 
-const CLS: Record<string, string> = { z0: C.muted, muted: C.muted, z1: C.foam, z2: C.pine, z3: C.gold, z4: C.rose, z5: C.love, alert: C.love }
+const cls = (): Record<string, string> => ({ z0: C.muted, muted: C.muted, z1: C.foam, z2: C.pine, z3: C.gold, z4: C.rose, z5: C.love, alert: C.love })
 
 // A row of the printout, as on the website: title, one plain sentence, the ASCII figure.
 function Row({ fig }: { fig: Fig }) {
@@ -28,7 +28,7 @@ function Row({ fig }: { fig: Fig }) {
       <View accessible accessibilityRole="image" accessibilityLabel={fig.label} style={{ marginTop: 6 }}>
         {fig.rows.map((row, r) => (
           <Text key={r} style={{ fontFamily: 'Menlo', fontSize: 12, lineHeight: 17 }}>
-            {row.map((c, i) => <Text key={i} style={{ color: CLS[c.cls] ?? C.text }}>{c.ch}</Text>)}
+            {row.map((c, i) => <Text key={i} style={{ color: cls()[c.cls] ?? C.text }}>{c.ch}</Text>)}
           </Text>
         ))}
       </View>
