@@ -2,9 +2,9 @@
 import { analyze } from "./engine.js";
 import { paint, banner } from "./ascii.js";
 import { createDb } from "./db.js";
-import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel, briefText, answerQuestion } from "./view.js";
+import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel, briefText, answerQuestion, hm } from "./view.js";
 import { recordQuestion } from "./voice.js";
-import { signIn, saveVault, deleteAccount, addToVault, makeReport, workoutSummaries, fetchRecords, deleteRecords, newToken, listTokens, revokeToken, featuresFromVault, speakBrief, listenQuestion, RELAY } from "./account.js";
+import { signIn, saveVault, deleteAccount, addToVault, makeReport, workoutSummaries, daySummaries, fetchRecords, deleteRecords, newToken, listTokens, revokeToken, featuresFromVault, speakBrief, listenQuestion, RELAY } from "./account.js";
 import { dayNumber, mergeDrop, validDrop } from "./sync-merge.js";
 
 const HEX_COMMIT = /^[0-9a-f]{7,40}$/;
@@ -214,6 +214,27 @@ function renderSession(a, f) {
     methodNode(s.source, s.ref));
 }
 
+function renderSleep(an, f) {
+  const nights = f.days.filter((d) => d.sleep_min != null).slice(-14).reverse();
+  if (!state.features || !nights.length) return $("sleep-body").replaceChildren(emptyNote());
+  const s = an.sleep;
+  $("sleep-body").replaceChildren(
+    el("p", { className: "lede", textContent: `Last night ${hm(s.last)}. Your 7-night average is ${hm(s.avg7)}${s.avg28 != null ? `, 28-night ${hm(s.avg28)}` : ""}.` }),
+    table(["night", "asleep", "vs 7-night average"], nights.map((d) => [dateLabel(d.day), hm(d.sleep_min),
+      `${d.sleep_min >= s.avg7 ? "+" : "\u2212"}${hm(Math.abs(d.sleep_min - s.avg7))}`]), [1, 2]),
+    methodNode(s.source, "ref-sleep"));
+}
+
+function renderFitness(an, f) {
+  const pts = f.days.filter((d) => d.vo2 != null).reverse();
+  if (!state.features || !pts.length) return $("fitness-body").replaceChildren(emptyNote());
+  const t = an.vo2Trend.value;
+  $("fitness-body").replaceChildren(
+    el("p", { className: "lede", textContent: `Apple estimates VO2 max after outdoor walks, runs and hikes. ${t == null ? "" : `Over four weeks it moved ${t >= 0 ? "up" : "down"} ${Math.abs(Math.round(t * 10) / 10)} ml/kg/min.`}` }),
+    table(["day", "VO2 max (ml/kg/min)"], pts.map((d) => [dateLabel(d.day), String(Math.round(d.vo2 * 10) / 10)]), [1], true),
+    methodNode(an.vo2Trend.source, "ref-vo2-trend"));
+}
+
 function renderZones(f) {
   if (!state.features || !f.workouts.length) return $("zones-body").replaceChildren(emptyNote());
   const z = zoneDetail(f);
@@ -238,17 +259,19 @@ function render() {
   const { call, week, last, zones } = todayModel(an, f);
   if (state.features) {
     const listen = el("button", { type: "button", className: "listen", textContent: "listen" });
-    listen.addEventListener("click", () => playBrief(briefText({ call, week, last }), listen));
+    listen.addEventListener("click", () => playBrief(briefText({ call, week, last, sleep: todayModel(an, f).sleep }), listen));
     listen.classList.toggle("hidden", !state.account);
     $("hero").replaceChildren(
       ...bannerNode([call.headline.toUpperCase()], call.headline),
       el("p", { className: "reason", textContent: call.reason }),
       el("p", { className: "basis", textContent: `${dateLabel(0)}, ${call.basis}.` }),
       el("div", { className: "speak" }, listen, el("p", { id: "caption", className: "caption hidden" })),
-      askNode(() => ({ model: { call, week, last }, week: weekDetail(an, f), session: sessionDetail(an, f), zones: zoneDetail(f),
+      askNode(() => ({ model: { call, week, last, ...(({ sleep, fitness }) => ({ sleep, fitness }))(todayModel(an, f)) }, week: weekDetail(an, f), session: sessionDetail(an, f), zones: zoneDetail(f),
         features: state.features, relay: RELAY })),
       methodNode(call.source, call.ref));
+    const { sleep, fitness } = todayModel(an, f);
     $("panels").replaceChildren(panelNode(week, { href: "#week" }), ...(last ? [panelNode(last, { href: "#session" })] : []),
+      ...(sleep ? [panelNode(sleep, { href: "#sleep" })] : []), ...(fitness ? [panelNode(fitness, { href: "#fitness" })] : []),
       panelNode(zones, { href: "#zones" }));
   } else {
     const login = el("button", { type: "button", className: "primary", textContent: "log in" });
@@ -263,14 +286,16 @@ function render() {
   renderWeek(an, f);
   renderSession(an, f);
   renderZones(f);
+  renderSleep(an, f);
+  renderFitness(an, f);
   $("stored").textContent = storedLine(state.features);
 }
 
 // One page at a time. Method links (#ref-*) open the methods page at that card.
 function route() {
   const h = location.hash.slice(1) || "today";
-  const page = h.startsWith("ref-") ? "references" : ["today", "week", "session", "zones", "import", "account", "references"].includes(h) ? h : "today";
-  const tab = ["week", "session", "zones", "references"].includes(page) ? "today" : page;   // details live under ./today
+  const page = h.startsWith("ref-") ? "references" : ["today", "week", "session", "zones", "sleep", "fitness", "import", "account", "references"].includes(h) ? h : "today";
+  const tab = ["week", "session", "zones", "sleep", "fitness", "references"].includes(page) ? "today" : page;   // details live under ./today
   if (page === "account" && !state.account) openSheet(true);
   for (const s of document.querySelectorAll("section.page")) s.classList.toggle("active", s.id === page);
   for (const a of document.querySelectorAll("nav.tabs a")) {
@@ -329,6 +354,9 @@ function renderAccount() {
   $("acct-name").textContent = a ? a.username : "Account";
   const listen = document.querySelector("#hero .listen");
   if (listen) listen.classList.toggle("hidden", !a);
+  // the microphone needs a session too (Gradium speech-to-text through the relay): show it as soon as you log in
+  const mic = document.querySelector("#hero .mic");
+  if (mic) mic.classList.toggle("hidden", !a || !navigator.mediaDevices || typeof MediaRecorder === "undefined");
   if (!a) return;
   const { reports, workouts } = a.vault;
   $("acct-reports").replaceChildren(...(reports.length ? reports.map((r) => el("li", {
@@ -348,7 +376,7 @@ async function autoSave(source) {
   const f = state.features;
   const an = analyze(f);
   const report = makeReport(an, f, todayModel(an, f).call, { source });
-  const vault = addToVault(a.vault, report, workoutSummaries(f));
+  const vault = addToVault(a.vault, report, workoutSummaries(f), daySummaries(f));
   acctSay("Encrypting and saving\u2026");
   const r = await saveVault({ account: a, vault });
   if (r.ok) { a.vault = vault; acctSay(`Saved: report ${fmtAt(report.at)}, ${vault.workouts.length} workouts in your history.`); }

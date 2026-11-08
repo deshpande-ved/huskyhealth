@@ -15,6 +15,7 @@ export const SOURCES = {
   "baseline":        { method: "At least 14 days with HRV before the last 7", citation: "HuskyHealth", status: "ours", version: VERSION.readiness },
   "load-call":       { method: "When HRV is too thin for a call: last 7 days' load / your usual week (last 28 days / 4); above 1.3: easy, else hard is fine", citation: "Gabbett 2016, Br J Sports Med (acute:chronic)", status: "disputed", version: VERSION.readiness },
   "load-spike":      { method: "Last 7 days / (last 28 days / 4); info only above 1.5", citation: "Gabbett 2016, Br J Sports Med", status: "disputed", version: VERSION.load },
+  "sleep":           { method: "Minutes asleep per night (core, deep, REM; never in bed or awake), last night against your 7-night average", citation: "Apple sleep stages", status: "descriptive", version: VERSION.load },
   "vo2-trend":       { method: "Least-squares slope of VO2 max x 28 days", citation: "Apple VO2 max estimate", status: "descriptive", version: VERSION.load },
   "sport-view":      { method: "Latest session vs your own history in the same sport (mean, SD, z); no multipliers", citation: "HuskyHealth", status: "ours", version: VERSION.load },
   "hr-density":      { method: "Workout HR averages at least 1 sample per 15 s, else zones are low-confidence", citation: "HuskyHealth", status: "ours", version: VERSION.gates },
@@ -122,6 +123,15 @@ export function vo2Trend(days) {
   return { value: sxx ? (sxy / sxx) * 28 : null, source: source("vo2-trend") };
 }
 
+// Sleep, descriptive: last night, the 7-night and 28-night averages, and the last 7 nights (oldest first).
+export function sleepSummary(days) {
+  const nights = days.filter((d) => d.sleep_min != null);
+  const avg = (a) => (a.length ? mean(a.map((d) => d.sleep_min)) : null);
+  const last = nights.length ? nights[nights.length - 1] : null;
+  return { last: last ? last.sleep_min : null, lastDay: last ? last.day : null, avg7: avg(nights.slice(-7)), avg28: avg(nights.slice(-28)),
+           nights7: days.slice(-7).map((d) => ({ day: d.day, min: d.sleep_min ?? null })), source: source("sleep") };
+}
+
 // Latest session of a sport vs the earlier ones (by TRIMP).
 export function sportView(workouts, sport) {
   const ws = workouts.filter((w) => w.sport === sport).slice().sort((a, b) => a.day - b.day);
@@ -203,6 +213,7 @@ export function analyze(features) {
     monotony: monotony(load.slice(-7)),
     loadSpike: loadSpike(load),
     vo2Trend: vo2Trend(features.days),
+    sleep: sleepSummary(features.days),
     sportView: Object.fromEntries(sports.map((s) => [s, sportView(workouts, s)])),
     gates,
   };

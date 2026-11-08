@@ -16,13 +16,14 @@ export async function loadFeatures(now = Date.now()) {
   // heart rate only inside workouts (zones, TRIMP); plus daily resting HR, HRV, VO2 max, effort
   const hr: [number, number][] = []
   for (const w of workouts) hr.push(...(await HealthKit.getSamples('hr', w.start, w.end)))
-  const [rhr, hrvMs, vo2, effort, effortEst] = await Promise.all([
+  const [rhr, hrvMs, vo2, effort, effortEst, sleep] = await Promise.all([
     HealthKit.getSamples('rhr', start, now), HealthKit.getSamples('hrv', start, now),
     HealthKit.getSamples('vo2', start, now), HealthKit.getSamples('effort', start, now),
     HealthKit.getSamples('effortEst', start, now),
+    HealthKit.getSleep(start - DAY, now),            // minutes asleep per night, [[wakeMs, minutes]]
   ])
   const scan = {
-    samples: { hr, rhr, hrv: hrvMs, vo2, effort, effortEst },
+    samples: { hr, rhr, hrv: hrvMs, vo2, effort, effortEst, sleep },
     workouts: workouts.map((w) => ({ ...w, min: w.min })),
     now, days: WINDOW_DAYS, source: 'healthkit',
   }

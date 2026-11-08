@@ -193,7 +193,7 @@ def test_uncollected_records_expire_after_30_days(c, acct):
 
 def test_json_only_and_version_header(c, acct):
     r = c.post("/v1/me/records", data=json.dumps(payload()), headers=bearer(acct["token"]))      # no JSON content type
-    assert r.status_code == 415 and r.headers["API-Version"] == "1" and r.headers["Cache-Control"] == "no-store"
+    assert r.status_code == 415 and r.headers["API-Version"] == "1.1" and r.headers["Cache-Control"] == "no-store"
 
 
 def test_per_token_write_limit_with_retry_after(c, acct, monkeypatch):
@@ -225,3 +225,39 @@ def test_session_rate_limit(c, acct, monkeypatch):
     monkeypatch.setattr(relay_app, "SESSION_LIMIT", relay_app.KeyedWindow(3, 60))
     codes = [c.get("/v1/me/records", headers=bearer(acct["session"])).status_code for _ in range(4)]
     assert codes == [200, 200, 200, 429]
+
+
+
+def test_vo2_and_sleep_are_accepted_and_bounded(c, acct):
+    ok = payload(vo2=[{"t_s": 86400 * d, "v": 47.5} for d in range(10)], sleep=[{"t_s": 86400 * d + 3600, "v": 430.0} for d in range(60)])
+    assert c.post("/v1/me/records", content_type="application/json", data=json.dumps(ok), headers=bearer(acct["token"])).status_code == 201
+    got = c.get("/v1/me/records", headers=bearer(acct["session"])).json["records"][0]
+    assert unseal(got)["record"]["sleep"][0] == {"t_s": 3600, "v": 430.0}
+    too_long = payload(sleep=[{"t_s": 1, "v": 1200.0}])                        # 20 h asleep is not a night
+    assert c.post("/v1/me/records", content_type="application/json", data=json.dumps(too_long), headers=bearer(acct["token"])).status_code == 422
+
+
+
+def test_client_sealed_record_is_stored_without_the_relay_reading_it(c, acct, tmp_path):
+    from cryptography.hazmat.primitives.serialization import load_der_public_key
+    inner = json.dumps({"received": 1794103242, "record": payload()}).encode()
+    aes, nonce = AESGCM.generate_key(bit_length=256), b"\x07" * 12
+    pub = load_der_public_key(base64.b64decode(PUB))
+    env = {"key": base64.b64encode(pub.encrypt(aes, padding.OAEP(mgf=padding.MGF1(hashes.SHA256()), algorithm=hashes.SHA256(), label=None))).decode(),
+           "nonce": base64.b64encode(nonce).decode(), "ct": base64.b64encode(AESGCM(aes).encrypt(nonce, inner, None)).decode()}
+    r = c.post("/v1/me/records", content_type="application/json", data=json.dumps({"sealed": env}), headers=bearer(acct["token"]))
+    assert r.status_code == 201
+    got = c.get("/v1/me/records", headers=bearer(acct["session"])).json["records"][0]
+    assert {k: got[k] for k in ("key", "nonce", "ct")} == env                    # stored exactly as the device sealed it
+    assert unseal(got) == {"received": 1794103242, "record": payload()}
+
+
+@pytest.mark.parametrize("env", [{"key": "AAAA", "nonce": "AAAA", "ct": "AAAA"}, {"key": "x", "nonce": "y"}, "nope"])
+def test_bad_envelopes_fall_through_to_the_schema_and_are_rejected(c, acct, env):
+    r = c.post("/v1/me/records", content_type="application/json", data=json.dumps({"sealed": env}), headers=bearer(acct["token"]))
+    assert r.status_code == 422
+
+
+def test_open_returns_the_public_key(c):
+    c.post("/v1/account/create", json={"id": AID, "auth": AUTH, "pub": PUB})
+    assert c.post("/v1/account/open", json={"id": AID, "auth": AUTH}).json["pub"] == PUB

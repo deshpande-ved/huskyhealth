@@ -85,11 +85,12 @@ export function dropToScan(drop, sentAt) {
       ...(SRC[w.src] || SRC.other),
     }));
   });
-  return { samples: { hr, rhr: pts(drop.rhr), hrv: pts(drop.hrv), vo2: [], effort: pts(drop.effort), effortEst: [] }, workouts };
+  return { samples: { hr, rhr: pts(drop.rhr), hrv: pts(drop.hrv), vo2: pts(drop.vo2), effort: pts(drop.effort), effortEst: [],
+                      sleep: pts(drop.sleep) }, workouts };
 }
 
 export function validDrop(d) {
-  return d && d.v === 1 && Array.isArray(d.workouts) && ["rhr", "hrv", "effort", "marks"].every((k) => d[k] === undefined || Array.isArray(d[k]))
+  return d && d.v === 1 && Array.isArray(d.workouts) && ["rhr", "hrv", "effort", "marks", "vo2", "sleep"].every((k) => d[k] === undefined || Array.isArray(d[k]))
     && d.workouts.every((w) => typeof w.start_s === "number" && typeof w.end_s === "number" && w.start_s >= w.end_s);
 }
 
@@ -108,7 +109,7 @@ export function mergeDrop(features, drop, { nowMs, ageS = 0, refDay }) {
   const added = fresh.workouts.filter((w) => !base.workouts.some((b) => sameWorkout(b, w)));
   const workouts = [...base.workouts, ...added].sort((a, b) => a.day - b.day);
   const touched = new Set([...fresh.workouts.map((w) => w.day),
-    ...fresh.days.filter((d) => d.rhr != null || d.ln_hrv != null).map((d) => d.day)]);
+    ...fresh.days.filter((d) => d.rhr != null || d.ln_hrv != null || d.vo2 != null || d.sleep_min != null).map((d) => d.day)]);
   const days = base.days.map((d) => {
     if (!touched.has(d.day)) return d;
     const f = fresh.days.find((x) => x.day === d.day) || {};
@@ -116,7 +117,7 @@ export function mergeDrop(features, drop, { nowMs, ageS = 0, refDay }) {
     const rated = ws.filter((w) => w.srpe != null);
     return { day: d.day, trimp: r1(ws.reduce((s, w) => s + w.trimp, 0)),
       srpe: rated.length ? r1(rated.reduce((s, w) => s + w.srpe, 0)) : null,
-      rhr: f.rhr ?? d.rhr, ln_hrv: f.ln_hrv ?? d.ln_hrv, vo2: d.vo2 };
+      rhr: f.rhr ?? d.rhr, ln_hrv: f.ln_hrv ?? d.ln_hrv, vo2: f.vo2 ?? d.vo2, sleep_min: f.sleep_min ?? d.sleep_min ?? null };
   });
   const maxes = [base.max_hr, fresh.max_hr].filter((x) => x != null);
   return { features: { ...base, max_hr: maxes.length ? Math.max(...maxes) : null, days, workouts }, refDay: today, added: added.length };

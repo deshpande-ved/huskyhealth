@@ -47,7 +47,7 @@ def test_errors_are_generic(client, monkeypatch):
     ]
     for r in cases:
         assert r.status_code >= 400 and SENTINEL.encode() not in r.data
-        assert set(r.get_json()) == {"error", "status"} and r.headers["API-Version"] == "1"
+        assert set(r.get_json()) == {"error", "status"} and r.headers["API-Version"] == "1.1"
 
     with relay_app.app.app_context():                               # unhandled exception -> fixed body
         body, code, _headers = relay_app.any_error(RuntimeError(SENTINEL))

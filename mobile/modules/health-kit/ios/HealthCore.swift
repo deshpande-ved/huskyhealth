@@ -45,7 +45,7 @@ enum HealthCore {
   }()
 
   static var readTypes: Set<HKObjectType> {
-    var s: Set<HKObjectType> = [HKObjectType.workoutType()]
+    var s: Set<HKObjectType> = [HKObjectType.workoutType(), HKCategoryType(.sleepAnalysis)]
     for id in quantityIds.values { s.insert(HKQuantityType(id)) }
     return s
   }
@@ -59,6 +59,33 @@ enum HealthCore {
     guard HKHealthStore.isHealthDataAvailable() else { return false }
     try await store.requestAuthorization(toShare: shareTypes, read: readTypes)
     return true
+  }
+
+  // MARK: - Sleep
+
+  /// Minutes asleep per night (core, deep, REM or unspecified asleep; never in bed or awake), keyed to the moment
+  /// you woke, as [[wakeMs, minutes]]. Overlapping sources (Watch and phone) are merged so time is not counted twice.
+  static func sleepNights(from start: Date, to end: Date) async throws -> [[Double]] {
+    let pred = HKQuery.predicateForSamples(withStart: start, end: end, options: [])
+    let d = HKSampleQueryDescriptor(predicates: [.categorySample(type: HKCategoryType(.sleepAnalysis), predicate: pred)],
+                                    sortDescriptors: [SortDescriptor(\.startDate)])
+    let asleep: Set<Int> = [HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue, HKCategoryValueSleepAnalysis.asleepCore.rawValue,
+                            HKCategoryValueSleepAnalysis.asleepDeep.rawValue, HKCategoryValueSleepAnalysis.asleepREM.rawValue]
+    let spans = try await d.result(for: store).filter { asleep.contains($0.value) }.map { ($0.startDate, $0.endDate) }
+    // merge overlaps, then split into nights at gaps of 3 h or more
+    var merged: [(Date, Date)] = []
+    for (a, b) in spans {
+      if let last = merged.last, a <= last.1 { merged[merged.count - 1].1 = max(last.1, b) } else { merged.append((a, b)) }
+    }
+    var nights: [[Double]] = []
+    var nightEnd: Date? = nil, minutes = 0.0
+    for (a, b) in merged {
+      if let e = nightEnd, a.timeIntervalSince(e) >= 3 * 3600 { nights.append([ms(e), minutes.rounded()]); minutes = 0 }
+      minutes += b.timeIntervalSince(a) / 60
+      nightEnd = b
+    }
+    if let e = nightEnd, minutes > 0 { nights.append([ms(e), minutes.rounded()]) }
+    return nights.filter { $0[1] >= 60 }                     // naps under an hour are not a night
   }
 
   // MARK: - Sports
@@ -160,12 +187,14 @@ enum HealthCore {
       ])
       effort += try await quantity("effort", from: w.startDate, to: w.endDate.addingTimeInterval(3600)).map(tS)
     }
-    var rhr: [[String: Any]] = [], hrv: [[String: Any]] = []
+    var rhr: [[String: Any]] = [], hrv: [[String: Any]] = [], vo2: [[String: Any]] = [], sleep: [[String: Any]] = []
     if let d = daily {
       rhr = Array(try await quantity("rhr", from: d.from, to: d.to).suffix(120)).map(tS)
       hrv = Array(try await quantity("hrv", from: d.from, to: d.to).suffix(400)).map(tS)
+      vo2 = Array(try await quantity("vo2", from: d.from, to: d.to).suffix(120)).map(tS)
+      sleep = Array(try await sleepNights(from: d.from.addingTimeInterval(-86400), to: d.to).suffix(120)).map(tS)
     }
-    let body: [String: Any] = ["v": 1, "workouts": items, "rhr": rhr, "hrv": hrv, "effort": Array(effort.suffix(50))]
+    let body: [String: Any] = ["v": 1, "workouts": items, "rhr": rhr, "hrv": hrv, "vo2": vo2, "sleep": sleep, "effort": Array(effort.suffix(50))]
     // JSONSerialization raises an Objective-C exception (a crash) on non-JSON values; check first so it throws instead.
     guard JSONSerialization.isValidJSONObject(body) else { throw NSError(domain: "HuskyHealth", code: 1) }
     return try JSONSerialization.data(withJSONObject: body)
@@ -183,7 +212,8 @@ enum HealthCore {
     req.httpMethod = "POST"
     req.setValue("application/json", forHTTPHeaderField: "Content-Type")
     req.setValue("Bearer \(cfg.token)", forHTTPHeaderField: "Authorization")
-    req.httpBody = body
+    // sealed on this device when the account key is known; otherwise the relay seals it in memory on arrival
+    req.httpBody = SyncConfig.pub.flatMap { Seal.envelope(record: body, pub: $0) } ?? body
     req.timeoutInterval = 30
     for attempt in 0..<2 {
       guard let (_, resp) = try? await URLSession.shared.data(for: req), let http = resp as? HTTPURLResponse else { return -1 }
@@ -345,6 +375,7 @@ struct SyncConfig {
     defaults.removeObject(forKey: "hh.relay")
     defaults.removeObject(forKey: "hh.lastEnd")
     defaults.removeObject(forKey: "hh.user")
+    defaults.removeObject(forKey: "hh.pub")
     SecItemDelete([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service] as CFDictionary)
   }
 
@@ -356,6 +387,12 @@ struct SyncConfig {
   static var user: String? {
     get { defaults.string(forKey: "hh.user") }
     set { defaults.set(newValue, forKey: "hh.user") }
+  }
+
+  /// The account's RSA public key (SPKI, base64). Public by design; records are sealed to it on this device.
+  static var pub: String? {
+    get { defaults.string(forKey: "hh.pub") }
+    set { defaults.set(newValue, forKey: "hh.pub") }
   }
 }
 
@@ -394,10 +431,48 @@ enum Account {
     guard let base = URL(string: relay), let k = derive(username: username, password: password) else { return 422 }
     let (s1, open) = await post(base.appendingPathComponent("v1/account/open"), ["id": k.id, "auth": k.auth])
     guard s1 == 200, let session = open["session"] as? String else { return s1 }
+    SyncConfig.pub = open["pub"] as? String
     let (s2, tok) = await post(base.appendingPathComponent("v1/account/tokens"), ["scope": "write", "days": 365], bearer: session)
     guard s2 == 201, let token = tok["token"] as? String, SyncConfig.save(relay: relay, token: token) else { return s2 == 201 ? 500 : s2 }
     SyncConfig.user = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     SyncConfig.lastEnd = nil
     return 200
+  }
+
+  /// Delete the account (and its encrypted history and records on the relay), then forget it on this device.
+  /// Needs the password again: the app never keeps a session. Returns an HTTP-ish status (204 = deleted).
+  static func deleteAccount(relay: String, username: String, password: String) async -> Int {
+    guard let base = URL(string: relay), let k = derive(username: username, password: password) else { return 422 }
+    let (s1, open) = await post(base.appendingPathComponent("v1/account/open"), ["id": k.id, "auth": k.auth])
+    guard s1 == 200, let session = open["session"] as? String else { return s1 }
+    let (s2, _) = await post(base.appendingPathComponent("v1/account/delete"), [:], bearer: session)
+    if s2 == 204 { SyncConfig.clear() }
+    return s2
+  }
+}
+
+/// Seal a record on this device, so the relay only ever handles ciphertext: AES-256-GCM for the record, the key
+/// wrapped with RSA-OAEP-SHA256 to the account's public key. Same envelope the relay makes (relay/records.py seal),
+/// so the website opens both the same way.
+enum Seal {
+  static func publicKey(spki b64: String) -> SecKey? {
+    guard let der = Data(base64Encoded: b64), der.count == 294 else { return nil }   // RSA-2048 SPKI, as the browser makes
+    let pkcs1 = der.subdata(in: 24..<der.count)                                      // drop the SPKI header: Security wants PKCS#1
+    let attrs: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeyClass as String: kSecAttrKeyClassPublic,
+                                kSecAttrKeySizeInBits as String: 2048]
+    return SecKeyCreateWithData(pkcs1 as CFData, attrs as CFDictionary, nil)
+  }
+
+  static func envelope(record: Data, pub: String, received: Int = Int(Date().timeIntervalSince1970)) -> Data? {
+    guard let key = publicKey(spki: pub), let rec = try? JSONSerialization.jsonObject(with: record),
+          let inner = try? JSONSerialization.data(withJSONObject: ["received": received, "record": rec]) else { return nil }
+    let aes = SymmetricKey(size: .bits256)
+    let nonce = AES.GCM.Nonce()
+    guard let box = try? AES.GCM.seal(inner, using: aes, nonce: nonce) else { return nil }
+    let raw = aes.withUnsafeBytes { Data($0) }
+    guard let wrapped = SecKeyCreateEncryptedData(key, .rsaEncryptionOAEPSHA256, raw as CFData, nil) as Data? else { return nil }
+    let env: [String: Any] = ["sealed": ["key": wrapped.base64EncodedString(), "nonce": Data(nonce).base64EncodedString(),
+                                         "ct": (box.ciphertext + box.tag).base64EncodedString()]]
+    return try? JSONSerialization.data(withJSONObject: env)
   }
 }

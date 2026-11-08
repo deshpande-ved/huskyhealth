@@ -73,6 +73,8 @@ class SyncDrop(_Strict):
     rhr: list[Sample] = Field(default_factory=list, max_length=120)
     hrv: list[Sample] = Field(default_factory=list, max_length=400)
     effort: list[Sample] = Field(default_factory=list, max_length=50)
+    vo2: list[Sample] = Field(default_factory=list, max_length=120)      # VO2 max estimates, ml/kg/min
+    sleep: list[Sample] = Field(default_factory=list, max_length=120)    # minutes asleep per night, at the time you woke
     marks: list[Mark] = Field(default_factory=list, max_length=20)
 
 
@@ -138,6 +140,25 @@ def _writer():
     return None
 
 
+def client_sealed(raw: bytes):
+    """{"sealed": {"key", "nonce", "ct"}} from a device that encrypted the record itself -> the envelope, else None.
+    Shape only: an RSA-2048/4096 wrapped key, a 12-byte nonce, ciphertext plus a 16-byte tag."""
+    try:
+        body = json.loads(raw)
+    except ValueError:
+        return None
+    env = body.get("sealed") if isinstance(body, dict) and set(body) == {"sealed"} else None
+    if not isinstance(env, dict) or set(env) != {"key", "nonce", "ct"} or not all(isinstance(v, str) for v in env.values()):
+        return None
+    try:
+        key, nonce, ct = (base64.b64decode(env[k], validate=True) for k in ("key", "nonce", "ct"))
+    except ValueError:
+        return None
+    if len(key) not in (256, 512) or len(nonce) != 12 or not 16 < len(ct) <= MAX_RECORD:
+        return None
+    return {"key": env["key"], "nonce": env["nonce"], "ct": env["ct"]}
+
+
 @bp.post("/v1/me/records")
 def post_record():
     import accounts
@@ -158,14 +179,20 @@ def post_record():
     raw = request.get_data(cache=False)
     if len(raw) > MAX_RECORD:
         return _err(413)
-    try:
-        SyncDrop.model_validate_json(raw)                # never echo or log the error: it contains input
-    except ValidationError:
-        return _err(422)
     now = int(time.time())
-    # The exact receive time travels inside the ciphertext (the client needs it to place workouts in time);
-    # only the hour is stored in the clear, so the Pi keeps as little timing metadata as possible.
-    sealed = seal(base64.b64decode(rec["pub"]), json.dumps({"received": now, "record": json.loads(raw)}).encode())
+    presealed = client_sealed(raw)
+    if presealed:
+        # Sealed on the device (the iPhone app): the relay never sees the record, not even in memory. It can only
+        # check the envelope; the app builds records from a fixed field list and the website validates on opening.
+        sealed = presealed
+    else:
+        try:
+            SyncDrop.model_validate_json(raw)            # never echo or log the error: it contains input
+        except ValidationError:
+            return _err(422)
+        # Sealed here, in memory, for clients that cannot encrypt (curl, scripts). The exact receive time travels
+        # inside the ciphertext; only the hour is stored in the clear.
+        sealed = seal(base64.b64decode(rec["pub"]), json.dumps({"received": now, "record": json.loads(raw)}).encode())
     del raw
     with accounts.LOCK:
         acct = accounts.read_account(aid) or rec

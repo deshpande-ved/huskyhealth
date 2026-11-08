@@ -99,3 +99,21 @@ test("talk to your API: keyword intents answer from the page's data and show the
     assert.ok(!/\d{5,}/.test(t) && t.length <= 600, q);
   }
 });
+
+test("sleep and VO2 max rows: from the days, descriptive, linked to methods; answers know them", async () => {
+  const { todayModel, answerQuestion, weekDetail, sessionDetail, zoneDetail } = await import("../web/js/view.js");
+  const g = structuredClone(f);
+  g.days.forEach((d, i) => { d.sleep_min = i >= 53 ? 400 + (i - 53) * 10 : null; d.vo2 = i % 10 === 0 ? 45 + i / 20 : null; });
+  const a = analyze(g);
+  const mm = todayModel(a, g);
+  assert.match(mm.sleep.summary, /^Last night you slept 7 h 40 min, against your usual 7 h 10 min\.$/);
+  assert.equal(mm.sleep.rows.length, 7);
+  assert.equal(mm.sleep.ref, "ref-sleep");
+  assert.equal(mm.sleep.source.status, "descriptive");
+  assert.match(mm.fitness.summary, /^VO2 max 47\.5 ml\/kg\/min, up \d+(\.\d)? over four weeks\.$/);
+  const ctx = { model: mm, week: weekDetail(a, g), session: sessionDetail(a, g), zones: zoneDetail(g), features: g, relay: "https://r" };
+  assert.equal(answerQuestion("how did I sleep last night", ctx).intent, "sleep");
+  assert.equal(answerQuestion("what is my vo2 max", ctx).intent, "vo2");
+  const none = todayModel(analyze(f), f);
+  assert.equal(none.sleep, null); assert.equal(none.fitness === null || typeof none.fitness.summary === "string", true);
+});

@@ -2,7 +2,7 @@
 // A line scanner, not an XML DOM: every attribute we need is on the opening-tag line of <Record / <Workout,
 // and <WorkoutStatistics lines inside a workout carry calories. In a zip, only export.xml is decompressed.
 import { Unzip, UnzipInflate } from "../vendor/fflate.esm.js";
-import { toFeatures } from "./features.js";
+import { toFeatures, sleepNights } from "./features.js";
 
 // The only record types read (plan 6.1). Everything else, including ECG and clinical data, is ignored.
 export const KEEP = {
@@ -14,6 +14,9 @@ export const KEEP = {
   HKQuantityTypeIdentifierEstimatedWorkoutEffortScore: "effortEst",
 };
 const ACTIVE_KCAL = "HKQuantityTypeIdentifierActiveEnergyBurned";
+const SLEEP = "HKCategoryTypeIdentifierSleepAnalysis";                 // minutes asleep only: never "in bed" or "awake"
+const ASLEEP = new Set(["HKCategoryValueSleepAnalysisAsleep", "HKCategoryValueSleepAnalysisAsleepUnspecified",
+  "HKCategoryValueSleepAnalysisAsleepCore", "HKCategoryValueSleepAnalysisAsleepDeep", "HKCategoryValueSleepAnalysisAsleepREM"]);
 const ATTR = /(\w+)="([^"]*)"/g;
 const EXPORT_XML = /(^|\/)export\.xml$/;
 
@@ -37,7 +40,8 @@ export function windowStart(now, days) {
 
 export function createScanner({ now = Date.now(), days = 60 } = {}) {
   const cutoff = windowStart(now, days);
-  const samples = { hr: [], rhr: [], hrv: [], vo2: [], effort: [], effortEst: [] };
+  const samples = { hr: [], rhr: [], hrv: [], vo2: [], effort: [], effortEst: [], sleep: [] };
+  const asleep = [];
   const workouts = [];
   const stats = { lines: 0, splitTags: 0, skipped: 0 };
   let current = null;
@@ -64,6 +68,11 @@ export function createScanner({ now = Date.now(), days = 60 } = {}) {
     if ((isRecord || isWorkout) && !t.includes(">")) { stats.splitTags++; return; }   // attributes continue on the next line
     if (isRecord) {
       const a = attrs(t);
+      if (a.type === SLEEP) {
+        const s = toMs(a.startDate), e = toMs(a.endDate);
+        if (ASLEEP.has(a.value) && Number.isFinite(s) && Number.isFinite(e) && e > s && e >= cutoff) asleep.push([s, e]);
+        return;
+      }
       const key = KEEP[a.type];
       if (!key) return;
       const ms = toMs(a.startDate);
@@ -83,7 +92,7 @@ export function createScanner({ now = Date.now(), days = 60 } = {}) {
     }
   }
 
-  return { onLine, result: () => ({ samples, workouts, stats, now, days }) };
+  return { onLine, result: () => ({ samples: { ...samples, sleep: sleepNights(asleep) }, workouts, stats, now, days }) };
 }
 
 // Split a text stream into lines and scan them.

@@ -7,10 +7,10 @@ const html = readFileSync(new URL("../web/index.html", import.meta.url), "utf8")
 const card = (id) => { const i = html.indexOf(`id="${id}"`); return html.slice(i, html.indexOf("</article>", i)); };
 const STATUS = { "zone-minutes": "published", trimp: "published", srpe: "published", "fitness-fatigue": "published",
   monotony: "published", readiness: "adapted", "data-check": "published", baseline: "ours", "load-spike": "disputed",
-  "vo2-trend": "descriptive", "sport-view": "ours", "load-call": "disputed" };
+  "vo2-trend": "descriptive", "sport-view": "ours", "load-call": "disputed", sleep: "descriptive" };
 
-test("exactly 12 cards with the right ids", () => {
-  assert.equal((html.match(/id="ref-/g) || []).length, 12);
+test("exactly 13 cards with the right ids", () => {
+  assert.equal((html.match(/id="ref-/g) || []).length, 13);
   for (const id of Object.keys(STATUS)) assert.ok(html.includes(`id="ref-${id}"`), id);
 });
 

@@ -20,7 +20,7 @@ app.logger.disabled = True
 GENERIC = {400: "bad request", 401: "unauthorized", 403: "forbidden", 404: "not found", 405: "method not allowed",
            409: "conflict", 410: "gone", 413: "too large", 415: "send application/json", 422: "rejected",
            429: "slow down", 500: "server error"}
-API_VERSION = "1"
+API_VERSION = "1.1"   # 1.1: records may carry vo2 and sleep (additive; /v1/ paths unchanged)
 
 
 def generic(code: int, retry_after: int | None = None):
