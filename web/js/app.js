@@ -304,7 +304,7 @@ async function renderTokens() {
       acctSay(x.ok ? "Token revoked." : x.status);
       renderTokens();
     });
-    return el("li", {}, el("span", { textContent: `device token \u2026${t.id} \u00b7 ${t.scope} \u00b7 made ${t.created} ` }), b);
+    return el("li", {}, el("span", { textContent: `device token \u2026${t.id} \u00b7 ${t.scope} \u00b7 made ${t.created}${t.expires ? ` \u00b7 expires ${t.expires}` : ""} \u00b7 ${t.last_used ? `last used ${t.last_used}` : "never used"} ` }), b);
   }));
 }
 

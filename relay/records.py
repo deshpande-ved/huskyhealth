@@ -85,9 +85,9 @@ def seal(pub_spki_der: bytes, plaintext: bytes) -> dict:
     return {"key": b64(wrapped), "nonce": b64(nonce), "ct": b64(AESGCM(key).encrypt(nonce, plaintext, None))}
 
 
-def _err(code: int):
+def _err(code: int, retry_after: int | None = None):
     from app import generic                          # one generic body for every error
-    return generic(code)
+    return generic(code, retry_after)
 
 
 def load_pub(b64: str):
@@ -131,23 +131,28 @@ def _writer():
         return None
     rec = accounts.read_account(parts[1])
     h = hashlib.sha256(parts[2].encode()).hexdigest()
-    if rec and any(hmac.compare_digest(h, t["h"]) for t in rec.get("tokens", [])):
-        return parts[1], rec
+    today = time.strftime("%Y-%m-%d", time.gmtime())
+    for t in (rec or {}).get("tokens", []):
+        if hmac.compare_digest(h, t["h"]):
+            return (parts[1], rec, t) if t.get("expires", "9999-12-31") >= today else None   # expired tokens stop working
     return None
 
 
 @bp.post("/v1/me/records")
 def post_record():
     import accounts
-    from app import RECORD_LIMIT
+    from app import RECORD_LIMIT, WRITE_PER_ACCOUNT, WRITE_PER_TOKEN
     if not RECORD_LIMIT.allow():
-        return _err(429)
+        return _err(429, 10)
     if (request.content_length or 0) > MAX_RECORD:
         return _err(413)
     who = _writer()
     if not who:
         return _err(401)
-    aid, rec = who
+    aid, rec, tok = who
+    wait = WRITE_PER_TOKEN.check(tok["h"]) or WRITE_PER_ACCOUNT.check(aid)
+    if wait:
+        return _err(429, wait)
     if not rec.get("pub"):
         return _err(409)                                 # no key yet: log in on the website once
     raw = request.get_data(cache=False)
@@ -169,6 +174,9 @@ def post_record():
         items.append({"id": rid, "at": now - now % HOUR, **sealed})
         write_inbox(aid, items[-MAX_INBOX:])
         acct["next_id"] = rid + 1
+        for t in acct.get("tokens", []):                 # last used, to the day: enough to spot a stale device
+            if t["h"] == tok["h"]:
+                t["last_used"] = time.strftime("%Y-%m-%d", time.gmtime(now))
         accounts._write(aid, acct)
     return {"id": rid, "at": now - now % HOUR}, 201
 
@@ -176,9 +184,9 @@ def post_record():
 @bp.get("/v1/me/records")
 def list_records():
     import accounts
-    aid = accounts.session_id()
-    if not aid:
-        return _err(401)
+    aid, err = accounts.require_session()
+    if err:
+        return err
     try:
         after = int(request.args.get("after", "0"))
     except ValueError:
@@ -192,9 +200,9 @@ def list_records():
 def delete_records():
     """Delete-after-sync: once a client has folded records into the encrypted vault, it removes them here."""
     import accounts
-    aid = accounts.session_id()
-    if not aid:
-        return _err(401)
+    aid, err = accounts.require_session()
+    if err:
+        return err
     try:
         upto = int(request.args.get("upto", ""))
     except ValueError:
