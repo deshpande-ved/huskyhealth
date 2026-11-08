@@ -292,3 +292,84 @@ export function answerQuestion(question, { model, week, session, zones, features
 
 // The logged-out welcome, word for word on the website and in the iPhone app.
 export const WELCOME = "Log in on the HuskyHealth iPhone app and your last 60 days of Apple Watch or Garmin workouts arrive on every screen, encrypted so only you can read them.";
+
+// ---- Detail pages, as data: the website (app.js) and the iPhone app draw these same blocks, word for word ----
+// Blocks: { t: "lede" | "subhead" | "empty", text } · { t: "facts", items: [[k, v]] } · { t: "stack", cells }
+//         { t: "table", head, rows, num: [column indexes], narrow } · { t: "method", source, ref }
+// A table cell is a string, { ch, cls } (a coloured label such as Z3) or { stack: cells } (a zone-mix bar).
+export const DETAIL_PAGES = [["week", "This week"], ["session", "Sessions"], ["zones", "Heart-rate zones"], ["sleep", "Sleep"], ["fitness", "VO2 max"]];
+const EMPTY_NOTE = { t: "empty", text: "Nothing here yet. Import your export or log in to your account." };
+const dash = "\u2014";
+
+export function detailBlocks(id, an, f, hasData = true) {
+  if (!hasData) return [EMPTY_NOTE];
+  if (id === "week") {
+    const w = weekDetail(an, f);
+    return [
+      { t: "lede", text: w.ratio == null ? "No training in the last four weeks yet." : `This week's load is ${w.acute}, ${w.ratio} % of your usual week (${w.usual}).` },
+      { t: "subhead", text: "Day by day" },
+      { t: "table", head: ["day", "sessions", "load", "kcal"], num: [2, 3], rows: w.days.map((d) => [d.date,
+        d.sessions.length ? d.sessions.map((x) => `${x.sport} ${x.min} min${x.effort != null ? ` \u00b7 effort ${x.effort}` : ""}`).join(", ") : "rest",
+        d.load ? String(d.load) : dash, d.kcal ? String(d.kcal) : dash]) },
+      { t: "subhead", text: "Week by week" },
+      { t: "table", head: ["week", "load", "", "sessions", "minutes", "kcal"], num: [1, 3, 4, 5], rows: w.weeks.map((x, i) => [x.name, String(x.load),
+        { stack: [{ ch: x.bar, cls: i === 0 ? "z1" : "z2" }] }, String(x.sessions), String(x.minutes), x.kcal ? String(x.kcal) : dash]) },
+      { t: "method", source: w.source, ref: w.ref },
+    ];
+  }
+  if (id === "session") {
+    if (!f.workouts.length) return [EMPTY_NOTE];
+    const s = sessionDetail(an, f);
+    const L = s.last;
+    return [
+      { t: "subhead", text: "Last session" },
+      { t: "facts", items: [["date", `${L.date} (${L.ago})`], ["sport", L.sport], ["minutes", String(L.min)], ["load", String(L.load)],
+        ["effort", L.effort != null ? `${L.effort}/10 (Watch)` : "not rated"], ["session-RPE", L.srpe != null ? String(L.srpe) : dash],
+        ["calories", L.kcal != null ? `${L.kcal} kcal` : dash],
+        ["vs your " + L.sport.toLowerCase(), L.vsSport ? `${L.vsSport.pct} % of your average load (${L.vsSport.mean}, ${L.vsSport.count} sessions)` : "first one"]] },
+      { t: "table", head: ["zone", "minutes"], num: [1], narrow: true, rows: L.zones.map((m, k) => [{ ch: `Z${k + 1}`, cls: `z${k + 1}` }, String(m)]) },
+      { t: "subhead", text: "Recent sessions" },
+      { t: "table", head: ["date", "sport", "min", "load", "kcal", "effort", "Z1", "Z2", "Z3", "Z4", "Z5"], num: [2, 3, 4, 5, 6, 7, 8, 9, 10],
+        rows: s.recent.map((r) => [r.date, r.sport, String(r.min), String(r.load), r.kcal != null ? String(r.kcal) : dash,
+          r.effort != null ? String(r.effort) : dash, ...r.zones.map(String)]) },
+      { t: "method", source: s.source, ref: s.ref },
+    ];
+  }
+  if (id === "sleep") {
+    const nights = f.days.filter((d) => d.sleep_min != null).slice(-14).reverse();
+    if (!nights.length) return [EMPTY_NOTE];
+    const s = an.sleep;
+    return [
+      { t: "lede", text: `Last night ${hm(s.last)}. Your 7-night average is ${hm(s.avg7)}${s.avg28 != null ? `, 28-night ${hm(s.avg28)}` : ""}.` },
+      { t: "table", head: ["night", "asleep", "vs 7-night average"], num: [1, 2], rows: nights.map((d) => [dateLabel(d.day), hm(d.sleep_min),
+        `${d.sleep_min >= s.avg7 ? "+" : "\u2212"}${hm(Math.abs(d.sleep_min - s.avg7))}`]) },
+      { t: "method", source: s.source, ref: "ref-sleep" },
+    ];
+  }
+  if (id === "fitness") {
+    const pts = f.days.filter((d) => d.vo2 != null).reverse();
+    if (!pts.length) return [EMPTY_NOTE];
+    const t = an.vo2Trend.value;
+    return [
+      { t: "lede", text: `Apple estimates VO2 max after outdoor walks, runs and hikes. ${t == null ? "" : `Over four weeks it moved ${t >= 0 ? "up" : "down"} ${Math.abs(Math.round(t * 10) / 10)} ml/kg/min.`}` },
+      { t: "table", head: ["day", "VO2 max (ml/kg/min)"], num: [1], narrow: true, rows: pts.map((d) => [dateLabel(d.day), String(Math.round(d.vo2 * 10) / 10)]) },
+      { t: "method", source: an.vo2Trend.source, ref: "ref-vo2-trend" },
+    ];
+  }
+  if (id === "zones") {
+    if (!f.workouts.length) return [EMPTY_NOTE];
+    const z = zoneDetail(f);
+    const pct = (m, tot) => (tot ? `${Math.round((m / tot) * 100)} %` : dash);
+    return [
+      { t: "lede", text: `${z.minutes} minutes of workout heart rate in the last 60 days. Zones are % of your highest recorded heart rate: Z1 50\u201360 %, up to Z5 90\u2013100 %.` },
+      { t: "stack", cells: z.stack },
+      { t: "table", head: ["zone", "", "minutes", "share"], num: [2, 3], narrow: true, rows: z.total.map((m, k) => [{ ch: `Z${k + 1}`, cls: `z${k + 1}` }, z.names[k], String(m), pct(m, z.minutes)]) },
+      { t: "subhead", text: "Week by week" },
+      { t: "table", head: ["week", "mix", "minutes"], num: [2], rows: z.weeks.map((w) => [w.name, { stack: w.stack }, String(w.minutes)]) },
+      { t: "subhead", text: "By sport" },
+      { t: "table", head: ["sport", "mix", "sessions", "minutes"], num: [2, 3], rows: z.sports.map((x) => [x.sport, { stack: x.stack }, String(x.sessions), String(x.minutes)]) },
+      { t: "method", source: z.source, ref: z.ref },
+    ];
+  }
+  return [EMPTY_NOTE];
+}
