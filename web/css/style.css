@@ -201,6 +201,8 @@ section.page:not(.active) { display: none; }
 .alert { color: var(--red); }
 
 .scroll { overflow-x: auto; }
+ol.steps { margin: 0 0 var(--s-4); padding-left: var(--s-6); max-width: 70ch; }
+ol.steps li { margin: 0 0 var(--s-3); }
 table.data { border-collapse: collapse; width: 100%; font-size: var(--t-sm); }
 table.data th { text-align: left; font-weight: 400; color: var(--ink-3); font-size: var(--t-xs); padding: var(--s-2) var(--s-4) var(--s-2) 0; border-bottom: 1px solid var(--ink); white-space: nowrap; }
 table.data td { padding: var(--s-2) var(--s-4) var(--s-2) 0; border-bottom: 1px dashed var(--rule); vertical-align: top; }
