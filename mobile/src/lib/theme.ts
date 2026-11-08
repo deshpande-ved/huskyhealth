@@ -6,11 +6,11 @@ import { Appearance } from 'react-native'
 
 const LIGHT = {
   base: '#f3efe3', surface: '#ebe5d3', text: '#1b1a17', text2: '#4d4a42', muted: '#625e55', rule: '#cdc6b2',
-  foam: '#49687a', pine: '#33694c', gold: '#785806', rose: '#b1430f', love: '#b00e28', iris: '#b00e28',
+  foam: '#16699e', pine: '#33694c', gold: '#785806', rose: '#b1430f', love: '#b00e28', iris: '#b00e28',
 }
 const DARK: typeof LIGHT = {
   base: '#16140f', surface: '#1c1a14', text: '#ece6d6', text2: '#bdb6a4', muted: '#9a9382', rule: '#3a362c',
-  foam: '#8fb3c4', pine: '#86c29d', gold: '#d9ab43', rose: '#f0904f', love: '#ff5a6b', iris: '#ff5a6b',
+  foam: '#7fd0ff', pine: '#86c29d', gold: '#d9ab43', rose: '#f0904f', love: '#ff5a6b', iris: '#ff5a6b',
 }
 
 export type Scheme = 'light' | 'dark'

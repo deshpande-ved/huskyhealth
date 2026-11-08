@@ -85,7 +85,7 @@ function Banner({ words, width }: { words: string[]; width: number }) {
 function Masthead({ user }: { user: string | null }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingTop: 24, paddingBottom: 16, borderBottomWidth: 1, borderColor: C.text }}>
-      <Pressable onPress={() => router.replace('/')} accessibilityLabel="HuskyHealth, today"><Mark size={52} /></Pressable>
+      <Pressable onPress={() => router.replace('/')} accessibilityLabel="HuskyHealth, today"><Mark size={92} /></Pressable>
       <View style={{ flex: 1, gap: 8 }}>
         <View>
           <Text style={{ ...bold, fontSize: 24, lineHeight: 27 }}>HuskyHealth</Text>
@@ -118,6 +118,7 @@ export default function Today() {
   const [asked, setAsked] = useState<{ heard: string; curl: string } | null>(null)
   const [listening, setListening] = useState(false)
   const [focused, setFocused] = useState(false)
+  const [showCurl, setShowCurl] = useState(false)       // the request behind the answer, folded away until asked for
   const timer = useRef<ReturnType<typeof setInterval> | null>(null)
   const micOk = useRef(false)
 
@@ -182,6 +183,7 @@ export default function Today() {
     if (!m || !f || !an) return
     const r = answerQuestion(q, { model: m, week: weekDetail(an, f), session: sessionDetail(an, f), zones: zoneDetail(f), features: f, relay: RELAY })
     setAsked({ heard: `You asked: ${q}`, curl: r.curl })
+    setShowCurl(false)
     if (speaking) stopSpeaking()
     speak(r.answer)
   }
@@ -214,11 +216,12 @@ export default function Today() {
       <Banner words={[m.call.headline]} width={bannerWidth} />
       <Text style={{ ...mono, fontSize: 20, lineHeight: 29 }}>{m.call.reason}</Text>
       <Text style={{ ...mono, color: C.text2, fontSize: 14, marginTop: 12 }}>{`${dateLabel(0)}, ${m.call.basis}.`}</Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, alignItems: 'baseline', marginTop: 24 }}>
+      {/* ./listen ./speak centred above the prompt, as on the website */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: 24, rowGap: 8, alignItems: 'baseline', marginTop: 24 }}>
         <Cmd label={speaking ? 'stop' : 'listen'} onPress={() => speak(briefText({ call: m.call, week: m.week, last: m.last, sleep: m.sleep }))} />
         <Cmd label={listening ? '…' : 'speak'} onPress={askByVoice} />
         {caption ? (
-          <Text style={{ ...mono, flex: 1, minWidth: 200, fontSize: 14, color: C.text2 }}>
+          <Text style={{ ...mono, width: '100%', textAlign: 'center', fontSize: 14, color: C.text2 }}>
             {caption.words.map((w, i) => (
               <Text key={i} style={i === caption.on ? { color: C.base, backgroundColor: C.love } : null}>{`${w.text} `}</Text>
             ))}
@@ -237,8 +240,13 @@ export default function Today() {
           <Text style={{ ...mono, color: C.love, fontSize: 16, paddingHorizontal: 4 }}>{'\u21b5'}</Text>
         </Pressable>
       </View>
-      {asked ? <Text style={{ ...mono, color: C.text2, fontSize: 14, marginTop: 12 }}><Text style={{ color: C.muted }}>{'> '}</Text>{asked.heard}</Text> : null}
-      {asked?.curl ? (
+      {asked ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 16, marginTop: 12 }}>
+          <Text style={{ ...mono, color: C.text2, fontSize: 14 }}><Text style={{ color: C.muted }}>{'> '}</Text>{asked.heard}</Text>
+          {asked.curl ? <Cmd label="curl" onPress={() => setShowCurl((v) => !v)} /> : null}
+        </View>
+      ) : null}
+      {asked?.curl && showCurl ? (
         <Text selectable style={{ fontFamily: 'SpaceMono', fontSize: 12.8, lineHeight: 19, color: C.text, borderLeftWidth: 2, borderColor: C.love, paddingVertical: 12, paddingLeft: 16, marginTop: 8 }}>{asked.curl}</Text>
       ) : null}
       <Text onPress={() => openRef(m.call.ref)} style={{ ...methodLink(), fontSize: 12.8, marginTop: 8 }}>

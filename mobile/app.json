@@ -4,7 +4,7 @@
     "slug": "huskyhealth",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "../web/icons/icon-512.png",
+    "icon": "./assets/icon.png",
     "scheme": "huskyhealth",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#f3efe3",

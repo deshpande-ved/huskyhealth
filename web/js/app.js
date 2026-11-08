@@ -112,11 +112,15 @@ function askNode(ctx, speakRow) {
   const curl = el("pre", { className: "log curl hidden" });
   const copy = el("button", { type: "button", className: "cmd hidden", textContent: "copy" });
   copy.addEventListener("click", () => navigator.clipboard && navigator.clipboard.writeText(curl.textContent));
+  // the request behind the answer, folded away until asked for
+  const showCurl = el("button", { type: "button", className: "cmd hidden", textContent: "curl" });
+  showCurl.addEventListener("click", () => { const open = curl.classList.toggle("hidden"); copy.classList.toggle("hidden", open); });
   const answer = (q) => {
     const r = answerQuestion(q, ctx());
     heard.textContent = `You asked: ${q}`;
     curl.textContent = r.curl;
-    for (const n of [heard, curl, copy]) n.classList.remove("hidden");
+    for (const n of [heard, showCurl]) n.classList.remove("hidden");
+    for (const n of [curl, copy]) n.classList.add("hidden");
     if (playing) playing.stop();
     playBrief(r.answer, speakRow.querySelector(".listen"));
   };
@@ -146,7 +150,7 @@ function askNode(ctx, speakRow) {
       heard.textContent = "No microphone access. Type your question instead.";
     }
   });
-  return el("div", { className: "askbox" }, form, heard, curl, copy);
+  return el("div", { className: "askbox" }, form, el("div", { className: "answer" }, heard, showCurl), curl, copy);
 }
 
 // The call, printed in block letters. It decodes from random ASCII into its letters (skipped with reduced motion).

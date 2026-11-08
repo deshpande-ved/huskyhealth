@@ -14,7 +14,7 @@
   --rule: #cdc6b2;
   --red: #b00e28;
   /* data: zone ribbon, cool to hot; always paired with Z1-Z5 labels */
-  --z1: #49687a;
+  --z1: #16699e;
   --z2: #33694c;
   --z3: #785806;
   --z4: #b1430f;
@@ -53,7 +53,7 @@
     --ink-3: #9a9382;
     --rule: #3a362c;
     --red: #ff5a6b;
-    --z1: #8fb3c4;
+    --z1: #7fd0ff;
     --z2: #86c29d;
     --z3: #d9ab43;
     --z4: #f0904f;
@@ -108,33 +108,38 @@ main, footer, .masthead, .strip { width: min(100% - 2 * var(--s-4), var(--column
 
 /* ---------- masthead ---------- */
 .masthead {
-  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--s-2) var(--s-4);
+  /* the mark, title and tabs as one group, centred like the rest of the page; log in stays at the right edge */
+  display: grid; grid-template-columns: 1fr auto auto 1fr; align-items: center; gap: var(--s-2) var(--s-4);
   padding: var(--s-6) 0 var(--s-4); border-bottom: 1px solid var(--ink); position: relative;
 }
-.mark-link { line-height: 0; grid-row: span 2; }
-#mark { width: 52px; height: auto; aspect-ratio: 1 / 1; object-fit: contain; }
+/* the mark is as tall as the title, tagline and tabs beside it */
+.mark-link { grid-column: 2; grid-row: 1 / span 2; line-height: 0; align-self: center; }
+#mark { width: 88px; height: auto; aspect-ratio: 1 / 1; object-fit: contain; }
+.brand { grid-column: 3; grid-row: 1; }
 .brand h1 { margin: 0; font-size: var(--t-xl); line-height: 1.1; letter-spacing: -0.01em; }
 .brand h1 a { text-decoration: none; }
 .tagline { margin: 2px 0 0; color: var(--ink-2); font-size: var(--t-sm); }
-nav.tabs { grid-column: 2; display: flex; gap: var(--s-6); font-size: var(--t-sm); }
+nav.tabs { grid-column: 3; grid-row: 2; display: flex; gap: var(--s-6); font-size: var(--t-sm); }
 nav.tabs a { color: var(--ink-2); text-decoration: none; }
 nav.tabs a::before { content: "./"; color: var(--ink-3); }
 nav.tabs a:hover { color: var(--red); }
 nav.tabs a[aria-current="page"] { color: var(--ink); text-decoration: underline; text-decoration-color: var(--red); text-underline-offset: 6px; }
 
-.who { grid-column: 3; grid-row: 1 / span 2; align-self: start; justify-self: end; position: relative; }
+.who { grid-column: 4; grid-row: 1 / span 2; align-self: start; justify-self: end; position: relative; }
 #who-link { font-size: var(--t-sm); }
+#who-btn { white-space: nowrap; }
 .sheet {
   position: absolute; right: 0; top: calc(100% + var(--s-2)); z-index: 10; width: 300px;
   background: var(--paper); border: 1px solid var(--ink); padding: var(--s-4);
   box-shadow: 0 10px 28px -12px rgb(0 0 0 / 0.35);
 }
 @media (max-width: 640px) {
-  .masthead { grid-template-columns: auto 1fr auto; }
-  .mark-link { grid-row: span 1; }
+  .masthead { grid-template-columns: auto 1fr auto; column-gap: var(--s-3); }
+  .mark-link { grid-column: 1; }
+  #mark { width: 68px; }
   .brand { grid-column: 2; }
   .who { grid-column: 3; grid-row: 1; }
-  nav.tabs { grid-column: 1 / -1; }
+  nav.tabs { grid-column: 2; }
   .sheet { position: fixed; left: var(--s-4); right: var(--s-4); top: 84px; width: auto; }
 }
 
@@ -144,6 +149,12 @@ nav.tabs a[aria-current="page"] { color: var(--ink); text-decoration: underline;
 
 /* ---------- today: the call ---------- */
 .hero { padding: var(--s-12) 0 var(--s-8); }
+/* the call is centred in the column: block letters, then (on wide screens) its reason and basis, then the
+   controls: ./listen ./speak centred above the prompt */
+.hero .banner { width: fit-content; max-width: 100%; margin-inline: auto; }
+@media (min-width: 860px) {
+  .hero .reason, .hero .basis, .hero .method { text-align: center; margin-inline: auto; }
+}
 .banner {
   --cols: 40;
   margin: 0 0 var(--s-6); color: var(--red); font-weight: 700; line-height: 1;
@@ -155,8 +166,8 @@ nav.tabs a[aria-current="page"] { color: var(--ink); text-decoration: underline;
 .method { margin: var(--s-2) 0 0; font-size: var(--t-xs); }
 .method a { color: var(--ink-3); text-decoration-color: var(--ink-3); text-decoration-style: dotted; }
 .method a:hover { color: var(--ink); }
-.speak { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-4); margin: var(--s-6) 0 0; }
-.caption { margin: 0; flex: 1 1 28ch; max-width: 64ch; font-size: var(--t-sm); color: var(--ink-2); }
+.speak { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: var(--s-2) var(--s-6); margin: var(--s-6) auto 0; max-width: 680px; }
+.caption { margin: 0; flex: 1 1 100%; text-align: center; font-size: var(--t-sm); color: var(--ink-2); }
 .caption span { transition: color var(--d-fast) var(--ease-std), background-color var(--d-fast) var(--ease-std); }
 .caption span.on { color: var(--paper); background: var(--red); }
 /* Voice and ask read as lines of the printout: commands like the nav (./listen), a prompt on a dashed rule. */
@@ -167,7 +178,9 @@ button.cmd {
 }
 button.cmd::before { content: "./"; color: var(--ink-3); }
 button.cmd:hover, button.cmd:focus-visible { background: none; color: var(--red); text-decoration-color: var(--red); outline: none; }
-.askbox { margin: var(--s-3) 0 0; max-width: 680px; }
+.askbox { margin: var(--s-3) auto 0; max-width: 680px; }
+.answer { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-4); }
+.answer button.cmd { font-size: var(--t-sm); }
 .prompt { display: flex; align-items: baseline; gap: var(--s-3); border-bottom: 1px dashed var(--rule); padding: var(--s-1) 0; }
 .prompt:focus-within { border-bottom-color: var(--red); }
 .prompt .sigil { color: var(--red); font-weight: 700; }
@@ -189,7 +202,9 @@ a.row {
   color: inherit; text-decoration: none;
   transition: background-color var(--d-norm) var(--ease-std);
 }
-@media (min-width: 860px) { a.row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; } }
+/* wide screens: words beside the figure, the pair centred in the column like the call above (figures are 44
+   characters wide, so every row lines up on the same two columns) */
+@media (min-width: 860px) { a.row { grid-template-columns: 22rem 23rem; justify-content: center; column-gap: var(--s-12); align-items: center; } }
 a.row h3 { margin: 0; font-size: var(--t-lg); }
 a.row p { margin: var(--s-1) 0 0; color: var(--ink-2); font-size: var(--t-sm); max-width: 48ch; }
 a.row:hover, a.row:focus-visible { background: var(--band); outline: none; }
