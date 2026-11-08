@@ -25,7 +25,7 @@
         <p>training insight from your watch &middot; computed on this phone &middot; nothing leaves it</p>
       </div>
     </header>
-    <nav class="tabs" aria-label="Sections"><a href="#today">today</a><a href="#import">import</a><a href="#settings">settings</a><a href="#references">references</a></nav>
+    <nav class="tabs" aria-label="Sections"><a href="#today">today</a><a href="#import">import</a><a href="#account">account</a><a href="#settings">settings</a><a href="#references">references</a></nav>
 
     <section id="today" aria-label="Today">
       <div class="hero" id="hero"></div>
@@ -45,6 +45,35 @@
       <input id="import-file" class="visually-hidden" type="file" accept=".zip,.xml">
       <pre id="progress" class="fig hidden" role="img" aria-label=""></pre>
       <p id="import-error" class="alert hidden"></p>
+    </section>
+
+    <section id="account" aria-label="Account" class="block">
+      <h2>Account</h2>
+      <p class="lede">Optional. An account keeps your past reports and workout summaries so you can look back from any device. Your browser encrypts them with a key made from your password before anything is sent. The Pi stores only that ciphertext, under a hash of your username. It cannot read it, and neither can we. Forget the password and the history is gone for good.</p>
+      <div id="acct-out" class="panel">
+        <h3>Log in or create an account</h3>
+        <p class="explain">Raw heart rate is never saved: only each report (the call, fitness, fatigue, form) and per-workout summaries (date, sport, minutes, load, zone minutes).</p>
+        <div class="field"><label for="acct-user">username</label><input id="acct-user" type="text" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
+        <div class="field"><label for="acct-pass">password</label><input id="acct-pass" type="password" autocomplete="current-password"></div>
+        <p><button id="acct-login" type="button">Log in</button> <button id="acct-create" type="button">Create account</button></p>
+      </div>
+      <div id="acct-in" class="hidden">
+        <article class="panel">
+          <h3>Signed in</h3>
+          <p>Account: <b id="acct-name" class="z1"></b> <span class="muted">(encrypted on this device; the Pi holds ciphertext only)</span></p>
+          <p><button id="acct-save" type="button">Save today's report</button> <button id="acct-logout" type="button">Log out</button> <button id="acct-delete" type="button" class="danger">Delete account</button></p>
+        </article>
+        <article class="panel">
+          <h3>Past reports</h3>
+          <ul id="acct-reports" class="notes"></ul>
+        </article>
+        <article class="panel">
+          <h3>Workout history</h3>
+          <p id="acct-wsum" class="explain"></p>
+          <pre id="acct-workouts" class="log"></pre>
+        </article>
+      </div>
+      <p id="acct-status" class="explain" role="status"></p>
     </section>
 
     <section id="settings" aria-label="Settings" class="block">

@@ -1,0 +1,137 @@
+// web/js/account.js: zero-knowledge accounts. Everything readable stays in this browser.
+//   username -> id = SHA-256("huskyhealth:" + username)            (the Pi never sees the username)
+//   password -> PBKDF2-SHA256, 600 000 rounds -> 64 bytes:
+//                 first 32 = AES-256-GCM vault key (never leaves this browser, non-extractable)
+//                 last 32  = auth key, sent to the Pi, which stores only a scrypt hash of it
+//   vault    -> JSON -> gzip -> AES-GCM (id as associated data) -> base64 -> the Pi
+// Forget the password and the vault cannot be opened by anyone, including us.
+import { RELAY } from "./sync-settings.js";
+
+export const ROUNDS = 600_000;                 // OWASP 2023 guidance for PBKDF2-HMAC-SHA256
+export const MAX_REPORTS = 365;
+const DAY = 86_400_000;
+const te = new TextEncoder();
+const td = new TextDecoder();
+
+const b64 = (u8) => { let s = ""; for (const b of u8) s += String.fromCharCode(b); return btoa(s); };
+const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+
+export const normalize = (username) => String(username || "").trim().toLowerCase();
+
+export async function deriveKeys(username, password, rounds = ROUNDS) {
+  const u = normalize(username);
+  if (!u || !password) throw new Error("username and password are required");
+  const id = hex(await crypto.subtle.digest("SHA-256", te.encode(`huskyhealth:${u}`)));
+  const base = await crypto.subtle.importKey("raw", te.encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = new Uint8Array(await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt: te.encode(`huskyhealth-v1:${u}`), iterations: rounds }, base, 512));
+  const key = await crypto.subtle.importKey("raw", bits.slice(0, 32), "AES-GCM", false, ["encrypt", "decrypt"]);
+  const auth = b64(bits.slice(32));
+  bits.fill(0);
+  return { id, key, auth };
+}
+
+async function pipe(bytes, stream) {
+  return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
+}
+
+export async function seal(keys, vault) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const packed = await pipe(te.encode(JSON.stringify(vault)), new CompressionStream("gzip"));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: te.encode(keys.id) }, keys.key, packed));
+  const out = new Uint8Array(1 + iv.length + ct.length);
+  out.set([1]); out.set(iv, 1); out.set(ct, 13);               // version byte | iv | ciphertext+tag
+  return b64(out);
+}
+
+export async function unseal(keys, blob) {
+  const raw = unb64(blob);
+  if (raw[0] !== 1) throw new Error("unknown vault version");
+  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: raw.slice(1, 13), additionalData: te.encode(keys.id) }, keys.key, raw.slice(13));
+  return JSON.parse(td.decode(await pipe(new Uint8Array(pt), new DecompressionStream("gzip"))));
+}
+
+export const emptyVault = () => ({ v: 1, reports: [], workouts: [] });
+
+const isoDay = (ms) => new Date(ms).toISOString().slice(0, 10);
+
+// One report: what the screen said, as numbers and words. No raw heart rate.
+export function makeReport(analysis, features, call, { nowMs = Date.now(), source = "import", brief = null } = {}) {
+  const ff = analysis.fitnessFatigue;
+  const ws = features.workouts || [];
+  return {
+    at: new Date(nowMs).toISOString(), source,
+    call: call.headline, reason: call.reason,
+    fitness: Math.round(ff.fitness), fatigue: Math.round(ff.fatigue), form: Math.round(ff.form),
+    workouts: ws.length, minutes: Math.round(ws.reduce((s, w) => s + (w.min || 0), 0)),
+    load: Math.round(ws.reduce((s, w) => s + (w.trimp || 0), 0)),
+    brief,
+  };
+}
+
+// Per-workout summaries with real dates (inside the vault only): sport, minutes, load, zone minutes, effort.
+export function workoutSummaries(features, nowMs = Date.now()) {
+  return (features.workouts || []).map((w) => ({
+    date: isoDay(nowMs + w.day * DAY), sport: w.sport, min: w.min, trimp: w.trimp,
+    zone_min: w.zone_min, effort: w.effort ?? null, srpe: w.srpe ?? null,
+  }));
+}
+
+// Merge a new report and its workouts into the vault: workouts deduped by date+sport+minutes, newest report first.
+export function addToVault(vault, report, workouts) {
+  const key = (w) => `${w.date}|${w.sport}|${Math.round(w.min)}`;
+  const byKey = new Map((vault.workouts || []).map((w) => [key(w), w]));
+  for (const w of workouts) byKey.set(key(w), w);
+  return {
+    v: 1,
+    reports: [report, ...(vault.reports || [])].slice(0, MAX_REPORTS),
+    workouts: [...byKey.values()].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
+  };
+}
+
+// ---- relay calls. All return { ok, ... } and never throw. ----
+async function call(fetchFn, relay, path, body, session) {
+  const headers = { "Content-Type": "application/json" };
+  if (session) headers.Authorization = `Bearer ${session}`;
+  try {
+    const res = await fetchFn(`${relay}/v1/account/${path}`, { method: "POST", headers, body: body ? JSON.stringify(body) : undefined });
+    const json = res.status === 204 ? null : await res.json().catch(() => null);
+    return { status: res.status, json };
+  } catch {
+    return { status: 0, json: null };
+  }
+}
+
+const SAY = {
+  0: "Could not reach the relay. Nothing was sent.",
+  401: "Wrong username or password.",
+  409: "That username is taken. Log in instead, or pick another.",
+  413: "Your history is too big to save. Older reports need trimming.",
+  429: "Too many tries. Wait a minute.",
+};
+const say = (s) => SAY[s] || "The relay refused that. Nothing was saved.";
+
+// Create or open. Returns { ok, session, keys, vault } with the vault already decrypted here.
+export async function signIn({ username, password, create = false, fetchFn = fetch, relay = RELAY, rounds = ROUNDS }) {
+  let keys;
+  try { keys = await deriveKeys(username, password, rounds); } catch (e) { return { ok: false, status: e.message }; }
+  const r = await call(fetchFn, relay, create ? "create" : "open", { id: keys.id, auth: keys.auth });
+  if (r.status !== 200 && r.status !== 201) return { ok: false, status: say(r.status) };
+  let vault = emptyVault();
+  if (r.json.vault) {
+    try { vault = await unseal(keys, r.json.vault); } catch { return { ok: false, status: "Could not decrypt your history." }; }
+  }
+  return { ok: true, session: r.json.session, keys: { id: keys.id, key: keys.key }, vault };
+}
+
+export async function saveVault({ account, vault, fetchFn = fetch, relay = RELAY }) {
+  const blob = await seal(account.keys, vault);
+  const r = await call(fetchFn, relay, "vault", { vault: blob }, account.session);
+  return r.status === 204 ? { ok: true } : { ok: false, status: r.status === 401 ? "Session expired. Log in again." : say(r.status) };
+}
+
+export async function deleteAccount({ account, fetchFn = fetch, relay = RELAY }) {
+  const r = await call(fetchFn, relay, "delete", null, account.session);
+  return r.status === 204 ? { ok: true } : { ok: false, status: say(r.status) };
+}
