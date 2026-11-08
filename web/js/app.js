@@ -2,7 +2,7 @@
 import { analyze } from "./engine.js";
 import { paint, banner } from "./ascii.js";
 import { createDb } from "./db.js";
-import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel, briefText, answerQuestion, hm, WELCOME, DETAIL_PAGES, detailBlocks } from "./view.js";
+import { todayModel, storedLine, onImportMessage, weekDetail, sessionDetail, zoneDetail, dateLabel, briefText, answerQuestion, hm, WELCOME, DETAIL_PAGES, detailBlocks, todayRows, ROW_PAGE } from "./view.js";
 import { recordQuestion } from "./voice.js";
 import { signIn, saveVault, fetchVault, deleteAccount, addToVault, makeReport, workoutSummaries, daySummaries, fetchRecords, deleteRecords, newToken, listTokens, revokeToken, featuresFromVault, speakBrief, listenQuestion, RELAY } from "./account.js";
 import { dayNumber, dropToVault, validDrop } from "./sync-merge.js";
@@ -200,7 +200,7 @@ let db = null;
 function render() {
   const f = state.features || EMPTY;
   const an = analyze(f);
-  const { call, week, last, zones } = todayModel(an, f);
+  const { call, week, last } = todayModel(an, f);
   if (state.features) {
     const listen = el("button", { type: "button", className: "listen", textContent: "listen" });
     listen.addEventListener("click", () => playBrief(briefText({ call, week, last, sleep: todayModel(an, f).sleep }), listen));
@@ -213,10 +213,7 @@ function render() {
       askNode(() => ({ model: { call, week, last, ...(({ sleep, fitness }) => ({ sleep, fitness }))(todayModel(an, f)) }, week: weekDetail(an, f), session: sessionDetail(an, f), zones: zoneDetail(f),
         features: state.features, relay: RELAY })),
       methodNode(call.source, call.ref));
-    const { sleep, fitness } = todayModel(an, f);
-    $("panels").replaceChildren(panelNode(week, { href: "#week" }), ...(last ? [panelNode(last, { href: "#session" })] : []),
-      ...(sleep ? [panelNode(sleep, { href: "#sleep" })] : []), ...(fitness ? [panelNode(fitness, { href: "#fitness" })] : []),
-      panelNode(zones, { href: "#zones" }));
+    $("panels").replaceChildren(...todayRows(todayModel(an, f)).map((fig) => panelNode(fig, { href: `#${ROW_PAGE[fig.id]}` })));
   } else {
     const login = el("button", { type: "button", className: "primary", textContent: "log in" });
     login.addEventListener("click", () => openSheet(true));

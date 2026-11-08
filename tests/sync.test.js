@@ -133,3 +133,18 @@ test("calories survive the API and show in today's summaries", async () => {
   assert.match(m.week.summary, /500 kcal/);
   assert.match(m.last.summary, /500 kcal/);
 });
+
+test("a workout deleted in Apple Health leaves the vault on the next sync; older history and API workouts stay", async () => {
+  const { pruneDeleted } = await import("../web/js/vault.js");
+  const app = (start, min) => ({ ...timed(start, min), by: "app" });
+  const vault = { ...emptyVault(), workouts: [
+    app("2026-09-01T08:00", 40),                 // older than anything the phone can see now: kept
+    app("2026-10-20T08:00", 45),                 // still in Apple Health: kept
+    app("2026-10-25T08:00", 30),                 // deleted in Apple Health: removed
+    timed("2026-10-26T08:00", 30),               // sent through the API: kept
+  ] };
+  const phone = [app("2026-10-10T07:00", 50), app("2026-10-20T08:01", 45)];
+  assert.deepEqual(pruneDeleted(vault, phone).workouts.map((w) => w.start).sort(),
+    ["2026-09-01T08:00", "2026-10-20T08:00", "2026-10-26T08:00"]);
+  assert.equal(pruneDeleted(vault, []), vault);  // an empty read deletes nothing
+});
