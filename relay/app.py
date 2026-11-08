@@ -109,6 +109,7 @@ CREATE_LIMIT = Window(30, 3600)              # new accounts per hour, everyone t
 WRITE_PER_TOKEN = KeyedWindow(120, 3600)     # a device token: 120 records an hour (a 60-day backfill is ~20-60)
 WRITE_PER_ACCOUNT = KeyedWindow(300, 3600)   # all of one account's devices together
 SESSION_LIMIT = KeyedWindow(120, 60)         # reads, deletes, token management per session
+SPEAK_PER_SESSION = KeyedWindow(20, 3600)    # spoken briefs per account per hour (each one costs Gradium credits)
 
 
 @app.get("/v1/healthz")
@@ -141,3 +142,7 @@ app.register_blueprint(records_bp)
 from accounts import bp as accounts_bp          # noqa: E402
 
 app.register_blueprint(accounts_bp)
+
+from speak import bp as speak_bp                # noqa: E402
+
+app.register_blueprint(speak_bp)

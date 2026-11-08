@@ -89,6 +89,14 @@ enum HealthCore {
     (s.sourceRevision.productType ?? "").contains("Watch") || (s.device?.model ?? "").contains("Watch")
   }
 
+  /// Garmin Connect writes workouts into Apple Health; so may Whoop, Oura, Polar. The relay accepts watch / garmin / other.
+  static func fromGarmin(_ s: HKSample) -> Bool {
+    let src = s.sourceRevision.source
+    return src.bundleIdentifier.lowercased().contains("garmin") || src.name.lowercased().contains("garmin")
+  }
+
+  static func srcTag(_ s: HKSample) -> String { fromWatch(s) ? "watch" : fromGarmin(s) ? "garmin" : "other" }
+
   // MARK: - Queries
 
   static func workouts(since start: Date, until end: Date = Date()) async throws -> [HKWorkout] {
@@ -118,7 +126,7 @@ enum HealthCore {
       return [
         "type": hkName[sp] ?? "HKWorkoutActivityTypeOther", "sport": sp,
         "start": ms(w.startDate), "end": ms(w.endDate), "min": w.duration / 60,
-        "kcal": kcal(w).map { $0 as Any } ?? NSNull(), "device": fromWatch(w) ? "Apple Watch" : "", "sourceName": "",
+        "kcal": kcal(w).map { $0 as Any } ?? NSNull(), "device": fromWatch(w) ? "Apple Watch" : "", "sourceName": fromGarmin(w) ? "Garmin" : "",   // a category, never the device's own name
       ]
     }
   }
@@ -146,7 +154,7 @@ enum HealthCore {
         "sport": sport(w.workoutActivityType),
         "start_s": Int(now.timeIntervalSince(w.startDate)), "end_s": Int(now.timeIntervalSince(w.endDate)),
         "kcal": kcal(w).map { min(max($0, 0), 10000) as Any } ?? NSNull(),
-        "src": fromWatch(w) ? "watch" : "other",
+        "src": srcTag(w),
         "hr_t": hr.map { iso.string(from: Date(timeIntervalSince1970: $0[0] / 1000)) },
         "hr_v": hr.map { min(max($0[1], 20), 300) },
       ])
