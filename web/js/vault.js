@@ -70,6 +70,19 @@ export function mergeWorkouts(existing, incoming, prefer = "incoming") {
   return out.map(({ _in, ...w }) => w).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (b.start || "") < (a.start || "") ? -1 : 1));
 }
 
+// Deleted in Apple Health -> deleted here. `phone` is everything the app just read from Apple Health. A workout
+// the app wrote earlier (by: "app") that is no longer there is removed, but only inside the span the phone can see
+// (from its oldest workout on), so a 30-day Health permission never erases older history, and an empty read
+// deletes nothing. Workouts from the API (curl, other devices) or an export are never removed this way.
+export function pruneDeleted(vault, phone) {
+  const starts = phone.map(startMs).filter(Number.isFinite);
+  if (!starts.length) return vault;
+  const from = Math.min(...starts);
+  const gone = (w) => w.by === "app" && Number.isFinite(startMs(w)) && startMs(w) >= from && !phone.some((p) => sameSession(p, w));
+  const workouts = (vault.workouts || []).filter((w) => !gone(w));
+  return workouts.length === (vault.workouts || []).length ? vault : { ...vault, workouts };
+}
+
 // Merge a new report, its workouts and day summaries into the vault. Newest report first.
 export function addToVault(vault, report, workouts, days = [], { prefer = "incoming" } = {}) {
   const byDate = new Map((vault.days || []).map((d) => [d.date, d]));
