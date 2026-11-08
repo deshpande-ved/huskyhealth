@@ -127,7 +127,14 @@ curl -X POST https://veds-pi5.polecat-nominal.ts.net:10000/v1/me/records \
   -d '{"v":1,"workouts":[{"sport":"running","start_s":3600,"end_s":1800,"kcal":320}]}'
 ```
 
-It appears on your website within 30 seconds, encrypted the whole way. Full reference: `/api` and `/v1/openapi.json`.
+It appears on your website within 30 seconds, encrypted the whole way. Read your whole history back, decrypted on
+your machine (the Pi only ever returns ciphertext):
+
+```bash
+node scripts/huskyhealth.mjs history --user <you> --sport squash --last 1
+```
+
+Full reference: `/api` and `/v1/openapi.json`.
 
 ## Repository
 
