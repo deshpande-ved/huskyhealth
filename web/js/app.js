@@ -428,7 +428,7 @@ function wireAccount() {
   $("acct-create").addEventListener("click", () => go(true));
   $("who-btn").addEventListener("click", () => openSheet($("login").classList.contains("hidden")));
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") openSheet(false); });
-  document.addEventListener("click", (e) => { if (!e.target.closest(".who") && !e.target.closest(".cta")) openSheet(false); });
+  document.addEventListener("click", (e) => { if (!e.target.closest(".who, .cta, .mic")) openSheet(false); });
   $("acct-save").addEventListener("click", () => (state.features ? autoSave("manual") : acctSay("Nothing to report yet.")));
   $("acct-logout").addEventListener("click", () => { state.account = null; hideToken(); renderAccount(); location.hash = "#today"; });
   $("acct-delete").addEventListener("click", async () => {
